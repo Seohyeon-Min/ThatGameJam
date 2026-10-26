@@ -3,6 +3,7 @@
 ## 대화와 기록
 - 대화는 한국어로 한다.
 - 작업 기록은 `docs/kor/`에 먼저 쓰고, `docs/eng/`에 같은 구조로 미러링한다. 지금은 `decisions/`와 `commit_history/`만 쓴다.
+- 기록 형식은 `docs/record-format-example.md`를 따른다.
 
 ## 프로젝트
 - Unity 6000.4.2f1, URP, Input System 전용이다. 예전 `UnityEngine.Input` API는 쓰지 않는다.
