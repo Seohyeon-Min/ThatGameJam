@@ -1,8 +1,8 @@
-# Add the Unity Pipeline package and `image.png` (ADR 0001)
+# Add the Unity Pipeline package and `image.png`
 
 ## Why
 
-Driving the Editor from the Unity CLI needs `com.unity.pipeline`. `image.png` stays on `sam` only ([ADR 0001](../../decisions/0001-branch-file-placement.md)).
+Driving the Editor from the Unity CLI needs `com.unity.pipeline`. `image.png` stays on `sam` only.
 
 ## What changed
 

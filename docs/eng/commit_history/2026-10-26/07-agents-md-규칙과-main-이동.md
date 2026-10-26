@@ -1,8 +1,8 @@
-# Put project rules in `AGENTS.md` and share it on main (ADR 0006)
+# Put project rules in `AGENTS.md` and share it on main (ADR 0002)
 
 ## Why
 
-The user decided to put rules for developing the game into `AGENTS.md` and share it with the team ([ADR 0006](../../decisions/0006-agents-md-shared-on-main.md)).
+The user decided to put rules for developing the game into `AGENTS.md` and share it with the team ([ADR 0002](../../decisions/0002-agents-md-shared-on-main.md)).
 
 ## What changed
 

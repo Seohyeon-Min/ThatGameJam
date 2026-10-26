@@ -1,8 +1,8 @@
-# Add the work records `docs/` (ADR 0005)
+# Add the work records `docs/` (ADR 0001)
 
 ## Why
 
-The user decided to keep work records. For now only `commit_history/` and `decisions/`, with kor as the source and eng as the mirror ([ADR 0005](../../decisions/0005-docs-kor-source-eng-mirror.md)).
+The user decided to keep work records. For now only `commit_history/` and `decisions/`, with kor as the source and eng as the mirror ([ADR 0001](../../decisions/0001-docs-kor-source-eng-mirror.md)).
 
 ## What changed
 

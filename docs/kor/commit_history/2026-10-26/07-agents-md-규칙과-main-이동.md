@@ -1,8 +1,8 @@
-# `AGENTS.md` 에 프로젝트 규칙을 넣고 main 에 공용으로 올림 (ADR 0006)
+# `AGENTS.md` 에 프로젝트 규칙을 넣고 main 에 공용으로 올림 (ADR 0002)
 
 ## 왜 했나
 
-사용자가 게임 개발에 쓸 규칙을 `AGENTS.md` 에 넣고 팀 공용으로 두기로 했다([ADR 0006](../../decisions/0006-agents-md-를-main-에-공용으로-둔다.md)).
+사용자가 게임 개발에 쓸 규칙을 `AGENTS.md` 에 넣고 팀 공용으로 두기로 했다([ADR 0002](../../decisions/0002-agents-md-를-main-에-공용으로-둔다.md)).
 
 ## 무엇을 바꿨나
 

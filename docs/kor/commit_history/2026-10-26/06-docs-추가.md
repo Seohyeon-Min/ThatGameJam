@@ -1,8 +1,8 @@
-# 작업 기록 `docs/` 추가 (ADR 0005)
+# 작업 기록 `docs/` 추가 (ADR 0001)
 
 ## 왜 했나
 
-사용자가 작업 기록을 남기기로 했다. 지금은 `commit_history/` 와 `decisions/` 만 두고 kor 원본, eng 미러로 쓴다([ADR 0005](../../decisions/0005-docs-는-kor-원본-eng-미러.md)).
+사용자가 작업 기록을 남기기로 했다. 지금은 `commit_history/` 와 `decisions/` 만 두고 kor 원본, eng 미러로 쓴다([ADR 0001](../../decisions/0001-docs-는-kor-원본-eng-미러.md)).
 
 ## 무엇을 바꿨나
 

@@ -1,4 +1,4 @@
-# 0005. `docs/` uses kor as the source and mirrors it in eng
+# 0001. `docs/` uses kor as the source and mirrors it in eng
 
 - Status: accepted
 - Date: 2026-10-26

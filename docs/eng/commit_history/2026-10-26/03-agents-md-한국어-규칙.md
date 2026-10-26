@@ -1,4 +1,4 @@
-# Add a Korean conversation rule to `AGENTS.md` and check it is read at session start (ADR 0001)
+# Add a Korean conversation rule to `AGENTS.md` and check it is read at session start
 
 ## Why
 

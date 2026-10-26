@@ -1,8 +1,8 @@
-# Unity Pipeline 패키지와 `image.png` 추가 (ADR 0001)
+# Unity Pipeline 패키지와 `image.png` 추가
 
 ## 왜 했나
 
-Unity CLI 로 에디터를 조종하려면 `com.unity.pipeline` 이 필요하다. `image.png` 는 `sam` 에만 둔다([ADR 0001](../../decisions/0001-브랜치별-파일-배치.md)).
+Unity CLI 로 에디터를 조종하려면 `com.unity.pipeline` 이 필요하다. `image.png` 는 `sam` 에만 둔다.
 
 ## 무엇을 바꿨나
 

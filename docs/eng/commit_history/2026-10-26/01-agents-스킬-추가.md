@@ -1,8 +1,8 @@
-# Add the Unity agent skills `.agents/` to main (ADR 0001)
+# Add the Unity agent skills `.agents/` to main
 
 ## Why
 
-The project folder had 34 Unity agent skills. They are shared by the team, so they went on `main` ([ADR 0001](../../decisions/0001-branch-file-placement.md)).
+The project folder had 34 Unity agent skills. They are shared by the team, so they went on `main`.
 
 ## What changed
 
