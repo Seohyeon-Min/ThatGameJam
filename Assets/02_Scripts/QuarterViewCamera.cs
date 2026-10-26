@@ -4,7 +4,8 @@ using UnityEngine;
 public class QuarterViewCamera : MonoBehaviour
 {
     [SerializeField] Transform target;
-    [SerializeField] Vector3 offset = new Vector3(-8f, 10f, -8f);
+    // Seen from behind-right of the road, so the +Z road runs from lower-left to upper-right on screen (director's sketch, image.png).
+    [SerializeField] Vector3 offset = new Vector3(6.5f, 6f, -6.5f);
     [SerializeField] float followSharpness = 5f;
 
     void Start()

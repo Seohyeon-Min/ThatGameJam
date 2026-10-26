@@ -13,7 +13,7 @@ public static class BuildSamTestScene
     {
         EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        Primitive(PrimitiveType.Cube, "Snow", new Vector3(0f, -0.15f, 13f), new Vector3(30f, 0.1f, 40f), Mat("Snow", new Color(0.92f, 0.95f, 1f)));
+        Primitive(PrimitiveType.Cube, "Snow", new Vector3(0f, -0.15f, 13f), new Vector3(120f, 0.1f, 120f), Mat("Snow", new Color(0.92f, 0.95f, 1f)));
         Primitive(PrimitiveType.Cube, "Road", new Vector3(0f, -0.05f, 13f), new Vector3(3f, 0.1f, 30f), Mat("Road", new Color(0.55f, 0.6f, 0.7f)));
 
         Material obstacleMat = Mat("Obstacle", new Color(0.45f, 0.3f, 0.2f));
