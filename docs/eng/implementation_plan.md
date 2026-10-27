@@ -19,7 +19,7 @@ So the code builds a shared framework first. Each stage's devices are small comp
 | Baby | Walk along the path, stop, react (look up), sleep, wake up | §2.2, §2.4, §4 |
 | Natural resolution timer | Waiting time, 3-step signals, "did the bird solve it / did it resolve on its own" | §3 |
 | Sunlit Rest Area and stage transition | Falling asleep, seasonal effect, screen transition, placement for the next stage | §10, §11 |
-| Camera | A camera that follows the bird. In a device zone it locks to a smaller range. The bird stays on the road, and cannot go past a device until the device is solved | §2.5, ADR 0005, ADR 0007 |
+| Camera | A camera that follows the bird. When the bird crosses a device zone's trigger, it locks to a smaller range. The bird stays on the road | §2.5, ADR 0005, ADR 0007, ADR 0008 |
 
 | Stage device | Design basis |
 |---|---|
@@ -56,8 +56,8 @@ Names are suggestions. Each component does one thing.
 | `GameFlow` | Runs the order intro → tutorial → stages 1·2·3 → ending. Knows the current stage |
 | `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, road range, Sunlit Rest Area, seasonal effect |
 | `ScreenFader` | Covers and uncovers the screen during stage transitions |
-| `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, within the screen around this point, and before the wall of any device not yet solved. One Cinemachine camera follows this point (ADR 0005, ADR 0007) |
-| `CameraZone` | One device's camera zone. When the baby reaches the trigger, the camera locks to a rectangle; when the device is solved, it unlocks. Until the device is solved, the bird cannot pass the wall (`BirdWall`) (ADR 0007) |
+| `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, and within the screen around this point. One Cinemachine camera follows this point (ADR 0005, ADR 0007, ADR 0008) |
+| `CameraZone` | One device's camera zone. When the bird crosses the trigger line, the camera locks to a rectangle; when the device is solved, it unlocks (ADR 0007, ADR 0008) |
 | `BirdController` | Click movement, perching, cry, altitude |
 | `Perchable` | An object the bird can perch on. Fires a `Perched` event when the bird lands. Uses the current `PerchPoint` as the perch position |
 | `CryListener` | The shared part of things that react to the cry. Has a reaction distance. Used by the baby, fog animals, and the migratory birds in the ending |
@@ -107,7 +107,7 @@ Each stage is a prefab. That way several people can build different stages in th
   - `ClickPlane`: a large invisible plane placed where there is no ground, such as beyond the cliff (§2.3). The baby's movement checks ignore this layer.
 - Clicking the ground while perched makes the bird take off.
 - The bird is not pushed or pulled by physics. It flies over terrain and obstacles (§2.1), so it is moved directly to the target point. The current Rigidbody velocity approach is dropped.
-- The bird cannot leave the stage's road range, the screen (Q3), or pass the wall of a device not yet solved (ADR 0007). The clicked target point is not clamped. So the bird stays at the edge of its range, and keeps going when the camera follows or a wall opens. In 3-3, the area above and beyond the cliff is included in the range.
+- The bird cannot leave the stage's road range or the screen (Q3) (ADR 0007). The clicked target point is not clamped. So the bird stays at the edge of its range, and keeps going when the camera follows. In 3-3, the area above and beyond the cliff is included in the range.
 - While left click is held, the target point keeps updating (Q12). This is handy when drawing a path in the fog.
 - A small circle briefly shows where you clicked (Q13).
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
@@ -181,8 +181,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 - The camera follows the bird (ADR 0005). The user changed the "fixed camera per section" in design doc §2.5. In device zones it locks to a smaller range instead of a fixed position (ADR 0007).
 - Use Cinemachine (Q2). The main camera has a `CinemachineBrain`. One `CinemachineCamera`, fixed at the quarter-view angle, follows one point with `CinemachineFollow`.
 - `BirdCamera` decides that point every frame. It clamps the bird's position to the road range. The baby is not used as a reference, to show that the bird and the baby are separate beings (ADR 0007).
-- Each device has a `CameraZone`. When the baby reaches its trigger, the point eases into the zone's rectangle over 1 second and follows the bird inside it. When the device is solved, it eases out over 1 second. A zone that has been released never locks again.
-- Until a device is solved, the bird cannot pass that zone's wall, even before the baby arrives. The bird does not move by physics, so the wall is not a collider but the Z end of the bird's movement range.
+- Each device has a `CameraZone`. When the bird crosses its trigger line (a Z across the road), the point eases into the zone's rectangle over 1 second and follows the bird inside it. The range is small, so the camera barely moves while locked. When the device is solved, it eases out over 1 second. A zone that has been released never locks again (ADR 0008).
 - On a stage transition, the camera cuts to the new stage.
 - In the intro, a zoomed-out camera follows the bird. When the bird comes within a set distance of the baby, it switches to the stage camera (§5.2 Phase 2).
 - The camera for the 3-3 climb section is not yet decided in the design (§16). As a first try, use a camera that rises to follow the bird's height.
@@ -322,7 +321,7 @@ This matches the design doc's "about 3 min 20 s". The target is about 3 minutes 
 ### 4.18 Development Tools
 
 - Time scale (2×), skip to the next stage, resolve the current device on its own, resolve the current device as if the bird solved it.
-- Draw paths, trails, `StopPoint`s, the road range, and camera zones and walls with Gizmos.
+- Draw paths, trails, `StopPoint`s, the road range, and camera zones and triggers with Gizmos.
 - Uses keyboard shortcuts, but they are on only in development builds and the Editor. Game controls stay just the two mouse buttons (§15.6).
 
 ### 4.19 Things to Check in the Web Build
@@ -341,7 +340,7 @@ Most of the undecided items in Section 16 of the design doc are numbers or prese
 |---|---|---|
 | Q1 | Which scene is the shared game scene | `Main.unity`. Stages are built as prefabs and gathered in `Main.unity` |
 | Q2 | Should we add Cinemachine | Yes |
-| Q3 | Can the bird leave the fixed camera's view | No. In 3-3, include the area above and beyond the cliff in the range. ADR 0005 changed the camera to follow the bird, and the bird cannot leave that view. ADR 0007 added the road range and the device walls |
+| Q3 | Can the bird leave the fixed camera's view | No. In 3-3, include the area above and beyond the cliff in the range. ADR 0005 changed the camera to follow the bird, and the bird cannot leave that view. ADR 0007 added the road range |
 | Q4 | When does natural resolution time start. Can the bird solve it before the baby arrives | From when the baby stops in front of that device. Solving first is allowed, and the baby still gives the help reaction |
 | Q5 | What happens to the bird when the log it perches on falls | When the log starts to fall, the bird takes off on its own and hovers right above |
 | Q6 | Show a marker when the mouse is over something the bird can perch on | Only change the cursor. Remove the current marker that blinks on approach |
@@ -384,6 +383,8 @@ Changes outside the plan:
 
 - The camera follows the bird and cannot go past a device until the device is solved (ADR 0005, work record 07)
 - In device zones the camera locks to a smaller range. The baby-based limit was removed. The bird stays on the road and cannot pass a wall until the device is solved (ADR 0007, 2026-10-27 work record 10)
+- Camera zones lock when the bird, not the baby, crosses the trigger. The wall that stopped the bird was removed. The log zone's range was made much smaller (ADR 0008, 2026-10-27 work record 13)
+- The fog map (`Sam_Fog_Test`) is neither rebuilt nor tested until the basics are settled. When the user says the fog map work starts, it is rebuilt with the code of that time
 - The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
 - The dev time scale is 2x (work record 09)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
@@ -392,8 +393,8 @@ Changes outside the plan:
 Remaining work and open issues:
 
 - Q11 (the last cry in the ending) must be asked to the design lead
-- The camera differs from design doc §2.5. ADR 0007 is the director's request but still being tried. Waiting for the director's feedback
-- Temporary values: the bird's screen range (`birdRange` on `BirdCamera`), the camera zones' trigger, range, and wall positions, the 1-second ease, and the fog clearing width, re-join range, and animal answer range
+- The camera differs from design doc §2.5. ADR 0007 and 0008 are the director's requests but still being tried. Waiting for the director's feedback
+- Temporary values: the bird's screen range (`birdRange` on `BirdCamera`), the camera zones' triggers and ranges, the 1-second ease, and the fog clearing width, re-join range, and animal answer range
 - Each builder run changes `_SrcBlend` on the transparent test materials (`ClickMarker.mat`, `RestLight.mat`, `AnimalGlow.mat`). The builder setting blend values directly and the Editor's automatic adjustment seem to use different values. These changes are left uncommitted; fix them when the builder is next touched
 - Only the user's own test was done by hand with a real mouse. All other checks used a virtual mouse
 

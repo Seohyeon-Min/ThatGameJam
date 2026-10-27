@@ -1,9 +1,8 @@
 using Unity.Cinemachine;
 using UnityEngine;
 
-// The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007).
-// The bird stays on the stage's road and behind the wall of every device not yet open, and so does the point the camera
-// follows. While a device's camera zone is locked,
+// The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007). The bird also locks the zones (ADR 0008).
+// The bird stays on the stage's road, and so does the point the camera follows. While a device's camera zone is locked,
 // the point stays inside that zone's area, and the bird is also kept within view of the point so it never leaves the screen
 // (ADR 0003 Q3).
 public class BirdCamera : MonoBehaviour
@@ -30,10 +29,12 @@ public class BirdCamera : MonoBehaviour
 
     void LateUpdate()
     {
-        Vector3 point = ClampXZ(BirdController.Instance.transform.position, stage.area.min, stage.area.max);
+        Vector3 bird = BirdController.Instance.transform.position;
+        Vector3 point = ClampXZ(bird, stage.area.min, stage.area.max);
         for (int i = 0; i < zones.Length; i++)
         {
             CameraZone zone = zones[i];
+            zone.TrackBird(bird);
             zoneWeights[i] = Mathf.MoveTowards(zoneWeights[i], zone.IsLocked ? 1f : 0f, Time.deltaTime / zoneEaseTime);
             point = Vector3.Lerp(point, ClampXZ(point, zone.AreaMin, zone.AreaMax), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
         }
@@ -43,11 +44,6 @@ public class BirdCamera : MonoBehaviour
         Vector3 range = new(birdRange.x, 0f, birdRange.y);
         Vector3 min = Vector3.Max(stage.area.min, point - range);
         Vector3 max = Vector3.Min(stage.area.max, point + range);
-        foreach (CameraZone zone in zones)
-        {
-            if (zone.IsWallUp)
-                max.z = Mathf.Min(max.z, zone.WallZ);
-        }
         var bounds = new Bounds();
         bounds.SetMinMax(new Vector3(min.x, point.y - 50f, min.z), new Vector3(max.x, point.y + 50f, max.z));
         BirdController.Instance.SetBounds(bounds);
