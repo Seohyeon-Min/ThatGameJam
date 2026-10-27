@@ -2,7 +2,7 @@
 
 > Basis: [`game_design.md`](game_design.md) (original `Game Design.pdf`). `§N` below is a section number in that document.
 > Korean version: [`../kor/implementation_plan.md`](../kor/implementation_plan.md)
-> Status: draft, 2026-10-27. 12 of the questions in Section 5 were decided on 2026-10-27 ([ADR 0003](decisions/0003-implementation-plan-question-answers.md), [ADR 0004](decisions/0004-fog-natural-resolution-rule.md)). Will be updated once the remaining questions are decided.
+> Status: draft, 2026-10-27. Progress is in 6.1. 12 of the questions in Section 5 were decided on 2026-10-27 ([ADR 0003](decisions/0003-implementation-plan-question-answers.md), [ADR 0004](decisions/0004-fog-natural-resolution-rule.md)). Will be updated once the remaining questions are decided.
 
 This document sets out what the code side will build from the design doc. For art, sound, and level layout, it only covers the points where code attaches (events, animator parameters, shader values).
 
@@ -367,6 +367,30 @@ Most of the undecided items in Section 16 of the design doc are numbers or prese
 | 6. Wrap-up | Gather stage prefabs in `Main.unity`, attach art and sound, web build, tune time values | On the web, about 5 minutes when playing actively, about 8 minutes when only waiting (§1.4) |
 
 Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3·4·5 can also be done separately from each other once the step 1 framework exists.
+
+### 6.1 Progress (as of 2026-10-27)
+
+| Step | Status | Where |
+|---|---|---|
+| 1. Shared framework | Done | `Assets/00_Scenes/Sam_Test.unity`. Work records 04, 05 |
+| 2. Fog prototype | Done | `Assets/00_Scenes/Sam_Fog_Test.unity`. Work record 06 |
+| 3. Stage 2 | Next. Not started | "Stage2" in `Sam_Test` is a temporary stage for checking the transition (only ground and a sunlit spot). Step 3 replaces it with the real stage 2 |
+| 4 to 6 | Not started | |
+
+Changes outside the plan:
+
+- The camera follows the bird and cannot go past a device until the device is solved (ADR 0005, work record 07)
+- The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
+- The dev time scale is 2x (work record 09)
+- The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
+
+Remaining work and open issues:
+
+- Q11 (the last cry in the ending) must be asked to the design lead
+- The camera differs from design doc §2.5. It must be agreed with the design lead
+- Temporary values: the camera ranges (`babyRange`, `birdRange` on `BirdCamera`), and the fog clearing width, re-join range, and animal answer range
+- Each builder run changes `_SrcBlend` on the transparent test materials (`ClickMarker.mat`, `RestLight.mat`, `AnimalGlow.mat`). The builder setting blend values directly and the Editor's automatic adjustment seem to use different values. These changes are left uncommitted; fix them when the builder is next touched
+- Only the user's own test was done by hand with a real mouse. All other checks used a virtual mouse
 
 ## 7. Risks
 
