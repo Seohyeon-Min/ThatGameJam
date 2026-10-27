@@ -2,7 +2,7 @@
 
 > Basis: [`game_design.md`](game_design.md) (original `Game Design.pdf`). `§N` below is a section number in that document.
 > Korean version: [`../kor/implementation_plan.md`](../kor/implementation_plan.md)
-> Status: draft, 2026-10-27. 11 of the questions in Section 5 were decided on 2026-10-27 ([ADR 0003](decisions/0003-implementation-plan-question-answers.md)). Will be updated once the remaining questions are decided.
+> Status: draft, 2026-10-27. 12 of the questions in Section 5 were decided on 2026-10-27 ([ADR 0003](decisions/0003-implementation-plan-question-answers.md), [ADR 0004](decisions/0004-fog-natural-resolution-rule.md)). Will be updated once the remaining questions are decided.
 
 This document sets out what the code side will build from the design doc. For art, sound, and level layout, it only covers the points where code attaches (events, animator parameters, shader values).
 
@@ -256,7 +256,8 @@ This is the hardest and riskiest part. A prototype built separately from the oth
 - Level design draws the correct path (a point list) for each section.
 - `NaturalTimer` about 30 seconds per section. Signals are the fog edge thins → sounds of hidden animals → the outline of the route shows through.
 - When time runs out, the fog slowly clears along the correct path, and the baby walks along the correct path.
-- What to do if natural resolution comes while the bird has drawn part of a trail, and whether the timer runs while the bird is drawing, is not decided yet (Q10).
+- Time runs continuously from when the baby first stops in front of the fog. It does not stop while the bird is drawing a trail (Q10).
+- When natural resolution comes, the baby drops the remaining trail, goes to the nearest correct path point, and walks along the correct path (Q10).
 
 ### 4.13 3-3 — Cliff and Breaking Through the Clouds (§9.6)
 
@@ -326,7 +327,7 @@ This matches the design doc's "about 3 min 20 s". The target is about 3 minutes 
 
 ## 5. Decisions and Open Questions
 
-Most of the undecided items in Section 16 of the design doc are numbers or presentation, so the code only needs a place to change those values. Below are the items that affect code structure but had no answer in the design doc. On 2026-10-27 the user decided all of them except Q10 and Q11. The reasons and the rejected alternatives are in [ADR 0003](decisions/0003-implementation-plan-question-answers.md).
+Most of the undecided items in Section 16 of the design doc are numbers or presentation, so the code only needs a place to change those values. Below are the items that affect code structure but had no answer in the design doc. On 2026-10-27 the user decided all of them except Q11. The reasons and the rejected alternatives are in [ADR 0003](decisions/0003-implementation-plan-question-answers.md) and [ADR 0004](decisions/0004-fog-natural-resolution-rule.md).
 
 ### 5.1 Decided
 
@@ -341,6 +342,7 @@ Most of the undecided items in Section 16 of the design doc are numbers or prese
 | Q7 | Keep the current roadside trees (perchable) | Keep them only as decoration and remove perching |
 | Q8 | How does the bird come down from the intro's high altitude to the stage altitude | When the camera switches to the fixed position, the bird also comes down to the stage altitude |
 | Q9 | If several branches block the side path, must all be cleared to open it | All must be cleared to open it |
+| Q10 | Fog: does natural resolution time run while the bird is drawing a trail. If a partly drawn trail and natural resolution overlap, which one does the baby follow | Time runs continuously from when the baby first stops in front of the fog. When natural resolution comes, the baby drops the remaining trail and goes to the nearest correct path point ([ADR 0004](decisions/0004-fog-natural-resolution-rule.md)) |
 | Q12 | Should holding left click keep following | Keep updating the target point while the button is held |
 | Q13 | Show a destination marker where you clicked | Briefly show a small circle |
 
@@ -348,7 +350,6 @@ Most of the undecided items in Section 16 of the design doc are numbers or prese
 
 | # | Question | Current state |
 |---|---|---|
-| Q10 | Fog: does natural resolution time run while the bird is drawing a trail. If a partly drawn trail and natural resolution overlap, which one does the baby follow | Not decided. The first suggestion was "time runs continuously from when the baby first stops in front of the fog, and when natural resolution comes, the baby drops the remaining trail and goes to the nearest correct path point" |
 | Q11 | When is the last cry in the ending made, and who makes it | Not decided. The table in §12.2 of the design doc has a "Last cry" row. The normal ending is "No answer", and the happy ending is "Other migratory birds answer". §12.3 explains that in the happy ending, migratory birds of the same kind answer for the first time. This reads as a scene in the ending where the bird cries once. The design doc does not say whether the player makes that cry with right click or the cutscene makes it automatically, or when it happens. We need to ask the design lead |
 
 ## 6. Work Order
