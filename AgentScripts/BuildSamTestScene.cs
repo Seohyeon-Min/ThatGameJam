@@ -120,11 +120,13 @@ public static class BuildSamTestScene
         StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
-        // The camera stops at z 19 until the leaning log has fallen.
-        Gate(root, leaningLog, 19f);
+        // When the baby nears the log, the camera eases onto the log and stream until the log has fallen.
+        // The wall at z 21.5 is just past the perch on the log's top (z 20.9), so the bird cannot cross the stream before.
+        Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector3(0f, 0f, 19.5f), new Vector2(4f, 5f), 21.5f);
 
+        // The road is the ground strip, z -2 .. 27.
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(6f, 1f, 25f)));
+            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(10f, 1f, 29f)));
     }
 
     // Just a start and a rest area, to see the transition from stage 1.
@@ -136,7 +138,7 @@ public static class BuildSamTestScene
         RestLight(root, new Vector3(60f, 0f, 9f));
         BabyRoute route = Route(root, new Vector3(60f, 0f, 4f), new Vector3(60f, 0f, 9f));
         return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(60f, 0f, 5f), new Vector3(6f, 1f, 10f)));
+            new Bounds(new Vector3(60f, 0f, 5f), new Vector3(10f, 1f, 14f)));
     }
 
     // The ground is only paths (correct ones and dead ends); everything else is dark water hidden under the fog.
@@ -180,12 +182,14 @@ public static class BuildSamTestScene
         StopAt(route[2], fog32);
         RestLight(root, route[route.Count - 1].position);
 
-        // The camera stops short of the next fog until a section is through, so the bird cannot clear it early.
-        Gate(root, fog31, 16f);
-        Gate(root, fog32, 34f);
+        // When the baby nears a fog section, the camera eases onto it until the section is through.
+        // Each wall is just past the section's exit, so the bird can lead the baby out but cannot clear the next fog early.
+        Zone(root, fog31, new Vector3(0f, 0f, 4f), new Vector3(0f, 0f, 11.5f), new Vector2(6f, 9f), 19f);
+        Zone(root, fog32, new Vector3(0f, 0f, 18.5f), new Vector3(0f, 0f, 28f), new Vector2(6f, 13f), 37f);
 
+        // The road covers every path tile, dead ends included: x -6.25 .. 7.25, z -2 .. 39.75.
         return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route,
-            new Bounds(new Vector3(0f, 0f, 18.75f), new Vector3(8f, 1f, 37.5f)));
+            new Bounds(new Vector3(0.5f, 0f, 18.875f), new Vector3(13.5f, 1f, 41.75f)));
     }
 
     // The sunlit spot at the end of a route: a narrow shaft of light, like a portal.
@@ -295,14 +299,14 @@ public static class BuildSamTestScene
         tile.layer = groundLayer;
     }
 
-    static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, Bounds cameraArea)
+    static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, Bounds roadArea)
     {
         var stage = root.AddComponent<Stage>();
         stage.babyStart = Child(root, "BabyStart", babyStart).transform;
         stage.birdStart = Child(root, "BirdStart", birdStart).transform;
         stage.route = route;
         stage.birdAltitude = BirdAltitude;
-        stage.area = cameraArea;
+        stage.area = roadArea;
         return stage;
     }
 
@@ -425,12 +429,21 @@ public static class BuildSamTestScene
         return fader;
     }
 
-    // The camera cannot move past z until the blocker opens.
-    static void Gate(GameObject parent, PathBlocker blocker, float z)
+    // Once the baby reaches the trigger, the camera stays inside the area until the blocker opens.
+    // Until then the bird cannot fly past wallZ either.
+    static void Zone(GameObject parent, PathBlocker blocker, Vector3 trigger, Vector3 areaCenter, Vector2 areaSize, float wallZ)
     {
-        GameObject gateObject = Child(parent, $"CameraGate_{blocker.name}", new Vector3(parent.transform.position.x, 0f, z));
-        var gate = gateObject.AddComponent<CameraGate>();
-        Set(gate, so => so.FindProperty("blocker").objectReferenceValue = blocker);
+        GameObject zoneObject = Child(parent, $"CameraZone_{blocker.name}", areaCenter);
+        GameObject triggerObject = Child(zoneObject, "Trigger", trigger);
+        GameObject wallObject = Child(zoneObject, "BirdWall", new Vector3(areaCenter.x, 0f, wallZ));
+        var zone = zoneObject.AddComponent<CameraZone>();
+        Set(zone, so =>
+        {
+            so.FindProperty("blocker").objectReferenceValue = blocker;
+            so.FindProperty("trigger").objectReferenceValue = triggerObject.transform;
+            so.FindProperty("areaSize").vector2Value = areaSize;
+            so.FindProperty("wall").objectReferenceValue = wallObject.transform;
+        });
     }
 
     static BabyRoute Route(GameObject parent, params Vector3[] points)
