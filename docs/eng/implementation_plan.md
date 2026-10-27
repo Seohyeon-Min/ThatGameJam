@@ -65,7 +65,7 @@ Names are suggestions. Each component does one thing.
 | `BabyRoute` | The path the baby walks. A list of points |
 | `StopPoint` | A spot on the path where the baby stops. Holds which obstacle it waits for and in what pose |
 | `NaturalTimer` | Time until natural resolution, 3-step signals, resolution. All five points in the §3.2 table use it |
-| `RestArea` | The Sunlit Rest Area. When the baby arrives, starts falling asleep, the seasonal effect, and the transition |
+| Sunlit Rest Area | The last point of the baby's path (`BabyRoute`) and the light on it. When the baby reaches the last point, it falls asleep and raises `ReachedRest`. There is no separate component or section for it (ADR 0006) |
 | `GameTuning` | A ScriptableObject that holds time and speed values (`Assets/04_Data/`) |
 | Stage devices | `WingUmbrella`, `LeaningLog`, `SnowBranch`, `RabbitFamily`, `FogField`, `FogTrail`, `FogAnimal`, `HiddenObstacle`, `CloudCover`, `Ending`, seasonal effects |
 | `DevTools` | For development. Fast-forward time, skip stages. Turned off in release builds |
@@ -83,7 +83,7 @@ GameFlow ──start──▶ Stage ──▶ Baby (placed asleep)
                                │ bird solves it (byBird) or time runs out (byNature)
                                ▼
                Baby reacts (looks up if byBird) → walks the next path
-                               │ reach RestArea
+                               │ reach the end of the path (Sunlit Rest Area)
                                ▼
                fall asleep → seasonal effect → GameFlow switches to the next Stage
 ```
@@ -130,7 +130,7 @@ Each stage is a prefab. That way several people can build different stages in th
 |---|---|---|
 | `Sleeping` | Stage start, arrival at the Sunlit Rest Area | Cry, or the wake-up timer ends |
 | `Waking` | Waking up | The reaction (look up or look around) animation ends |
-| `Walking` | Starts walking, obstacle resolved | Reaches a `StopPoint` or `RestArea` |
+| `Walking` | Starts walking, obstacle resolved | Reaches a `StopPoint` or the end of the path |
 | `Waiting` | Reaches a `StopPoint`. The `StopPoint` sets the pose: standing, crouching (rabbits), sitting (resting stone) | The device's `Resolved` |
 | `Reacting` | `Resolved(byBird: true)`. Looks up at the bird. With the rabbits, peeks at them first and then looks up | The reaction animation ends |
 
@@ -169,7 +169,8 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 
 ### 4.6 Sunlit Rest Area, Stage Transition, Game Flow (§10, §11)
 
-- When the baby reaches the `RestArea`: the baby falls asleep → the stage's seasonal effect plays and the game waits for it to finish → `GameFlow` runs the transition.
+- The Sunlit Rest Area is not a special section (ADR 0006). Put one portal-like light at the end of the baby's path, right after the stage's last device. Do not build more path or ground past it.
+- When the baby reaches the end of the path: the baby falls asleep → the stage's seasonal effect plays and the game waits for it to finish → `GameFlow` runs the transition.
 - Transition: cover the screen → move the baby and the bird to the next stage's start positions, change the camera, change the bird's altitude → uncover the screen → the baby is `Sleeping`.
 - The light of the Sunlit Rest Area (a gap in the clouds and sunlight) is art work (§16). The code only turns it on and off.
 - The Sunlit Rest Area in the last stage starts off. It turns on when the clouds are broken through or part (§10.3, 4.13).

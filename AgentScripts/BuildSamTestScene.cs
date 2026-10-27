@@ -82,7 +82,8 @@ public static class BuildSamTestScene
         return scenePath;
     }
 
-    // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream, 1-3 sunlit rest area. The road runs along +Z.
+    // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream; the stage ends in the sunlit spot right after it.
+    // The road runs along +Z.
     static Stage BuildStage1(GameObject treePrefab)
     {
         var root = new GameObject("Stage1");
@@ -92,7 +93,7 @@ public static class BuildSamTestScene
 
         Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow);     // z -2 .. 8
         Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 28.25f), 11.5f, snow); // z 22.5 .. 34
+        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow);  // z 22.5 .. 27
         Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water);
         Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water); // z 20 .. 22.5
 
@@ -104,19 +105,18 @@ public static class BuildSamTestScene
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
 
-        GameObject restLight = Primitive(PrimitiveType.Cylinder, "RestArea", new Vector3(0f, 3f, 30f), new Vector3(3f, 3f, 3f),
-            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), root);
-        Object.DestroyImmediate(restLight.GetComponent<Collider>());
 
         // Only on the far side of the road, so they do not hide the road from the camera.
-        foreach (float z in new[] { 2f, 15f, 28f })
+        foreach (float z in new[] { 2f, 15f, 24f })
             PlaceTree(treePrefab, root, new Vector3(-4.5f, 0f, z), 90f);
 
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
             new Vector3(0f, 0f, 6.8f), new Vector3(0f, 0.6f, 8f), new Vector3(0f, 0.6f, 12f), new Vector3(0f, 0f, 13f),
             new Vector3(0f, 0f, 19f), new Vector3(0f, 0.6f, 20.2f), new Vector3(0f, 0.6f, 22.7f), new Vector3(0f, 0f, 23.5f),
-            new Vector3(0f, 0f, 30f));
+            new Vector3(0f, 0f, 25f));
+        // The sunlit spot is not a section of its own: the stage ends in it right after the last device (ADR 0006).
+        RestLight(root, route[route.Count - 1].position);
         StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
@@ -124,7 +124,7 @@ public static class BuildSamTestScene
         Gate(root, leaningLog, 19f);
 
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(0f, 0f, 16f), new Vector3(6f, 1f, 32f)));
+            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(6f, 1f, 25f)));
     }
 
     // Just a start and a rest area, to see the transition from stage 1.
@@ -133,9 +133,7 @@ public static class BuildSamTestScene
         var root = new GameObject("Stage2");
         root.transform.position = new Vector3(60f, 0f, 0f);
         Ground(root, "Bank", new Vector3(60f, 0f, 5f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)));
-        GameObject restLight = Primitive(PrimitiveType.Cylinder, "RestArea", new Vector3(60f, 3f, 9f), new Vector3(3f, 3f, 3f),
-            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), root);
-        Object.DestroyImmediate(restLight.GetComponent<Collider>());
+        RestLight(root, new Vector3(60f, 0f, 9f));
         BabyRoute route = Route(root, new Vector3(60f, 0f, 4f), new Vector3(60f, 0f, 9f));
         return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route,
             new Bounds(new Vector3(60f, 0f, 5f), new Vector3(6f, 1f, 10f)));
@@ -162,7 +160,7 @@ public static class BuildSamTestScene
         HiddenRock(root, new Vector3(3f, 0f, 10f), rock);
 
         // 3-2
-        Vector3[] path32 = { new(0f, 0f, 20f), new(3f, 0f, 23f), new(3f, 0f, 27f), new(-2f, 0f, 30f), new(-2f, 0f, 34f), new(0f, 0f, 36f), new(0f, 0f, 41f) };
+        Vector3[] path32 = { new(0f, 0f, 20f), new(3f, 0f, 23f), new(3f, 0f, 27f), new(-2f, 0f, 30f), new(-2f, 0f, 34f), new(0f, 0f, 36f), new(0f, 0f, 38.5f) };
         PathTiles(root, path32, snow);
         PathTile(root, new Vector3(3f, 0f, 27f), new Vector3(6f, 0f, 30f), snow);
         HiddenRock(root, new Vector3(5.2f, 0f, 29.2f), rock);
@@ -175,21 +173,27 @@ public static class BuildSamTestScene
             new[] { new Vector3(0f, 0f, 20f), new Vector3(3f, 0f, 23f), new Vector3(3f, 0f, 27f), new Vector3(-2f, 0f, 30f), new Vector3(-2f, 0f, 34f) }, new Vector3(0f, 0f, 36f),
             new[] { new Vector3(3f, 0f, 25f), new Vector3(-2f, 0f, 32f) });
 
-        GameObject restLight = Primitive(PrimitiveType.Cylinder, "RestArea", new Vector3(0f, 3f, 39f), new Vector3(3f, 3f, 3f),
-            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), root);
-        Object.DestroyImmediate(restLight.GetComponent<Collider>());
 
         BabyRoute route = Route(root,
-            new Vector3(0f, 0f, 5.5f), new Vector3(0f, 0f, 18f), new Vector3(0f, 0f, 19.5f), new Vector3(0f, 0f, 36f), new Vector3(0f, 0f, 39f));
+            new Vector3(0f, 0f, 5.5f), new Vector3(0f, 0f, 18f), new Vector3(0f, 0f, 19.5f), new Vector3(0f, 0f, 36f), new Vector3(0f, 0f, 37.5f));
         StopAt(route[0], fog31);
         StopAt(route[2], fog32);
+        RestLight(root, route[route.Count - 1].position);
 
         // The camera stops short of the next fog until a section is through, so the bird cannot clear it early.
         Gate(root, fog31, 16f);
         Gate(root, fog32, 34f);
 
         return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route,
-            new Bounds(new Vector3(0f, 0f, 19.5f), new Vector3(8f, 1f, 39f)));
+            new Bounds(new Vector3(0f, 0f, 18.75f), new Vector3(8f, 1f, 37.5f)));
+    }
+
+    // The sunlit spot at the end of a route: a narrow shaft of light, like a portal.
+    static void RestLight(GameObject parent, Vector3 position)
+    {
+        GameObject light = Primitive(PrimitiveType.Cylinder, "SunlitSpot", position + Vector3.up * 3f, new Vector3(1.6f, 3f, 1.6f),
+            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), parent);
+        Object.DestroyImmediate(light.GetComponent<Collider>());
     }
 
     static void StopAt(Transform point, PathBlocker blocker)
