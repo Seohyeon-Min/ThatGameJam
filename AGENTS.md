@@ -10,7 +10,7 @@
 - 목표 플랫폼은 웹 브라우저다. 마우스 휠은 값의 크기 대신 방향만 쓴다. 휠 값의 크기가 브라우저마다 다르기 때문이다.
 
 ## 씬과 폴더
-- `Main.unity`는 건드리지 않는다. 개인 테스트 씬 `Assets/00_Scenes/<이름>_Test.unity`에서 작업한다.
+- 개인 테스트 씬 `Assets/00_Scenes/<이름>_Test.unity`에서 작업한다.
 - 폴더 용도: `00_Scenes` 씬, `01_Arts` 아트와 머티리얼, `02_Scripts` 스크립트, `03_Prefabs` 프리팹, `04_Data` 데이터, `05_Sounds` 사운드.
 - 오브젝트를 여러 개 만드는 작업은 `AgentScripts/`(Assets 밖)에 빌더 스크립트로 둔다. 실행은 `unity command script run --file ... --entry ...`로 한다.
 
