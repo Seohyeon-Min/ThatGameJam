@@ -28,7 +28,8 @@ public class GameTuning : ScriptableObject
     [Header("Bird")]
     public float birdSpeed = 6f;
     public float birdAltitudeSpeed = 3f;
-    public float birdPerchDuration = 0.3f;
+    // Arriving at a perch until perched: the Bird_Landing clip's GripComplete event, when the toes have gripped.
+    public float birdPerchDuration = 1.2f;
     public float birdCryCooldown = 0.8f;
 
     [Header("Flow")]

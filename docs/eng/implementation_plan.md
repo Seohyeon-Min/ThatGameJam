@@ -111,7 +111,8 @@ Each stage is a prefab. That way several people can build different stages in th
 - While left click is held, the target point keeps updating (Q12). This is handy when drawing a path in the fog.
 - A small circle briefly shows where you clicked (Q13).
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
-- The wings are always spread during flight (§2.1). This is passed to art through the animator's `Flying` and `Perched` states.
+- The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only two values to the Animator: `Moving` and `Perched` (landing or perched). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it flaps; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
+- The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
 
 ### 4.2 Cry (§2.1, §9.3, §15.7)
 
@@ -385,6 +386,7 @@ Changes outside the plan:
 - In device zones the camera locks to a smaller range. The baby-based limit was removed. The bird stays on the road and cannot pass a wall until the device is solved (ADR 0007, 2026-10-27 work record 10)
 - The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
 - The dev time scale is 2x (work record 09)
+- The bird now uses the art's model and animations (2026-10-27 work record 11)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:

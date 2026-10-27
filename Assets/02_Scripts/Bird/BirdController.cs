@@ -5,8 +5,13 @@ using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
 // right-click cries. Flies at the current map's fixed altitude and stays inside the area the camera can show (BirdCamera).
+// The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
 {
+    static readonly int PerchedParam = Animator.StringToHash("Perched");
+    static readonly int MovingParam = Animator.StringToHash("Moving");
+
+    [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
     [SerializeField] Texture2D perchCursor;
     [SerializeField] Vector2 perchCursorHotspot;
@@ -111,6 +116,7 @@ public class BirdController : MonoBehaviour
         if (cryAction.WasPressedThisFrame() && Time.time >= nextCryTime)
             Cry();
 
+        Vector3 before = transform.position;
         switch (state)
         {
             case State.Flying: Fly(); break;
@@ -118,6 +124,9 @@ public class BirdController : MonoBehaviour
             case State.Landing: Land(); break;
             case State.Perched: transform.position = perch.PerchPoint.position; break;
         }
+        // Glides while it moves and flaps while it hovers in place.
+        animator.SetBool(MovingParam, transform.position != before);
+        animator.SetBool(PerchedParam, state == State.Landing || state == State.Perched);
     }
 
     void Click(RaycastHit hit, Perchable hovered)

@@ -1,6 +1,7 @@
 using Unity.Cinemachine;
 using Unity.Cinemachine.TargetTracking;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,6 +16,15 @@ public static class BuildSamTestScene
     const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
     const string TreePrefabPath = "Assets/03_Prefabs/Tree.prefab";
+    const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
+    const string BirdModelPrefabPath = "Assets/03_Prefabs/Bird-Animated.prefab";
+    const string BirdAnimatorPath = "Assets/01_Arts/Models/Bird/Bird.controller";
+    // Wingspan about 2.2 (5.4 in the model), next to the baby's height of 1, so it reads from the quarter-view camera.
+    const float BirdModelScale = 0.4f;
+    // Where the toes are in the model while perched (Bird_PerchIdle), in model space.
+    static readonly Vector3 BirdModelPerchedToes = new(0f, 0.38f, -1.07f);
+    // Seconds of gliding between single wingbeats. Less than the Bird_Glide clip (2.5).
+    const float BirdGlideFlapInterval = 2f;
     const float BirdAltitude = 2.5f;
     // Seen from behind-right of the road, so the +Z road runs from lower-left to upper-right on screen (director's sketch).
     static readonly Vector3 CameraOffset = new(10f, 10f, -10f);
@@ -325,7 +335,8 @@ public static class BuildSamTestScene
         Object.DestroyImmediate(snowCap.GetComponent<Collider>());
 
         GameObject perchPoint = Child(pivot, "PerchPoint", Vector3.zero);
-        perchPoint.transform.localPosition = new Vector3(0f, LeaningLogLength + 0.3f, 0f);
+        // On the snow cap: the bird's feet stand here.
+        perchPoint.transform.localPosition = new Vector3(0f, LeaningLogLength + 0.15f, 0f);
         var top = trunk.AddComponent<Perchable>();
         Set(top, so => so.FindProperty("perchPoint").objectReferenceValue = perchPoint.transform);
 
@@ -374,13 +385,19 @@ public static class BuildSamTestScene
         return baby;
     }
 
+    // The bird model from the art (Assets/03_Prefabs/Bird-Animated.prefab) under the controller. The controller's transform is
+    // the feet: the model is turned to face +Z (it faces -Z) and shifted so its perched toes sit on that point.
     static BirdController BuildBird()
     {
-        GameObject bird = Primitive(PrimitiveType.Sphere, "Bird", Vector3.zero, Vector3.one * 0.5f, Mat("Bird", Color.white), null);
-        Object.DestroyImmediate(bird.GetComponent<Collider>());
-        GameObject beak = Primitive(PrimitiveType.Cube, "Beak", Vector3.zero, new Vector3(0.3f, 0.3f, 0.6f), Mat("Beak", new Color(1f, 0.75f, 0.2f)), bird);
-        beak.transform.localPosition = new Vector3(0f, 0f, 0.55f);
-        Object.DestroyImmediate(beak.GetComponent<Collider>());
+        var bird = new GameObject("Bird");
+        var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BirdModelPrefabPath);
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab, bird.transform);
+        model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        model.transform.localScale = Vector3.one * BirdModelScale;
+        model.transform.localPosition = -(model.transform.localRotation * BirdModelPerchedToes) * BirdModelScale;
+        var animator = model.GetComponent<Animator>();
+        animator.runtimeAnimatorController = BuildBirdAnimator();
+        animator.applyRootMotion = false;
 
         GameObject ring = Primitive(PrimitiveType.Cylinder, "ClickMarker", Vector3.zero, new Vector3(0.6f, 0.01f, 0.6f),
             Mat("ClickMarker", new Color(1f, 1f, 1f, 0.8f), transparent: true), null);
@@ -388,7 +405,99 @@ public static class BuildSamTestScene
         var marker = ring.AddComponent<ClickMarker>();
 
         var controller = bird.AddComponent<BirdController>();
-        Set(controller, so => so.FindProperty("clickMarker").objectReferenceValue = marker);
+        Set(controller, so =>
+        {
+            so.FindProperty("animator").objectReferenceValue = animator;
+            so.FindProperty("clickMarker").objectReferenceValue = marker;
+        });
+        return controller;
+    }
+
+    // Rebuilds the bird's Animator Controller from the model's clips, along the art's flow (its README):
+    // Glide <-> Flap -> Landing -> a random perch idle -> Takeoff -> Flap. While gliding, one wingbeat every BirdGlideFlapInterval. Parameters: Moving and Perched (BirdController),
+    // IdleVariant (RandomPerchIdle).
+    static AnimatorController BuildBirdAnimator()
+    {
+        var clips = new System.Collections.Generic.Dictionary<string, AnimationClip>();
+        foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(BirdModelPath))
+        {
+            if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
+                clips[clip.name] = clip;
+        }
+
+        // Rebuilt in place, so its GUID and the scenes' references to it stay.
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(BirdAnimatorPath)
+            ?? AnimatorController.CreateAnimatorControllerAtPath(BirdAnimatorPath);
+        foreach (AnimatorControllerParameter parameter in controller.parameters)
+            controller.RemoveParameter(parameter);
+        foreach (ChildAnimatorState child in controller.layers[0].stateMachine.states)
+            controller.layers[0].stateMachine.RemoveState(child.state);
+        controller.AddParameter("Moving", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("Perched", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("IdleVariant", AnimatorControllerParameterType.Int);
+        AnimatorStateMachine machine = controller.layers[0].stateMachine;
+
+        AnimatorState State(string clip, Vector2 position)
+        {
+            AnimatorState state = machine.AddState(clip.Replace("Bird_", ""), position);
+            state.motion = clips[clip];
+            return state;
+        }
+        AnimatorState flap = State("Bird_Flap", new Vector2(300f, 0f));
+        AnimatorState glide = State("Bird_Glide", new Vector2(300f, 120f));
+        AnimatorState glideFlap = State("Bird_Flap", new Vector2(300f, 240f));
+        glideFlap.name = "GlideFlap";
+        AnimatorState landing = State("Bird_Landing", new Vector2(600f, 60f));
+        AnimatorState[] idles =
+        {
+            State("Bird_PerchIdle", new Vector2(900f, -60f)),
+            State("Bird_PerchIdle_Preen", new Vector2(900f, 60f)),
+            State("Bird_PerchIdle_LeanBack", new Vector2(900f, 180f)),
+        };
+        AnimatorState takeoff = State("Bird_Takeoff", new Vector2(600f, 300f));
+        machine.defaultState = flap;
+
+        AnimatorStateTransition Go(AnimatorState from, AnimatorState to, float duration, float? exitTime = null)
+        {
+            AnimatorStateTransition transition = from.AddTransition(to);
+            transition.duration = duration;
+            transition.hasExitTime = exitTime.HasValue;
+            transition.exitTime = exitTime ?? 0f;
+            return transition;
+        }
+
+        // Flight changes only while not perched, so arriving at a perch (Moving and Perched change together) goes straight to Landing.
+        // A flight blend already under way is cut by the destination's Landing transition.
+        AnimatorStateTransition Fly(AnimatorStateTransition transition)
+        {
+            transition.AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+            transition.interruptionSource = TransitionInterruptionSource.Destination;
+            return transition;
+        }
+        Fly(Go(glide, flap, 0.25f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        Fly(Go(flap, glide, 0.25f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        // One Flap cycle, then back to gliding, which starts its clip again.
+        Fly(Go(glide, glideFlap, 0.25f, BirdGlideFlapInterval / clips["Bird_Glide"].length));
+        Fly(Go(glideFlap, glide, 0.25f, 1f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        Fly(Go(glideFlap, flap, 0.1f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        Go(glideFlap, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        // Glide ends in Landing's first pose; from Flap it blends.
+        Go(glide, landing, 0.1f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        Go(flap, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        // The perched poses match exactly, so these cut.
+        Go(landing, idles[0], 0f, 1f);
+        foreach (AnimatorState idle in idles)
+        {
+            idle.AddStateMachineBehaviour<RandomPerchIdle>();
+            for (int i = 0; i < idles.Length; i++)
+                Go(idle, idles[i], 0f, 1f).AddCondition(AnimatorConditionMode.Equals, i, "IdleVariant");
+            Go(idle, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+        }
+        Go(landing, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+        // Takeoff ends in Flap's first pose.
+        Go(takeoff, flap, 0.15f, 1f);
+
+        AssetDatabase.SaveAssets();
         return controller;
     }
 
