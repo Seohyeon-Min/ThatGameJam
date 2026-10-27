@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 // F1 fast time, F2 resolve the current wait naturally, F3 resolve it by bird, F4 next stage.
 public class DevTools : MonoBehaviour
 {
-    [SerializeField] float fastTimeScale = 4f;
+    [SerializeField] float fastTimeScale = 2f;
 
     void Awake()
     {

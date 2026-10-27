@@ -318,7 +318,7 @@ This matches the design doc's "about 3 min 20 s". The target is about 3 minutes 
 
 ### 4.18 Development Tools
 
-- Time scale (e.g. 4×), skip to the next stage, resolve the current device on its own, resolve the current device as if the bird solved it.
+- Time scale (2×), skip to the next stage, resolve the current device on its own, resolve the current device as if the bird solved it.
 - Draw paths, trails, `StopPoint`s, and the camera range with Gizmos.
 - Uses keyboard shortcuts, but they are on only in development builds and the Editor. Game controls stay just the two mouse buttons (§15.6).
 
