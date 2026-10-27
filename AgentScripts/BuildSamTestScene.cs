@@ -17,6 +17,8 @@ public static class BuildSamTestScene
     static readonly Vector3 CameraOffset = new(10f, 10f, -10f);
     // Section cameras aim this far above the road, so the leaning log's top stays in frame.
     const float CameraAimHeight = 1.5f;
+    // Short enough that its top (the perch) stays low in the fixed camera's frame, long enough to span stream 2 when fallen.
+    const float LeaningLogLength = 3.4f;
 
     static int groundLayer, interactableLayer, clickPlaneLayer;
 
@@ -77,9 +79,9 @@ public static class BuildSamTestScene
 
         Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow);     // z -2 .. 8
         Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 29f), 10f, snow);    // z 24 .. 34
+        Ground(root, "Bank_C", new Vector3(0f, 0f, 28.25f), 11.5f, snow); // z 22.5 .. 34
         Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water);
-        Water(root, "Stream_2", new Vector3(0f, 0f, 22f), 4f, water);
+        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water); // z 20 .. 22.5
 
         // 1-1: the fallen log is already a bridge; the stump shows it once stood.
         GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
@@ -100,14 +102,14 @@ public static class BuildSamTestScene
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
             new Vector3(0f, 0f, 6.8f), new Vector3(0f, 0.6f, 8f), new Vector3(0f, 0.6f, 12f), new Vector3(0f, 0f, 13f),
-            new Vector3(0f, 0f, 19f), new Vector3(0f, 0.6f, 20.2f), new Vector3(0f, 0.6f, 24f), new Vector3(0f, 0f, 25f),
+            new Vector3(0f, 0f, 19f), new Vector3(0f, 0.6f, 20.2f), new Vector3(0f, 0.6f, 22.7f), new Vector3(0f, 0f, 23.5f),
             new Vector3(0f, 0f, 30f));
         StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
         CameraZone zone1 = Zone(root, "Zone_1-1", new Vector3(0f, 0f, 5.5f), 15f);   // z -2 .. 13
-        Zone(root, "Zone_1-2", new Vector3(0f, 0f, 18.5f), 11f);                     // z 13 .. 24
-        Zone(root, "Zone_1-3", new Vector3(0f, 0f, 29f), 10f);                       // z 24 .. 34
+        Zone(root, "Zone_1-2", new Vector3(0f, 0f, 18f), 10f);                       // z 13 .. 23
+        Zone(root, "Zone_1-3", new Vector3(0f, 0f, 28.5f), 11f);                     // z 23 .. 34
 
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route, zone1);
     }
@@ -144,15 +146,15 @@ public static class BuildSamTestScene
         GameObject pivot = Child(root, "Pivot", basePosition);
         pivot.transform.localRotation = Quaternion.Euler(20f, 0f, 0f);
 
-        GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", Vector3.zero, new Vector3(0.6f, 2.5f, 0.6f), wood, pivot);
-        trunk.transform.localPosition = new Vector3(0f, 2.5f, 0f);
+        GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", Vector3.zero, new Vector3(0.6f, LeaningLogLength / 2f, 0.6f), wood, pivot);
+        trunk.transform.localPosition = new Vector3(0f, LeaningLogLength / 2f, 0f);
         trunk.layer = interactableLayer;
         GameObject snowCap = Primitive(PrimitiveType.Sphere, "SnowOnTop", Vector3.zero, new Vector3(0.7f, 0.35f, 0.7f), Mat("Snow", new Color(0.92f, 0.95f, 1f)), pivot);
-        snowCap.transform.localPosition = new Vector3(0f, 5f, -0.1f);
+        snowCap.transform.localPosition = new Vector3(0f, LeaningLogLength, -0.1f);
         Object.DestroyImmediate(snowCap.GetComponent<Collider>());
 
         GameObject perchPoint = Child(pivot, "PerchPoint", Vector3.zero);
-        perchPoint.transform.localPosition = new Vector3(0f, 5.3f, 0f);
+        perchPoint.transform.localPosition = new Vector3(0f, LeaningLogLength + 0.3f, 0f);
         var top = trunk.AddComponent<Perchable>();
         Set(top, so => so.FindProperty("perchPoint").objectReferenceValue = perchPoint.transform);
 
