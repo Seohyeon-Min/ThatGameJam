@@ -1,5 +1,5 @@
 // 잎 빌보드: 오브젝트 원점을 기준으로 Quad를 카메라 쪽으로 세운다.
-// Quad(로컬 XY 평면) 전용. Static Batching을 켜면 원점 정보가 사라져 동작하지 않는다.
+// Quad와 기본 Plane에 쓴다. Static Batching을 켜면 원점 정보가 사라져 동작하지 않는다.
 Shader "ThatGameJam/LeafBillboard"
 {
     Properties
@@ -26,15 +26,18 @@ Shader "ThatGameJam/LeafBillboard"
             half _Cutoff;
         CBUFFER_END
 
-        // 로컬 XY 정점을 카메라의 오른쪽/위 방향으로 펼친다.
+        // 로컬 정점을 카메라의 오른쪽/위 방향으로 펼친다.
+        // Quad는 XY, 기본 Plane은 XZ 평면이라 Y와 Z를 더해 둘 다 받는다.
         float3 BillboardPositionWS(float3 positionOS)
         {
             float3 originWS = TransformObjectToWorld(float3(0, 0, 0));
             float scaleX = length(float3(UNITY_MATRIX_M[0].x, UNITY_MATRIX_M[1].x, UNITY_MATRIX_M[2].x));
             float scaleY = length(float3(UNITY_MATRIX_M[0].y, UNITY_MATRIX_M[1].y, UNITY_MATRIX_M[2].y));
+            float scaleZ = length(float3(UNITY_MATRIX_M[0].z, UNITY_MATRIX_M[1].z, UNITY_MATRIX_M[2].z));
             float3 rightWS = UNITY_MATRIX_V[0].xyz;
             float3 upWS = UNITY_MATRIX_V[1].xyz;
-            return originWS + rightWS * positionOS.x * scaleX + upWS * positionOS.y * scaleY;
+            float up = positionOS.y * scaleY + positionOS.z * scaleZ;
+            return originWS + rightWS * positionOS.x * scaleX + upWS * up;
         }
         ENDHLSL
 
