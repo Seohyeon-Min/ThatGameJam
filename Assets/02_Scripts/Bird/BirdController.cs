@@ -4,7 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Flies at the current map's fixed altitude and stays inside the area the camera can show (BirdCamera).
+// right-click cries. Flies at the current map's fixed altitude and stays inside the current camera section's bounds.
 public class BirdController : MonoBehaviour
 {
     [SerializeField] ClickMarker clickMarker;
@@ -92,6 +92,7 @@ public class BirdController : MonoBehaviour
         bounds = area;
         if (state != State.Flying && !InBounds(perch.PerchPoint.position))
             LeavePerch();
+        target = Clamp(target);
     }
 
     void Update()
@@ -106,7 +107,7 @@ public class BirdController : MonoBehaviour
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
-            target = hit.point;
+            target = Clamp(hit.point);
 
         if (cryAction.WasPressedThisFrame() && Time.time >= nextCryTime)
             Cry();
@@ -131,10 +132,8 @@ public class BirdController : MonoBehaviour
         }
 
         LeavePerch();
-        // The target itself is not clamped: the bird presses against the edge of its area,
-        // and moves on as the area moves (the camera follows, or a gate opens).
-        target = hit.point;
-        clickMarker.Show(hit.point);
+        target = Clamp(hit.point);
+        clickMarker.Show(new Vector3(target.x, hit.point.y, target.z));
     }
 
     // Null unless the hit is a perchable Interactable whose perch point is inside the bounds.
@@ -161,15 +160,15 @@ public class BirdController : MonoBehaviour
             perch.Released -= LeavePerch;
         perch = null;
         if (state != State.Flying)
-            target = transform.position;
+            target = Clamp(transform.position);
         state = State.Flying;
     }
 
     void Fly()
     {
         Vector3 position = transform.position;
-        Vector3 flat = Clamp(Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), new Vector3(target.x, 0f, target.z),
-            GameTuning.Current.birdSpeed * Time.deltaTime));
+        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), new Vector3(target.x, 0f, target.z),
+            GameTuning.Current.birdSpeed * Time.deltaTime);
         float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
         Face(flat - position);
         transform.position = new Vector3(flat.x, y, flat.z);

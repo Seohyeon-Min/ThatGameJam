@@ -1,5 +1,4 @@
 using Unity.Cinemachine;
-using Unity.Cinemachine.TargetTracking;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -18,7 +17,7 @@ public static class BuildSamTestScene
     const float BirdAltitude = 2.5f;
     // Seen from behind-right of the road, so the +Z road runs from lower-left to upper-right on screen (director's sketch).
     static readonly Vector3 CameraOffset = new(10f, 10f, -10f);
-    // The camera aims this far above the followed point, so the leaning log's top stays in frame.
+    // Section cameras aim this far above the road, so the leaning log's top stays in frame.
     const float CameraAimHeight = 1.5f;
     // Short enough that its top (the perch) stays low in the fixed camera's frame, long enough to span stream 2 when fallen.
     const float LeaningLogLength = 3.4f;
@@ -60,8 +59,8 @@ public static class BuildSamTestScene
         bird.transform.position = stages[0].birdStart.position;
         baby.transform.SetPositionAndRotation(stages[0].babyStart.position, stages[0].babyStart.rotation);
 
-        Camera.main.gameObject.AddComponent<CinemachineBrain>();
-        BirdCamera birdCamera = BuildBirdCamera();
+        var brain = Camera.main.gameObject.AddComponent<CinemachineBrain>();
+        brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.EaseInOut, 1f);
 
         ScreenFader fader = BuildFader();
         var flow = new GameObject("GameFlow");
@@ -74,7 +73,7 @@ public static class BuildSamTestScene
             for (int i = 0; i < stages.Length; i++)
                 list.GetArrayElementAtIndex(i).objectReferenceValue = stages[i];
             so.FindProperty("fader").objectReferenceValue = fader;
-            so.FindProperty("birdCamera").objectReferenceValue = birdCamera;
+            so.FindProperty("brain").objectReferenceValue = brain;
         });
 
         EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), scenePath);
@@ -120,11 +119,10 @@ public static class BuildSamTestScene
         StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
-        // The camera stops at z 19 until the leaning log has fallen.
-        Gate(root, leaningLog, 19f);
+        CameraZone zone1 = Zone(root, "Zone_1-1", new Vector3(0f, 0f, 5.5f), 15f);   // z -2 .. 13
+        Zone(root, "Zone_1-2", new Vector3(0f, 0f, 20f), 14f);                       // z 13 .. 27, the leaning log and the sunlit spot
 
-        return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(6f, 1f, 25f)));
+        return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route, zone1);
     }
 
     // Just a start and a rest area, to see the transition from stage 1.
@@ -135,8 +133,8 @@ public static class BuildSamTestScene
         Ground(root, "Bank", new Vector3(60f, 0f, 5f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)));
         RestLight(root, new Vector3(60f, 0f, 9f));
         BabyRoute route = Route(root, new Vector3(60f, 0f, 4f), new Vector3(60f, 0f, 9f));
-        return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(60f, 0f, 5f), new Vector3(6f, 1f, 10f)));
+        CameraZone zone = Zone(root, "Zone_2", new Vector3(60f, 0f, 5f), 14f);
+        return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route, zone);
     }
 
     // The ground is only paths (correct ones and dead ends); everything else is dark water hidden under the fog.
@@ -180,12 +178,11 @@ public static class BuildSamTestScene
         StopAt(route[2], fog32);
         RestLight(root, route[route.Count - 1].position);
 
-        // The camera stops short of the next fog until a section is through, so the bird cannot clear it early.
-        Gate(root, fog31, 16f);
-        Gate(root, fog32, 34f);
+        // The 3-1 bird area reaches past the exit (z 18), so the bird can lead the baby all the way out.
+        CameraZone zone31 = Zone(root, "Zone_3-1", new Vector3(0f, 0f, 8.5f), 21f, 18f, 1.3f);  // z -2 .. 19
+        Zone(root, "Zone_3-2", new Vector3(0f, 0f, 30.5f), 23f, 18f, 1.5f);                     // z 19 .. 42
 
-        return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route,
-            new Bounds(new Vector3(0f, 0f, 18.75f), new Vector3(8f, 1f, 37.5f)));
+        return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route, zone31);
     }
 
     // The sunlit spot at the end of a route: a narrow shaft of light, like a portal.
@@ -295,14 +292,14 @@ public static class BuildSamTestScene
         tile.layer = groundLayer;
     }
 
-    static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, Bounds cameraArea)
+    static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, CameraZone firstZone)
     {
         var stage = root.AddComponent<Stage>();
         stage.babyStart = Child(root, "BabyStart", babyStart).transform;
         stage.birdStart = Child(root, "BirdStart", birdStart).transform;
         stage.route = route;
         stage.birdAltitude = BirdAltitude;
-        stage.area = cameraArea;
+        stage.firstZone = firstZone;
         return stage;
     }
 
@@ -388,24 +385,6 @@ public static class BuildSamTestScene
         return controller;
     }
 
-    // The point the camera follows, and one camera at a fixed quarter-view offset from it.
-    static BirdCamera BuildBirdCamera()
-    {
-        var point = new GameObject("CameraPoint");
-        var cameraObject = new GameObject("FollowCamera");
-        cameraObject.transform.SetPositionAndRotation(CameraOffset, Quaternion.LookRotation(-CameraOffset));
-        var followCamera = cameraObject.AddComponent<CinemachineCamera>();
-        followCamera.Target.TrackingTarget = point.transform;
-        var follow = cameraObject.AddComponent<CinemachineFollow>();
-        follow.FollowOffset = CameraOffset + Vector3.up * CameraAimHeight;
-        follow.TrackerSettings.BindingMode = BindingMode.WorldSpace;
-        follow.TrackerSettings.PositionDamping = Vector3.one * 0.4f;
-
-        var birdCamera = point.AddComponent<BirdCamera>();
-        Set(birdCamera, so => so.FindProperty("followCamera").objectReferenceValue = followCamera);
-        return birdCamera;
-    }
-
     static ScreenFader BuildFader()
     {
         var canvasObject = new GameObject("FadeCanvas", typeof(Canvas), typeof(CanvasScaler));
@@ -425,12 +404,27 @@ public static class BuildSamTestScene
         return fader;
     }
 
-    // The camera cannot move past z until the blocker opens.
-    static void Gate(GameObject parent, PathBlocker blocker, float z)
+    // A camera section covering `length` along Z around `center`: trigger for the baby, bird area, fixed camera.
+    static CameraZone Zone(GameObject parent, string name, Vector3 center, float length, float width = 12f, float cameraDistance = 1f)
     {
-        GameObject gateObject = Child(parent, $"CameraGate_{blocker.name}", new Vector3(parent.transform.position.x, 0f, z));
-        var gate = gateObject.AddComponent<CameraGate>();
-        Set(gate, so => so.FindProperty("blocker").objectReferenceValue = blocker);
+        GameObject zoneObject = Child(parent, name, center);
+        var trigger = zoneObject.AddComponent<BoxCollider>();
+        trigger.isTrigger = true;
+        trigger.center = new Vector3(0f, 1f, 0f);
+        trigger.size = new Vector3(width, 4f, length);
+
+        GameObject cameraObject = Child(zoneObject, "Camera", center + Vector3.up * CameraAimHeight + CameraOffset * cameraDistance);
+        cameraObject.transform.rotation = Quaternion.LookRotation(-CameraOffset);
+        var sectionCamera = cameraObject.AddComponent<CinemachineCamera>();
+        sectionCamera.Priority = 0;
+
+        var zone = zoneObject.AddComponent<CameraZone>();
+        Set(zone, so =>
+        {
+            so.FindProperty("sectionCamera").objectReferenceValue = sectionCamera;
+            so.FindProperty("birdArea").boundsValue = new Bounds(center + Vector3.up * 3f, new Vector3(width - 2f, 6f, length));
+        });
+        return zone;
     }
 
     static BabyRoute Route(GameObject parent, params Vector3[] points)
