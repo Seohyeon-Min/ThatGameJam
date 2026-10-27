@@ -4,12 +4,14 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Builds Assets/00_Scenes/Sam_Test.unity: a grey-box stage 1 (fallen log, leaning log, sunlit rest area)
-// and a minimal stage 2 to test the stage transition. Also rebuilds Assets/03_Prefabs/Tree.prefab (decoration only).
+// Builds the grey-box test scenes. Sam_Test.unity: stage 1 (fallen log, leaning log, sunlit rest area) and a minimal stage 2
+// to test the stage transition; also rebuilds Assets/03_Prefabs/Tree.prefab (decoration only). Sam_Fog_Test.unity: the fog stage.
 // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.Build
 public static class BuildSamTestScene
 {
     const string ScenePath = "Assets/00_Scenes/Sam_Test.unity";
+    const string FogScenePath = "Assets/00_Scenes/Sam_Fog_Test.unity";
+    const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
     const string TreePrefabPath = "Assets/03_Prefabs/Tree.prefab";
     const float BirdAltitude = 2.5f;
@@ -24,30 +26,40 @@ public static class BuildSamTestScene
 
     public static string Build()
     {
-        foreach (string unused in new[] { "PerchIndicator", "Obstacle", "Goal", "Road" })
-            AssetDatabase.DeleteAsset($"{MaterialFolder}/{unused}.mat");
+        NewScene();
+        GameObject treePrefab = BuildTreePrefab();
+        return Finish(ScenePath, BuildStage1(treePrefab), BuildStage2());
+    }
 
+    // Step 2: the fog stage alone (3-0 start, 3-1 half fog, 3-2 full fog, a rest area).
+    // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.BuildFog
+    public static string BuildFog()
+    {
+        NewScene();
+        return Finish(FogScenePath, BuildFogStage());
+    }
+
+    static void NewScene()
+    {
         groundLayer = LayerMask.NameToLayer("Ground");
         interactableLayer = LayerMask.NameToLayer("Interactable");
         clickPlaneLayer = LayerMask.NameToLayer("ClickPlane");
 
         EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-        GameObject treePrefab = BuildTreePrefab();
-
         var clickPlane = new GameObject("ClickPlane", typeof(BoxCollider)) { layer = clickPlaneLayer };
         clickPlane.transform.position = new Vector3(30f, -1f, 15f);
         clickPlane.GetComponent<BoxCollider>().size = new Vector3(400f, 0.1f, 400f);
+    }
 
-        Stage stage1 = BuildStage1(treePrefab);
-        Stage stage2 = BuildStage2();
-
+    // Adds the baby, the bird, the camera brain, the fader and the game flow over the given stages, and saves the scene.
+    static string Finish(string scenePath, params Stage[] stages)
+    {
         Baby baby = BuildBaby();
         BirdController bird = BuildBird();
-        bird.transform.position = stage1.birdStart.position;
-        baby.transform.SetPositionAndRotation(stage1.babyStart.position, stage1.babyStart.rotation);
+        bird.transform.position = stages[0].birdStart.position;
+        baby.transform.SetPositionAndRotation(stages[0].babyStart.position, stages[0].babyStart.rotation);
 
-        Camera camera = Camera.main;
-        var brain = camera.gameObject.AddComponent<CinemachineBrain>();
+        var brain = Camera.main.gameObject.AddComponent<CinemachineBrain>();
         brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.EaseInOut, 1f);
 
         ScreenFader fader = BuildFader();
@@ -56,17 +68,17 @@ public static class BuildSamTestScene
         flow.AddComponent<DevTools>();
         Set(gameFlow, so =>
         {
-            SerializedProperty stages = so.FindProperty("stages");
-            stages.arraySize = 2;
-            stages.GetArrayElementAtIndex(0).objectReferenceValue = stage1;
-            stages.GetArrayElementAtIndex(1).objectReferenceValue = stage2;
+            SerializedProperty list = so.FindProperty("stages");
+            list.arraySize = stages.Length;
+            for (int i = 0; i < stages.Length; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = stages[i];
             so.FindProperty("fader").objectReferenceValue = fader;
             so.FindProperty("brain").objectReferenceValue = brain;
         });
 
-        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), ScenePath);
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), scenePath);
         AssetDatabase.SaveAssets();
-        return ScenePath;
+        return scenePath;
     }
 
     // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream, 1-3 sunlit rest area. The road runs along +Z.
@@ -126,6 +138,155 @@ public static class BuildSamTestScene
         BabyRoute route = Route(root, new Vector3(60f, 0f, 4f), new Vector3(60f, 0f, 9f));
         CameraZone zone = Zone(root, "Zone_2", new Vector3(60f, 0f, 5f), 14f);
         return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route, zone);
+    }
+
+    // The ground is only paths (correct ones and dead ends); everything else is dark water hidden under the fog.
+    // 3-1: the fog starts at z 6; the left fork is the way (an animal sits on it), the right fork ends at a hidden rock.
+    // 3-2: fully fogged, a winding way with two dead ends (a rock, and open water).
+    static Stage BuildFogStage()
+    {
+        var root = new GameObject("Stage3_Fog");
+        Material snow = Mat("Snow", new Color(0.92f, 0.95f, 1f));
+        Material rock = Mat("Rock", new Color(0.45f, 0.45f, 0.48f));
+
+        GameObject water = Primitive(PrimitiveType.Cube, "Water", new Vector3(0f, -0.6f, 19f), new Vector3(30f, 0.2f, 50f), Mat("Water", new Color(0.35f, 0.55f, 0.8f)), root);
+        Object.DestroyImmediate(water.GetComponent<Collider>());
+
+        // 3-0 and 3-1
+        PathTile(root, new Vector3(0f, 0f, -2f), new Vector3(0f, 0f, 6f), snow);
+        Vector3[] path31 = { new(0f, 0f, 6f), new(-3f, 0f, 9f), new(-3f, 0f, 14f), new(0f, 0f, 17f), new(0f, 0f, 20f) };
+        PathTiles(root, path31, snow);
+        PathTile(root, new Vector3(0f, 0f, 6f), new Vector3(3f, 0f, 9f), snow);
+        PathTile(root, new Vector3(3f, 0f, 9f), new Vector3(3f, 0f, 12f), snow);
+        HiddenRock(root, new Vector3(3f, 0f, 10f), rock);
+
+        // 3-2
+        Vector3[] path32 = { new(0f, 0f, 20f), new(3f, 0f, 23f), new(3f, 0f, 27f), new(-2f, 0f, 30f), new(-2f, 0f, 34f), new(0f, 0f, 36f), new(0f, 0f, 41f) };
+        PathTiles(root, path32, snow);
+        PathTile(root, new Vector3(3f, 0f, 27f), new Vector3(6f, 0f, 30f), snow);
+        HiddenRock(root, new Vector3(5.2f, 0f, 29.2f), rock);
+        PathTile(root, new Vector3(-2f, 0f, 30f), new Vector3(-5f, 0f, 28.5f), snow);
+
+        FogSection fog31 = BuildFogSection(root, "Fog_3-1", new Vector3(0f, 0f, 11.5f), new Vector2(16f, 11f),
+            new[] { new Vector3(0f, 0f, 6f), new Vector3(-3f, 0f, 9f), new Vector3(-3f, 0f, 14f), new Vector3(0f, 0f, 17f) }, new Vector3(0f, 0f, 18f),
+            new[] { new Vector3(-3f, 0f, 10.5f) });
+        FogSection fog32 = BuildFogSection(root, "Fog_3-2", new Vector3(0f, 0f, 27.5f), new Vector2(16f, 15f),
+            new[] { new Vector3(0f, 0f, 20f), new Vector3(3f, 0f, 23f), new Vector3(3f, 0f, 27f), new Vector3(-2f, 0f, 30f), new Vector3(-2f, 0f, 34f) }, new Vector3(0f, 0f, 36f),
+            new[] { new Vector3(3f, 0f, 25f), new Vector3(-2f, 0f, 32f) });
+
+        GameObject restLight = Primitive(PrimitiveType.Cylinder, "RestArea", new Vector3(0f, 3f, 39f), new Vector3(3f, 3f, 3f),
+            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), root);
+        Object.DestroyImmediate(restLight.GetComponent<Collider>());
+
+        BabyRoute route = Route(root,
+            new Vector3(0f, 0f, 5.5f), new Vector3(0f, 0f, 18f), new Vector3(0f, 0f, 19.5f), new Vector3(0f, 0f, 36f), new Vector3(0f, 0f, 39f));
+        StopAt(route[0], fog31);
+        StopAt(route[2], fog32);
+
+        // The 3-1 bird area reaches past the exit (z 18), so the bird can lead the baby all the way out.
+        CameraZone zone31 = Zone(root, "Zone_3-1", new Vector3(0f, 0f, 8.5f), 21f, 18f, 1.3f);  // z -2 .. 19
+        Zone(root, "Zone_3-2", new Vector3(0f, 0f, 30.5f), 23f, 18f, 1.5f);                     // z 19 .. 42
+
+        return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route, zone31);
+    }
+
+    static void StopAt(Transform point, PathBlocker blocker)
+    {
+        StopPoint stop = point.gameObject.AddComponent<StopPoint>();
+        Set(stop, so => so.FindProperty("blocker").objectReferenceValue = blocker);
+    }
+
+    // A fog field with stacked layers, its timer, the authored correct path, the exit and the animals.
+    static FogSection BuildFogSection(GameObject parent, string name, Vector3 center, Vector2 size, Vector3[] correctPath, Vector3 exit, Vector3[] animals)
+    {
+        GameObject root = Child(parent, name, center);
+        var renderers = new Renderer[4];
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            GameObject layer = Primitive(PrimitiveType.Quad, $"FogLayer_{i}", center + Vector3.up * (0.15f + 0.35f * i), new Vector3(size.x, size.y, 1f), FogMaterial(), root);
+            layer.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            Object.DestroyImmediate(layer.GetComponent<Collider>());
+            renderers[i] = layer.GetComponent<Renderer>();
+        }
+        var field = root.AddComponent<FogField>();
+        Set(field, so =>
+        {
+            so.FindProperty("size").vector2Value = size;
+            SerializedProperty layers = so.FindProperty("layers");
+            layers.arraySize = renderers.Length;
+            for (int i = 0; i < renderers.Length; i++)
+                layers.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
+        });
+
+        var timer = root.AddComponent<NaturalTimer>();
+        Set(timer, so => so.FindProperty("kind").enumValueIndex = (int)NaturalTimerKind.FogSection);
+
+        GameObject path = Child(root, "CorrectPath", correctPath[0]);
+        for (int i = 0; i < correctPath.Length; i++)
+            Child(path, $"Point_{i}", correctPath[i]);
+        GameObject exitPoint = Child(root, "Exit", exit);
+
+        Material animalMat = Mat("Animal", new Color(0.55f, 0.45f, 0.35f));
+        Material glowMat = Mat("AnimalGlow", new Color(1f, 0.95f, 0.6f, 0.8f), transparent: true);
+        for (int i = 0; i < animals.Length; i++)
+        {
+            GameObject animal = Primitive(PrimitiveType.Sphere, $"Animal_{i}", animals[i] + Vector3.up * 0.2f, new Vector3(0.5f, 0.4f, 0.6f), animalMat, root);
+            Object.DestroyImmediate(animal.GetComponent<Collider>());
+            GameObject glow = Primitive(PrimitiveType.Sphere, "Glow", animals[i] + Vector3.up * 1.9f, Vector3.one * 0.5f, glowMat, animal);
+            glow.transform.localScale = Vector3.one * 1.2f;
+            Object.DestroyImmediate(glow.GetComponent<Collider>());
+            glow.SetActive(false);
+            var fogAnimal = animal.AddComponent<FogAnimal>();
+            Set(fogAnimal, so => so.FindProperty("glow").objectReferenceValue = glow);
+        }
+
+        var section = root.AddComponent<FogSection>();
+        Set(section, so =>
+        {
+            so.FindProperty("field").objectReferenceValue = field;
+            so.FindProperty("timer").objectReferenceValue = timer;
+            so.FindProperty("correctPath").objectReferenceValue = path.transform;
+            so.FindProperty("exit").objectReferenceValue = exitPoint.transform;
+        });
+        return section;
+    }
+
+    static Material FogMaterial()
+    {
+        var material = AssetDatabase.LoadAssetAtPath<Material>(FogMaterialPath);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("ThatGameJam/Fog"));
+            AssetDatabase.CreateAsset(material, FogMaterialPath);
+        }
+        // Four layers at 0.75 cover over 99 %, enough to hide the paths and rocks under full fog.
+        material.SetFloat("_Alpha", 0.75f);
+        material.SetColor("_Color", new Color(0.8f, 0.83f, 0.88f));
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
+    static void HiddenRock(GameObject parent, Vector3 position, Material material)
+    {
+        GameObject rock = Primitive(PrimitiveType.Sphere, "HiddenRock", position + Vector3.up * 0.3f, new Vector3(1.6f, 0.8f, 1.2f), material, parent);
+        rock.AddComponent<HiddenObstacle>();
+    }
+
+    static void PathTiles(GameObject parent, Vector3[] points, Material material)
+    {
+        for (int i = 1; i < points.Length; i++)
+            PathTile(parent, points[i - 1], points[i], material);
+    }
+
+    // A 2.5 m wide walkable strip from a to b, with its top at y = 0. Ends overlap so joints have no gaps.
+    static void PathTile(GameObject parent, Vector3 a, Vector3 b, Material material)
+    {
+        const float width = 2.5f;
+        Vector3 direction = b - a;
+        GameObject tile = Primitive(PrimitiveType.Cube, "Path", (a + b) * 0.5f + Vector3.down * 0.25f,
+            new Vector3(width, 0.5f, direction.magnitude + width), material, parent);
+        tile.transform.rotation = Quaternion.LookRotation(direction);
+        tile.layer = groundLayer;
     }
 
     static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, CameraZone firstZone)
@@ -241,15 +402,15 @@ public static class BuildSamTestScene
     }
 
     // A camera section covering `length` along Z around `center`: trigger for the baby, bird area, fixed camera.
-    static CameraZone Zone(GameObject parent, string name, Vector3 center, float length)
+    static CameraZone Zone(GameObject parent, string name, Vector3 center, float length, float width = 12f, float cameraDistance = 1f)
     {
         GameObject zoneObject = Child(parent, name, center);
         var trigger = zoneObject.AddComponent<BoxCollider>();
         trigger.isTrigger = true;
         trigger.center = new Vector3(0f, 1f, 0f);
-        trigger.size = new Vector3(12f, 4f, length);
+        trigger.size = new Vector3(width, 4f, length);
 
-        GameObject cameraObject = Child(zoneObject, "Camera", center + Vector3.up * CameraAimHeight + CameraOffset);
+        GameObject cameraObject = Child(zoneObject, "Camera", center + Vector3.up * CameraAimHeight + CameraOffset * cameraDistance);
         cameraObject.transform.rotation = Quaternion.LookRotation(-CameraOffset);
         var sectionCamera = cameraObject.AddComponent<CinemachineCamera>();
         sectionCamera.Priority = 0;
@@ -258,7 +419,7 @@ public static class BuildSamTestScene
         Set(zone, so =>
         {
             so.FindProperty("sectionCamera").objectReferenceValue = sectionCamera;
-            so.FindProperty("birdArea").boundsValue = new Bounds(center + Vector3.up * 3f, new Vector3(10f, 6f, length));
+            so.FindProperty("birdArea").boundsValue = new Bounds(center + Vector3.up * 3f, new Vector3(width - 2f, 6f, length));
         });
         return zone;
     }

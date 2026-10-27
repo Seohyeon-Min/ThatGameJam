@@ -237,7 +237,7 @@ This is the hardest and riskiest part. A prototype built separately from the oth
 **The bird's trail (`FogTrail`)**
 
 - Each time the bird moves a set distance (e.g. 0.5 m) over the fog section, add one point. The point's height is the ground height, found by casting a ray down.
-- The trail must start from the baby. When the bird passes within a set distance of the baby (or the spot where the baby stopped), a new trail starts from then, and the old trail the baby has not walked yet is dropped. This "near" distance is the design's "check range for continuing the trail again" (§16).
+- The trail must start from the baby. When the baby has no trail left to follow and the bird passes within a set distance of it, a new trail starts from then. This "near" distance is the design's "check range for continuing the trail again" (§16). While the baby is still walking, the bird coming close does not cut the trail. A bird just hovering close to the baby, on the exit side, still leads the baby to the spot under it.
 - Loop removal (§9.2): if a new segment crosses an earlier segment, delete the points between the crossing points. It is a 2D segment intersection test on the XZ plane.
 
 **The baby following the trail**
@@ -257,7 +257,7 @@ This is the hardest and riskiest part. A prototype built separately from the oth
 - `NaturalTimer` about 30 seconds per section. Signals are the fog edge thins → sounds of hidden animals → the outline of the route shows through.
 - When time runs out, the fog slowly clears along the correct path, and the baby walks along the correct path.
 - Time runs continuously from when the baby first stops in front of the fog. It does not stop while the bird is drawing a trail (Q10).
-- When natural resolution comes, the baby drops the remaining trail, goes to the nearest correct path point, and walks along the correct path (Q10).
+- When natural resolution comes, the baby drops the remaining trail, goes to the nearest correct path point, and walks along the correct path (Q10). If it is away from the correct path, it retraces the trail it walked until it is near the correct path, so it never cuts across water, and then joins it. On the correct path it never goes back; it heads for the end of the nearest segment.
 
 ### 4.13 3-3 — Cliff and Breaking Through the Clouds (§9.6)
 

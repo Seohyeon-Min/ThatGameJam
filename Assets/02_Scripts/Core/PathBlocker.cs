@@ -13,6 +13,9 @@ public abstract class PathBlocker : MonoBehaviour
     // The timer that resolves this blocker, for dev tools. Null if there is none.
     public abstract NaturalTimer Timer { get; }
 
+    // Whether the baby looks up at the bird after the bird opened this (design doc §4.2).
+    public virtual bool LookUpWhenOpenedByBird => true;
+
     // The baby has stopped in front of this blocker.
     public abstract void BeginWaiting();
 

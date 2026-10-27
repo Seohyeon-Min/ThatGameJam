@@ -83,7 +83,7 @@ public class Baby : CryListener
                 yield return new WaitUntil(() => blocker.IsOpen);
                 CurrentBlocker = null;
             }
-            if (blocker.OpenedByBird)
+            if (blocker.OpenedByBird && blocker.LookUpWhenOpenedByBird)
             {
                 State = BabyState.Reacting;
                 yield return LookUp(tuning.babyLookUpDuration);
@@ -97,14 +97,21 @@ public class Baby : CryListener
 
     IEnumerator WalkTo(Vector3 target)
     {
-        while (transform.position != target)
-        {
-            Vector3 position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.babyWalkSpeed * Time.deltaTime);
-            TurnToward(target - transform.position);
-            transform.position = position;
+        while (!StepToward(target))
             yield return null;
-        }
     }
+
+    // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
+    public bool StepToward(Vector3 target)
+    {
+        pose = Pose.Stand;
+        TurnToward(target - transform.position);
+        transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.babyWalkSpeed * Time.deltaTime);
+        return transform.position == target;
+    }
+
+    // Standing still while a blocker leads the baby.
+    public void StandStill() => pose = Pose.Stand;
 
     // Turns the body toward the bird; the head tilt is part of the pose.
     IEnumerator LookUp(float duration)

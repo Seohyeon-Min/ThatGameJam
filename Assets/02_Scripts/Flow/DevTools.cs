@@ -45,6 +45,6 @@ public class DevTools : MonoBehaviour
             ? $"{timer.Elapsed:0.0}/{timer.Duration:0}s  signal {timer.SignalLevel}"
             : "-";
         GUI.Label(new Rect(10f, 10f, 500f, 22f),
-            $"x{Time.timeScale:0}  {Baby.Instance.State}  {timerText}   [F1 speed  F2 natural  F3 bird  F4 skip]");
+            $"x{Time.timeScale:0.##}  {Baby.Instance.State}  {timerText}   [F1 speed  F2 natural  F3 bird  F4 skip]");
     }
 }
