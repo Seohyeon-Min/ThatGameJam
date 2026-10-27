@@ -19,7 +19,7 @@ So the code builds a shared framework first. Each stage's devices are small comp
 | Baby | Walk along the path, stop, react (look up), sleep, wake up | §2.2, §2.4, §4 |
 | Natural resolution timer | Waiting time, 3-step signals, "did the bird solve it / did it resolve on its own" | §3 |
 | Sunlit Rest Area and stage transition | Falling asleep, seasonal effect, screen transition, placement for the next stage | §10, §11 |
-| Camera | Follow in the intro, switch between fixed cameras per section | §2.5 |
+| Camera | A camera that follows the bird. Limit lines in front of devices, a range that keeps the baby on screen | §2.5, ADR 0005 |
 
 | Stage device | Design basis |
 |---|---|
@@ -54,10 +54,10 @@ Names are suggestions. Each component does one thing.
 | Component | What it does |
 |---|---|
 | `GameFlow` | Runs the order intro → tutorial → stages 1·2·3 → ending. Knows the current stage |
-| `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, bird movement range, camera positions, Sunlit Rest Area, seasonal effect |
+| `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, camera range, Sunlit Rest Area, seasonal effect |
 | `ScreenFader` | Covers and uncovers the screen during stage transitions |
-| Camera | Cinemachine. One fixed `CinemachineCamera` per section, and one camera that follows the bird in the intro. Switching uses priority |
-| `CameraZone` | A trigger that changes the camera position when the baby enters |
+| `BirdCamera` | Decides the point the camera follows. It follows the bird, but does not go past the stage range, the distance that keeps the baby on screen, or a `CameraGate` that is still closed. The bird's movement range is also set around this point. One Cinemachine camera follows this point (ADR 0005) |
+| `CameraGate` | The limit line beyond a device. Until the device is solved, the camera cannot cross this line (ADR 0005) |
 | `BirdController` | Click movement, perching, cry, altitude |
 | `Perchable` | An object the bird can perch on. Fires a `Perched` event when the bird lands. Uses the current `PerchPoint` as the perch position |
 | `CryListener` | The shared part of things that react to the cry. Has a reaction distance. Used by the baby, fog animals, and the migratory birds in the ending |
@@ -107,7 +107,7 @@ Each stage is a prefab. That way several people can build different stages in th
   - `ClickPlane`: a large invisible plane placed where there is no ground, such as beyond the cliff (§2.3). The baby's movement checks ignore this layer.
 - Clicking the ground while perched makes the bird take off.
 - The bird is not pushed or pulled by physics. It flies over terrain and obstacles (§2.1), so it is moved directly to the target point. The current Rigidbody velocity approach is dropped.
-- The bird cannot leave the view of the current section's camera (Q3). Each section has a bounds box that fits the screen, and the clicked target point is clamped inside it. In the intro the camera follows the bird, so the whole intro map is the range. In 3-3, the area above and beyond the cliff is included in the range.
+- The bird cannot leave the screen (Q3). The bird's position is kept inside a box around the point the camera follows. The clicked target point is not clamped. So the bird stays at the edge of the screen, and keeps going when the camera follows or a limit line opens (ADR 0005). In 3-3, the area above and beyond the cliff is included in the range.
 - While left click is held, the target point keeps updating (Q12). This is handy when drawing a path in the fog.
 - A small circle briefly shows where you clicked (Q13).
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
@@ -176,16 +176,18 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 
 ### 4.7 Camera (§2.5)
 
-- Use Cinemachine (Q2). Put a `CinemachineBrain` on the main camera, and a `CinemachineCamera` at each camera position. The Brain moves smoothly to the camera with the highest priority. The package (`com.unity.cinemachine`) is added in step 1.
-- Inside a stage, each section has one fixed `CinemachineCamera`. When the baby enters a `CameraZone` trigger, that section camera's priority is raised.
-- In the intro, a zoomed-out camera follows the bird. When the bird comes within a set distance of the baby, it switches to the camera at the assigned position (§5.2 Phase 2).
+- The camera follows the bird (ADR 0005). The user changed the "fixed camera per section" in design doc §2.5.
+- Use Cinemachine (Q2). The main camera has a `CinemachineBrain`. One `CinemachineCamera`, fixed at the quarter-view angle, follows one point with `CinemachineFollow`.
+- `BirdCamera` decides that point every frame. It starts at the bird's position, then is clamped to the stage range, to within a set distance of the baby (so the baby stays on screen), and to before the `CameraGate` of any device that is not yet solved. When a device is solved, its limit opens at once.
+- On a stage transition, the camera cuts to the new stage.
+- In the intro, a zoomed-out camera follows the bird. When the bird comes within a set distance of the baby, it switches to the stage camera (§5.2 Phase 2).
 - The camera for the 3-3 climb section is not yet decided in the design (§16). As a first try, use a camera that rises to follow the bird's height.
 
 ### 4.8 Intro (§5)
 
 - Start state: snow is falling. The baby is asleep. The camera is zoomed out. The bird is high up, near the camera.
 - There is no control guide UI (§5.2 Phase 1).
-- When the bird gets close to the baby and the camera switches to the fixed position, the bird also comes down from the intro's high altitude to the stage altitude (Q8).
+- When the bird gets close to the baby and the intro camera switches to the stage camera, the bird also comes down from the intro's high altitude to the stage altitude (Q8).
 - Wake up → cutscene → baby starts walking → transition on entering the tutorial section (§5.2 Phase 4).
 
 ### 4.9 Tutorial Snow Section and Wing Umbrella (§6)
@@ -316,7 +318,7 @@ This matches the design doc's "about 3 min 20 s". The target is about 3 minutes 
 ### 4.18 Development Tools
 
 - Time scale (e.g. 4×), skip to the next stage, resolve the current device on its own, resolve the current device as if the bird solved it.
-- Draw paths, trails, `StopPoint`s, and camera positions with Gizmos.
+- Draw paths, trails, `StopPoint`s, and the camera range with Gizmos.
 - Uses keyboard shortcuts, but they are on only in development builds and the Editor. Game controls stay just the two mouse buttons (§15.6).
 
 ### 4.19 Things to Check in the Web Build
@@ -335,7 +337,7 @@ Most of the undecided items in Section 16 of the design doc are numbers or prese
 |---|---|---|
 | Q1 | Which scene is the shared game scene | `Main.unity`. Stages are built as prefabs and gathered in `Main.unity` |
 | Q2 | Should we add Cinemachine | Yes |
-| Q3 | Can the bird leave the fixed camera's view | No. Limit it to a bounds box that fits each section's screen. In 3-3, include the area above and beyond the cliff in the range |
+| Q3 | Can the bird leave the fixed camera's view | No. In 3-3, include the area above and beyond the cliff in the range. ADR 0005 changed the camera to follow the bird, and the bird cannot leave that view |
 | Q4 | When does natural resolution time start. Can the bird solve it before the baby arrives | From when the baby stops in front of that device. Solving first is allowed, and the baby still gives the help reaction |
 | Q5 | What happens to the bird when the log it perches on falls | When the log starts to fall, the bird takes off on its own and hovers right above |
 | Q6 | Show a marker when the mouse is over something the bird can perch on | Only change the cursor. Remove the current marker that blinks on approach |
@@ -371,5 +373,5 @@ Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3
 |---|---|
 | The fog section is the most complex. Trail, checks, and display are tangled together | Test it separately first as step 2. Keep one grid as the shared source for both checks and display |
 | Just waiting may be boring (§3.1) | Test while changing signal timing and durations directly in `GameTuning`. Run the whole game often with the dev time scale |
-| With fixed cameras, the bird leaves the screen or is hidden by trees | The bird cannot leave the section's view (Q3). Check hiding when choosing camera positions |
+| The bird leaves the screen or is hidden by trees | The bird cannot leave the screen (Q3, ADR 0005). Check hiding when choosing the camera angle and prop placement |
 | Web performance (particles, several transparent fog layers, texture updates) | Check 4.19 once, right after step 1 is done |

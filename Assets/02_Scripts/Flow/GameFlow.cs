@@ -1,5 +1,4 @@
 using System.Collections;
-using Unity.Cinemachine;
 using UnityEngine;
 
 // Runs the stages in order: places the baby and bird, and after the baby sleeps in the rest area,
@@ -10,7 +9,7 @@ public class GameFlow : MonoBehaviour
 
     [SerializeField] Stage[] stages;
     [SerializeField] ScreenFader fader;
-    [SerializeField] CinemachineBrain brain;
+    [SerializeField] BirdCamera birdCamera;
 
     int current;
     bool transitioning;
@@ -66,8 +65,7 @@ public class GameFlow : MonoBehaviour
         Baby.Instance.PlaceAsleep(stage.babyStart, stage.route);
         BirdController.Instance.Teleport(stage.birdStart.position);
         BirdController.Instance.SetAltitude(stage.birdAltitude, true);
-        stage.firstZone.Activate();
-        // Cut to the new stage's camera instead of blending across the world.
-        brain.ResetState();
+        // Also cuts the camera to the new stage instead of sweeping across the world.
+        birdCamera.SetStage(stage);
     }
 }
