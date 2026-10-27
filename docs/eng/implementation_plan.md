@@ -94,7 +94,7 @@ Between a device and the baby there is only one event: `Resolved(bool byBird)`. 
 
 All stages sit in one game scene, at separate places. A transition covers the screen, moves the baby and the bird to the next stage's start positions, and uncovers the screen. The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
 
-Each stage is a prefab. That way several people can build different stages in their own test scenes, and the shared scene only needs the prefabs placed. Scene file conflicts go down. The shared game scene is `Main.unity` (Q1). `AGENTS.md` currently has the rule "do not touch `Main.unity`". Before step 6, which gathers the stages in `Main.unity`, the team must decide whether to change this rule.
+Each stage is a prefab. That way several people can build different stages in their own test scenes, and the shared scene only needs the prefabs placed. Scene file conflicts go down. The shared game scene is `Main.unity` (Q1).
 
 ## 4. Implementation by System
 
