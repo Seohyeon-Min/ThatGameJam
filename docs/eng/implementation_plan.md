@@ -68,7 +68,7 @@ Names are suggestions. Each component does one thing.
 | Sunlit Rest Area | The last point of the baby's path (`BabyRoute`) and the light on it. When the baby reaches the last point, it falls asleep and raises `ReachedRest`. There is no separate component or section for it (ADR 0006) |
 | `GameTuning` | A ScriptableObject that holds time and speed values (`Assets/04_Data/`) |
 | Stage devices | `WingUmbrella`, `LeaningLog`, `SnowBranch`, `RabbitFamily`, `FogField`, `FogTrail`, `FogAnimal`, `HiddenObstacle`, `CloudCover`, `Ending`, seasonal effects |
-| `DevTools` | For development. Fast-forward time, skip stages. Turned off in release builds |
+| `DevTools` | For development. Fast-forward time, skip stages. A row of buttons at the top of the screen. Turned off in release builds |
 
 ### 3.2 Flow
 
@@ -322,9 +322,10 @@ This matches the design doc's "about 3 min 20 s". The target is about 3 minutes 
 
 ### 4.18 Development Tools
 
-- Time scale (2×), skip to the next stage, resolve the current device on its own, resolve the current device as if the bird solved it.
+- Time scale (each press goes 1× → 2× → 3× → 1×), skip to the next stage, resolve the current device on its own, resolve the current device as if the bird solved it.
+- The four are a row of buttons at the top centre of the screen. Hovering a button shows what it does. A click on the row does not move the bird. The keys F1 to F4 do the same.
 - Draw paths, trails, `StopPoint`s, the road range, and camera zones and triggers with Gizmos.
-- Uses keyboard shortcuts, but they are on only in development builds and the Editor. Game controls stay just the two mouse buttons (§15.6).
+- On only in development builds and the Editor. Game controls stay just the two mouse buttons (§15.6).
 
 ### 4.19 Things to Check in the Web Build
 
@@ -388,7 +389,7 @@ Changes outside the plan:
 - Camera zones lock when the bird, not the baby, crosses the trigger. The wall that stopped the bird was removed. The log zone's range was made much smaller (ADR 0008, 2026-10-27 work record 13)
 - The fog map (`Sam_Fog_Test`) is neither rebuilt nor tested until the basics are settled. When the user says the fog map work starts, it is rebuilt with the code of that time
 - The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
-- The dev time scale is 2x (work record 09)
+- The dev time scale cycles 1x, 2x, 3x by a button. The dev tools are a row of buttons at the top of the screen (2026-10-28 work record 05)
 - Roadside trees come in 4 kinds, each bare and leafy, told apart by colour for now. Trunks have branches forking upward. They are placed at random in two rows along both edges of the road, and neighbours differ in kind. Trees on the camera side may hide the road. Stage 1 uses the 4 bare kinds (2026-10-28 work records 01 to 03)
 - The hidden bird shows as a silhouette (2026-10-28 work record 03)
 - The bird perches on roadside tree branches and, idle for 2 s, goes to the nearest one. Q7 reversed (ADR 0009, 2026-10-28 work record 04)

@@ -112,7 +112,7 @@ public class BirdController : MonoBehaviour
         Perchable hovered = hasHit ? PerchableAt(hit) : null;
         ShowPerchCursor(hovered != null);
 
-        if (moveAction.WasPressedThisFrame() && hasHit)
+        if (moveAction.WasPressedThisFrame() && hasHit && !DevTools.Covers(pointAction.ReadValue<Vector2>()))
             Click(hit, hovered);
         else if (!moveAction.IsPressed())
             following = false;
