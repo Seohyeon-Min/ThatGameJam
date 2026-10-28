@@ -69,6 +69,7 @@ Names are suggestions. Each component does one thing.
 | `GameTuning` | A ScriptableObject that holds time and speed values (`Assets/04_Data/`) |
 | Stage devices | `WingUmbrella`, `LeaningLog`, `SnowBranch`, `RabbitFamily`, `FogField`, `FogTrail`, `FogAnimal`, `HiddenObstacle`, `CloudCover`, `Ending`, seasonal effects |
 | `DevTools` | For development. Fast-forward time, skip stages. A row of buttons at the top of the screen. Turned off in release builds |
+| `TreeGenerator` | Level tool. Scatters tree prefabs over areas. Generate and Clear buttons in the Inspector |
 
 ### 3.2 Flow
 
@@ -326,6 +327,7 @@ This matches the design doc's "about 3 min 20 s". The target is about 3 minutes 
 - The four are a row of buttons at the top centre of the screen. Hovering a button shows what it does. A click on the row does not move the bird. The keys F1 to F4 do the same.
 - Draw paths, trails, `StopPoint`s, the road range, and camera zones and triggers with Gizmos.
 - On only in development builds and the Editor. Game controls stay just the two mouse buttons (§15.6).
+- `TreeGenerator`: a tree placement tool attached to a scene object. The Inspector sets the prefab list, the areas (outlined in the Scene view), spacing, jitter, size range, random rotation, and seed. Generate removes the trees that generator made and places new ones. Clear removes only the trees that generator made. Ctrl+Z undoes both. The `Sam_Test` builder uses it too.
 
 ### 4.19 Things to Check in the Web Build
 
@@ -391,6 +393,7 @@ Changes outside the plan:
 - The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
 - The dev time scale cycles 1x, 2x, 3x by a button. The dev tools are a row of buttons at the top of the screen (2026-10-28 work record 05)
 - Roadside trees come in 4 kinds, each bare and leafy, told apart by colour for now. Trunks have branches forking upward. They are placed at random in two rows along both edges of the road, and neighbours differ in kind. Trees on the camera side may hide the road. Stage 1 uses the 4 bare kinds (2026-10-28 work records 01 to 03)
+- The `TreeGenerator` component places the trees. Other scenes can attach it too (2026-10-28 work record 06)
 - The hidden bird shows as a silhouette (2026-10-28 work record 03)
 - The bird perches on roadside tree branches and, idle for 2 s, goes to the nearest one. Q7 reversed (ADR 0009, 2026-10-28 work record 04)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)

@@ -27,8 +27,6 @@ public static class BuildSamTestScene
     const float RoadsideWidth = 4f;
     // Average distance between neighbouring trees; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
-    // Trees closer than this are next to each other: the grid neighbours along X and Z, not the diagonal ones.
-    const float TreeNeighbourDistance = TreeSpacing * 1.3f;
     const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
     const string BirdModelPrefabPath = "Assets/03_Prefabs/Bird-Animated.prefab";
     const string BirdAnimatorPath = "Assets/01_Arts/Models/Bird/Bird.controller";
@@ -131,7 +129,7 @@ public static class BuildSamTestScene
 
         // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
         // Stage 1 has the bare trees; the leafy ones are for other stages.
-        PlaceRoadsideTrees(bareTrees, root,
+        RoadsideTrees(bareTrees, root,
             new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
             new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
 
@@ -665,45 +663,34 @@ public static class BuildSamTestScene
         return from + direction * length;
     }
 
-    // Fills each X range over each Z range with trees on a jittered grid, each turned and sized a little at random.
-    // A tree takes a kind that no tree next to it has; if every kind is taken, the kind whose nearest tree is farthest.
-    // The seed is fixed so rebuilding gives the same trees.
-    static void PlaceRoadsideTrees(GameObject[] prefabs, GameObject parent, Vector2[] xRanges, Vector2[] zRanges)
+    // A TreeGenerator over each X range times each Z range, with the seed fixed so rebuilding gives the same trees.
+    static void RoadsideTrees(GameObject[] prefabs, GameObject parent, Vector2[] xRanges, Vector2[] zRanges)
     {
-        var random = new System.Random(1);
-        var placed = new System.Collections.Generic.List<(Vector3 position, int kind)>();
-        var freeKinds = new System.Collections.Generic.List<int>();
-        const float jitter = TreeSpacing * 0.3f;
-        foreach (Vector2 xRange in xRanges)
-        foreach (Vector2 zRange in zRanges)
-            for (float x = xRange.x + jitter; x <= xRange.y - jitter; x += TreeSpacing)
-                for (float z = zRange.x + jitter; z <= zRange.y - jitter; z += TreeSpacing)
-                {
-                    var position = new Vector3(x + Jitter(random, jitter), 0f, z + Jitter(random, jitter));
-                    freeKinds.Clear();
-                    int farthestKind = 0;
-                    float farthest = -1f;
-                    for (int kind = 0; kind < prefabs.Length; kind++)
-                    {
-                        float nearest = float.MaxValue;
-                        foreach (var t in placed)
-                            if (t.kind == kind)
-                                nearest = Mathf.Min(nearest, Vector3.Distance(t.position, position));
-                        if (nearest >= TreeNeighbourDistance)
-                            freeKinds.Add(kind);
-                        if (nearest > farthest)
-                            (farthest, farthestKind) = (nearest, kind);
-                    }
-                    int chosen = freeKinds.Count > 0 ? freeKinds[random.Next(freeKinds.Count)] : farthestKind;
-                    placed.Add((position, chosen));
-
-                    var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[chosen], parent.transform);
-                    tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
-                    tree.transform.localScale = Vector3.one * Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
-                }
+        var generator = Child(parent, "RoadsideTrees", parent.transform.position).AddComponent<TreeGenerator>();
+        Set(generator, so =>
+        {
+            SerializedProperty kinds = so.FindProperty("prefabs");
+            kinds.arraySize = prefabs.Length;
+            for (int i = 0; i < prefabs.Length; i++)
+                kinds.GetArrayElementAtIndex(i).objectReferenceValue = prefabs[i];
+            SerializedProperty areas = so.FindProperty("areas");
+            areas.arraySize = xRanges.Length * zRanges.Length;
+            int index = 0;
+            foreach (Vector2 x in xRanges)
+            foreach (Vector2 z in zRanges)
+            {
+                SerializedProperty area = areas.GetArrayElementAtIndex(index++);
+                area.FindPropertyRelative("min").vector2Value = new Vector2(x.x, z.x);
+                area.FindPropertyRelative("max").vector2Value = new Vector2(x.y, z.y);
+            }
+            so.FindProperty("spacing").floatValue = TreeSpacing;
+            so.FindProperty("jitter").floatValue = 0.3f;
+            so.FindProperty("scaleRange").vector2Value = new Vector2(0.85f, 1.15f);
+            so.FindProperty("randomRotation").boolValue = true;
+            so.FindProperty("seed").intValue = 1;
+        });
+        generator.Generate();
     }
-
-    static float Jitter(System.Random random, float amount) => ((float)random.NextDouble() * 2f - 1f) * amount;
 
     static GameObject Child(GameObject parent, string name, Vector3 position)
     {
