@@ -156,11 +156,10 @@ public static class BuildSamTestScene
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
         // When the bird enters the band at z 15 .. 17, the camera eases onto the log and stream until the log has fallen or the bird
-        // flies out of x ±8, z 13.5 .. 21.5. The lock area takes in the roadside rows, so perching there keeps the lock.
-        // The camera area is small, so the camera barely moves while locked; the bird can still reach the log's top (z 20.9) and,
-        // staying on screen (±6, ±5 around the camera's point), still reach every edge of the lock area to leave it (ADR 0014).
-        // The band is 2 deep, so even a slow frame (a third of a second at the bird's speed) does not skip it.
-        Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector2(16f, 2f), new Vector3(0f, 0f, 17.5f), new Vector2(6f, 1f), new Vector2(16f, 8f));
+        // flies near the edge of the map: out of x ±10, z 10 .. 24 (the sunlit spot is at z 25). The band is 2 deep, so even a slow frame
+        // (a third of a second at the bird's speed) does not skip it. While locked the camera may slide 1.5 sideways, so the bird, staying
+        // on screen, can still reach the lock area's near edge (+X, toward the camera, where the quarter view shows least) (ADR 0014, ADR 0015).
+        Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector2(16f, 2f), new Vector3(0f, 0f, 17f), new Vector2(3f, 1f), new Vector2(20f, 14f));
 
         // The road and the terrain beside it, z -2 .. 27.
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,

@@ -55,7 +55,7 @@ Names are suggestions. Each component does one thing.
 |---|---|
 | `GameFlow` | Runs the order intro → tutorial → stages 1·2·3 → ending. Knows the current stage. Sets where the bird may fly (ADR 0010) |
 | `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, road range, Sunlit Rest Area |
-| `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range `GameFlow` has opened, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, and within the screen around this point. One Cinemachine camera follows this point (ADR 0005, ADR 0007, ADR 0008) |
+| `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range `GameFlow` has opened, and stays inside a locked `CameraZone`'s range if there is one. One Cinemachine camera follows this point. `BirdController` keeps the bird from leaving the screen, using the actual screen (ADR 0005, ADR 0007, ADR 0015) |
 | `CameraZone` | One device's camera zone. When the bird enters the trigger band, the camera locks to a rectangle; when the bird leaves the wider lock area or the device is solved, it unlocks (ADR 0007, ADR 0014) |
 | `BirdController` | Click movement, perching, cry, altitude |
 | `Perchable` | An object the bird can perch on. Fires a `Perched` event when the bird lands. Uses the current `PerchPoint` as the perch position. Roadside tree branches are spots the bird lands on when idle (ADR 0009) |
@@ -110,7 +110,7 @@ Each stage is a prefab. That way several people can build different stages in th
   - If the first thing hit is an `Interactable` the bird cannot perch on now (an off-screen branch's perch area, the fallen log), only `Ground` and `ClickPlane` are cast again, and the bird goes to the spot behind.
 - Clicking the ground while perched makes the bird take off.
 - The bird is not pushed or pulled by physics. It flies over terrain and obstacles (§2.1), so it is moved directly to the target point. The current Rigidbody velocity approach is dropped.
-- The bird cannot leave the stage's area (the road and the terrain beside it) or the screen (Q3) (ADR 0007, ADR 0013). The clicked target point is not clamped. So the bird stays at the edge of its range, and keeps going when the camera follows. In 3-3, the area above and beyond the cliff is included in the range.
+- The bird cannot leave the stage's area (the road and the terrain beside it) or the screen (Q3) (ADR 0007, ADR 0013). The screen is the slanted four-sided patch the main camera actually shows at the flying height, up to 8% of the screen (`screenMargin`) in from its edges. The branches it may perch on are inside the actual screen too (ADR 0015). The clicked target point is not clamped. So the bird stays at the edge of its range, and keeps going when the camera follows. In 3-3, the area above and beyond the cliff is included in the range.
 - While left click is held, the target point keeps updating (Q12). This is handy when drawing a path in the fog.
 - A small circle briefly shows where you clicked (Q13).
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
@@ -201,7 +201,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 - The camera follows the bird (ADR 0005). The user changed the "fixed camera per section" in design doc §2.5. In device zones it locks to a smaller range instead of a fixed position (ADR 0007).
 - Use Cinemachine (Q2). The main camera has a `CinemachineBrain`. One `CinemachineCamera`, fixed at the quarter-view angle, follows one point with `CinemachineFollow`.
 - `BirdCamera` decides that point every frame. It clamps the bird's position to the road range. The baby is not used as a reference, to show that the bird and the baby are separate beings (ADR 0007).
-- Each device has a `CameraZone`. When the bird enters its trigger band (a rectangle across the road), the point eases into the zone's rectangle over 1 second and follows the bird inside it. The range is small, so the camera barely moves while locked. When the bird leaves the wider lock area around the trigger, it eases out over 1 second, and entering the trigger again locks it again. When the device is solved it unlocks and never locks again. The bird cannot leave the screen, so the lock area is set to fit inside the locked view (ADR 0014).
+- Each device has a `CameraZone`. When the bird enters its trigger band (a rectangle across the road), the point eases into the zone's rectangle over 1 second and follows the bird inside it. The range is small, so the camera barely moves while locked. When the bird leaves the wider lock area around the trigger, it eases out over 1 second, and entering the trigger again locks it again. When the device is solved it unlocks and never locks again. The bird cannot leave the screen, so the lock area is set to fit inside the locked view. The log's unlocks near the map's edge (x ±10, z 10 to 24) (ADR 0014, ADR 0015).
 - When the stage changes, the camera does not cut; it keeps following the bird. It cuts only when the dev tool's "next stage" moves the bird (ADR 0010).
 - In the intro, a zoomed-out camera follows the bird. When the bird comes within a set distance of the baby, it switches to the stage camera (§5.2 Phase 2).
 - The camera for the 3-3 climb section is not yet decided in the design (§16). As a first try, use a camera that rises to follow the bird's height.
@@ -423,13 +423,14 @@ Changes outside the plan:
 - The bird is limited per stage, not per device. It goes only as far as the current stage's sunlit spot (ADR 0012, 2026-10-28 work record 11)
 - The bird's area widened to the terrain beside the road (x ±13), with wider ground (x ±22) and more trees beyond (ADR 0013, 2026-10-28 work record 12)
 - A camera zone locks when the bird enters its trigger band and unlocks when it leaves the wider lock area. Clicking water moves the bird (ADR 0014, 2026-10-28 work record 13)
+- The bird is kept inside the actual screen, not a fixed box. The log's camera zone unlocks near the map's edge (ADR 0015, 2026-10-28 work record 14)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:
 
 - Q11 (the last cry in the ending) must be asked to the design lead
 - The camera differs from design doc §2.5. ADR 0007 and 0008 are the director's requests but still being tried. Waiting for the director's feedback
-- Temporary values: the bird's screen range (`birdRange` on `BirdCamera`), the camera zones' triggers and ranges, the 1-second ease, and the fog clearing width, re-join range, and animal answer range
+- Temporary values: the bird's screen edge margin (`screenMargin` on `BirdController`), the camera zones' triggers and ranges, the 1-second ease, and the fog clearing width, re-join range, and animal answer range
 - Each builder run changes `_SrcBlend` on the transparent test materials (`ClickMarker.mat`, `RestLight.mat`, `AnimalGlow.mat`). The builder setting blend values directly and the Editor's automatic adjustment seem to use different values. These changes are left uncommitted; fix them when the builder is next touched
 - Only the user's own test was done by hand with a real mouse. All other checks used a virtual mouse
 - The baby's feet slide while walking. The walk clip's stride gives a no-slide speed of about 0.1 m/s (0.08 m/s at this game's size), but the baby walks at 1.2 m/s. Either the art makes a walk with a longer stride or the walking speed is decided again
