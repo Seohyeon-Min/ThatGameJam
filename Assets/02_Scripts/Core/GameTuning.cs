@@ -34,9 +34,6 @@ public class GameTuning : ScriptableObject
     // Seconds the bird hovers without input before it lands on the nearest roadside branch.
     public float birdIdlePerchDelay = 2f;
 
-    [Header("Flow")]
-    public float fadeDuration = 0.6f;
-
     static GameTuning current;
 
     public static GameTuning Current => current != null ? current : current = Resources.Load<GameTuning>("GameTuning");

@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Builds the grey-box test scenes. Sam_Test.unity: stage 1 (fallen log, leaning log, sunlit rest area) and a minimal stage 2
-// to test the stage transition; also rebuilds the roadside tree prefabs in Assets/03_Prefabs/Trees (decoration only).
+// right after it on the same road, to test going on from one stage to the next (ADR 0010); also rebuilds the roadside tree prefabs in Assets/03_Prefabs/Trees (decoration only).
 // Sam_Fog_Test.unity: the fog stage.
 // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.Build
 public static class BuildSamTestScene
@@ -53,8 +53,8 @@ public static class BuildSamTestScene
     public static string Build()
     {
         NewScene();
-        var (bareTrees, _) = BuildTreePrefabs();
-        return Finish(ScenePath, BuildStage1(bareTrees), BuildStage2());
+        var (bareTrees, leafyTrees) = BuildTreePrefabs();
+        return Finish(ScenePath, BuildStage1(bareTrees), BuildStage2(leafyTrees));
     }
 
     // Step 2: the fog stage alone (3-0 start, 3-1 half fog, 3-2 full fog, a rest area).
@@ -77,7 +77,7 @@ public static class BuildSamTestScene
         clickPlane.GetComponent<BoxCollider>().size = new Vector3(400f, 0.1f, 400f);
     }
 
-    // Adds the baby, the bird, the camera brain, the fader and the game flow over the given stages, and saves the scene.
+    // Adds the baby, the bird, the camera brain and the game flow over the given stages, and saves the scene.
     static string Finish(string scenePath, params Stage[] stages)
     {
         Baby baby = BuildBaby();
@@ -88,7 +88,6 @@ public static class BuildSamTestScene
         Camera.main.gameObject.AddComponent<CinemachineBrain>();
         BirdCamera birdCamera = BuildBirdCamera();
 
-        ScreenFader fader = BuildFader();
         var flow = new GameObject("GameFlow");
         var gameFlow = flow.AddComponent<GameFlow>();
         flow.AddComponent<DevTools>();
@@ -98,7 +97,6 @@ public static class BuildSamTestScene
             list.arraySize = stages.Length;
             for (int i = 0; i < stages.Length; i++)
                 list.GetArrayElementAtIndex(i).objectReferenceValue = stages[i];
-            so.FindProperty("fader").objectReferenceValue = fader;
             so.FindProperty("birdCamera").objectReferenceValue = birdCamera;
         });
 
@@ -130,6 +128,9 @@ public static class BuildSamTestScene
         Primitive(PrimitiveType.Cylinder, "Stump", new Vector3(0f, 0.35f, 7.2f), new Vector3(0.65f, 0.35f, 0.65f), wood, root);
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
+        // Until the log falls, the bird flies no farther than the middle of stream 2; it can still perch on the log's top (ADR 0010).
+        GameObject logLimit = Child(leaningLog.gameObject, "BirdLimit", new Vector3(0f, 0f, 21f));
+        Set(leaningLog, so => so.FindProperty("birdLimit").objectReferenceValue = logLimit.transform);
 
         // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
         // Stage 1 has the bare trees; the leafy ones are for other stages.
@@ -156,16 +157,20 @@ public static class BuildSamTestScene
             new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(10f, 1f, 29f)));
     }
 
-    // Just a start and a rest area, to see the transition from stage 1.
-    static Stage BuildStage2()
+    // Goes on from stage 1's sunlit spot (z 25) on the same road: just a walk to its own sunlit spot, to test going on to the next stage.
+    // Leafy trees, so the two stages are told apart.
+    static Stage BuildStage2(GameObject[] leafyTrees)
     {
         var root = new GameObject("Stage2");
-        root.transform.position = new Vector3(60f, 0f, 0f);
-        Ground(root, "Bank", new Vector3(60f, 0f, 5f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)));
-        RestLight(root, new Vector3(60f, 0f, 9f));
-        BabyRoute route = Route(root, new Vector3(60f, 0f, 4f), new Vector3(60f, 0f, 9f));
-        return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(60f, 0f, 5f), new Vector3(10f, 1f, 14f)));
+        Ground(root, "Bank", new Vector3(0f, 0f, 34f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)), RoadsideWidth); // z 27 .. 41
+        RoadsideTrees(leafyTrees, root,
+            new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
+            new[] { new Vector2(27f, 41f) });
+        BabyRoute route = Route(root, new Vector3(0f, 0f, 30f), new Vector3(0f, 0f, 38.5f));
+        RestLight(root, route[route.Count - 1].position);
+        // The baby starts where stage 1 left it asleep. The bird start is only for the dev tool's skip.
+        return StageComponent(root, new Vector3(0f, 0f, 25f), new Vector3(1.5f, BirdAltitude, 24f), route,
+            new Bounds(new Vector3(0f, 0f, 34f), new Vector3(10f, 1f, 14f)));
     }
 
     // The ground is only paths (correct ones and dead ends); everything else is dark water hidden under the fog.
@@ -624,25 +629,6 @@ public static class BuildSamTestScene
         var birdCamera = point.AddComponent<BirdCamera>();
         Set(birdCamera, so => so.FindProperty("followCamera").objectReferenceValue = followCamera);
         return birdCamera;
-    }
-
-    static ScreenFader BuildFader()
-    {
-        var canvasObject = new GameObject("FadeCanvas", typeof(Canvas), typeof(CanvasScaler));
-        canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-        var imageObject = new GameObject("Fade", typeof(RectTransform), typeof(Image));
-        imageObject.transform.SetParent(canvasObject.transform, false);
-        var rect = imageObject.GetComponent<RectTransform>();
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-        var image = imageObject.GetComponent<Image>();
-        image.color = new Color(0f, 0f, 0f, 0f);
-        image.raycastTarget = false;
-        var fader = canvasObject.AddComponent<ScreenFader>();
-        Set(fader, so => so.FindProperty("image").objectReferenceValue = image);
-        return fader;
     }
 
     // Once the bird crosses the trigger's Z, the camera stays inside the area until the blocker opens.

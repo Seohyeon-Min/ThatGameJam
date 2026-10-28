@@ -53,10 +53,9 @@ Names are suggestions. Each component does one thing.
 
 | Component | What it does |
 |---|---|
-| `GameFlow` | Runs the order intro → tutorial → stages 1·2·3 → ending. Knows the current stage |
+| `GameFlow` | Runs the order intro → tutorial → stages 1·2·3 → ending. Knows the current stage. Sets where the bird may fly (ADR 0010) |
 | `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, road range, Sunlit Rest Area, seasonal effect |
-| `ScreenFader` | Covers and uncovers the screen during stage transitions |
-| `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, and within the screen around this point. One Cinemachine camera follows this point (ADR 0005, ADR 0007, ADR 0008) |
+| `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range `GameFlow` has opened, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, and within the screen around this point. One Cinemachine camera follows this point (ADR 0005, ADR 0007, ADR 0008) |
 | `CameraZone` | One device's camera zone. When the bird crosses the trigger line, the camera locks to a rectangle; when the device is solved, it unlocks (ADR 0007, ADR 0008) |
 | `BirdController` | Click movement, perching, cry, altitude |
 | `Perchable` | An object the bird can perch on. Fires a `Perched` event when the bird lands. Uses the current `PerchPoint` as the perch position. Roadside tree branches are spots the bird lands on when idle (ADR 0009) |
@@ -93,7 +92,7 @@ Between a device and the baby there is only one event: `Resolved(bool byBird)`. 
 
 ### 3.3 Scene Setup
 
-All stages sit in one game scene, at separate places. A transition covers the screen, moves the baby and the bird to the next stage's start positions, and uncovers the screen. The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
+All stages join in one game scene as one long road along +Z. Each stage has one root object. The next stage starts at the sunlit spot where the baby fell asleep. There is no teleport and no screen cover (ADR 0010). The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
 
 Each stage is a prefab. That way several people can build different stages in their own test scenes, and the shared scene only needs the prefabs placed. Scene file conflicts go down. The shared game scene is `Main.unity` (Q1).
 
@@ -186,8 +185,10 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 ### 4.6 Sunlit Rest Area, Stage Transition, Game Flow (§10, §11)
 
 - The Sunlit Rest Area is not a special section (ADR 0006). Put one portal-like light at the end of the baby's path, right after the stage's last device. Do not build more path or ground past it.
-- When the baby reaches the end of the path: the baby falls asleep → the stage's seasonal effect plays and the game waits for it to finish → `GameFlow` runs the transition.
-- Transition: cover the screen → move the baby and the bird to the next stage's start positions, change the camera, change the bird's altitude → uncover the screen → the baby is `Sleeping`.
+- When the baby reaches the end of the path: the baby lies down and falls asleep → the stage's seasonal effect → `GameFlow` starts the next stage right there (ADR 0010).
+- Next stage: the baby stays asleep where it is (`Sleeping`) and its wake timer runs again. The bird's altitude eases to the new stage's value. The new stage is added to the road the bird may fly over.
+- Where the bird may fly: the road of every stage up to the current one. In the current stage it goes forward only up to the limit line of the first device not yet opened (the Z of `PathBlocker.birdLimit`). Backwards is always open (ADR 0010).
+- Only the dev tool's "next stage" teleports. It leaves the baby asleep at the current stage's sunlit spot and starts the next stage. The bird moves to the next stage's start.
 - The light of the Sunlit Rest Area (a gap in the clouds and sunlight) is art work (§16). The code only turns it on and off.
 - The Sunlit Rest Area in the last stage starts off. It turns on when the clouds are broken through or part (§10.3, 4.13).
 
@@ -197,7 +198,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 - Use Cinemachine (Q2). The main camera has a `CinemachineBrain`. One `CinemachineCamera`, fixed at the quarter-view angle, follows one point with `CinemachineFollow`.
 - `BirdCamera` decides that point every frame. It clamps the bird's position to the road range. The baby is not used as a reference, to show that the bird and the baby are separate beings (ADR 0007).
 - Each device has a `CameraZone`. When the bird crosses its trigger line (a Z across the road), the point eases into the zone's rectangle over 1 second and follows the bird inside it. The range is small, so the camera barely moves while locked. When the device is solved, it eases out over 1 second. A zone that has been released never locks again (ADR 0008).
-- On a stage transition, the camera cuts to the new stage.
+- When the stage changes, the camera does not cut; it keeps following the bird. It cuts only when the dev tool's "next stage" moves the bird (ADR 0010).
 - In the intro, a zoomed-out camera follows the bird. When the bird comes within a set distance of the baby, it switches to the stage camera (§5.2 Phase 2).
 - The camera for the 3-3 climb section is not yet decided in the design (§16). As a first try, use a camera that rises to follow the bird's height.
 
@@ -410,6 +411,7 @@ Changes outside the plan:
 - The bird perches on roadside tree branches and, idle for 2 s, goes to the nearest one. Q7 reversed (ADR 0009, 2026-10-28 work record 04)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
 - The baby now uses the art's girl model and animations. Where each clip is used is in 4.3 (2026-10-28 work record 07)
+- The stages join on one road and the teleport is gone. The bird goes only as far as the next device. Done in `Sam_Test` first; it moves to the director's main map when that arrives (ADR 0010, 2026-10-28 work record 08)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:

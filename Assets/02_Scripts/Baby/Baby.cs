@@ -41,18 +41,38 @@ public class Baby : CryListener
         wakeTimer.Resolved += byBird => StartCoroutine(WakeAndWalk(byBird));
     }
 
-    public void PlaceAsleep(Transform start, BabyRoute route)
+    // Moves the baby to the spot, already lying asleep there, ready to wake and walk the route.
+    public void PlaceAsleep(Transform at, BabyRoute route)
+    {
+        RestAt(at);
+        Sleep(route);
+    }
+
+    // Moves the baby to the spot lying asleep, as if it had walked there and fallen asleep. It does not wake from this by itself.
+    public void RestAt(Transform spot)
     {
         StopAllCoroutines();
-        transform.SetPositionAndRotation(start.position, start.rotation);
+        transform.SetPositionAndRotation(spot.position, spot.rotation);
+        // Already lying: no lying-down animation after the move.
+        animator.Play(SleepState, 0, 0f);
+        CurrentBlocker = null;
+        State = BabyState.Resting;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(LookAroundParam, false);
+        animator.SetBool(AsleepParam, true);
+        wakeTimer.ResetTimer();
+    }
+
+    // Asleep where it is, ready to wake and walk the route. The next stage starts this way where the baby fell asleep (ADR 0010).
+    public void Sleep(BabyRoute route)
+    {
+        StopAllCoroutines();
         this.route = route;
         CurrentBlocker = null;
         State = BabyState.Sleeping;
         animator.SetBool(WalkingParam, false);
         animator.SetBool(LookAroundParam, false);
         animator.SetBool(AsleepParam, true);
-        // Already lying: no lying-down animation after the move.
-        animator.Play(SleepState, 0, 0f);
         wakeTimer.ResetTimer();
         wakeTimer.Begin();
     }
