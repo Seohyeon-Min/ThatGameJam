@@ -121,7 +121,7 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("How far the light side fades toward Light Cream at the paper's edge. 0 = keeps the paint colour. Not used on floors.")]
         [Range(0f, 1f)] public float lightFade = 0.6f;
 
-        [Tooltip("How strongly the light side and the paper show scattered pastel chips (pink, mint, sky, lavender) from the baked colour drops. Works on white and grey too. Not used on floors.")]
+        [Tooltip("How strongly the light side shows scattered pastel chips (pink, mint, sky, lavender) from the baked colour drops. Never on the paper or on white paint. Not used on floors.")]
         [Range(0f, 1f)] public float lightPastelChips = 0.5f;
 
         [Tooltip("On: cast shadows become clear mid-tone shadow hues (Shadow Darkening, Shadow Hue From/To). Off: the earlier cast shadows, darker and richer in the paint's own colour turning toward blue (Shadow Depth, Dark Pigment Blue %).")]

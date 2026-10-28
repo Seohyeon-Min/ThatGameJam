@@ -249,7 +249,7 @@ Shader "ThatGameJam/WatercolorFlat"
             }
 
             // 빛 쪽 파스텔 색 조각: 색 물방울(drop, -1~1, 0 = 물방울 없음) 자리의 밝고 옅은 색.
-            // 무채색에도 보이도록 색상은 원래 색과 상관없이 정한다. 물방울 부호로 차가운 쪽(연두~하늘)과
+            // 색상은 원래 색과 상관없이 정한다(종이와 흰 물감에는 쓰지 않는다). 물방울 부호로 차가운 쪽(연두~하늘)과
             // 따뜻한 쪽(라벤더~분홍)을 고르고, 그 안에서는 저주파 잡음(noise)으로 천천히 바꾼다.
             // 물방울 값으로 바로 색상을 정하면 한 물방울 안에 무지개가 생긴다.
             half3 PastelChip(half drop, half noise)
@@ -361,7 +361,10 @@ Shader "ThatGameJam/WatercolorFlat"
                 half warmZone = smoothstep(paperEdge - ScreenWidth(ndotlRaw, _WC_WarmWidth), paperEdge, ndotl) * objectOnly;
                 half3 lightColor = lerp(albedo, _WC_LightCream.rgb, _WC_LightCream.a * warmZone);
                 // 빛 쪽 파스텔 조각: 색 물방울 자리에 옅은 파스텔 색이 비친다. 물방울이 진할수록 또렷하다.
-                half chip = saturate(abs(drop) * 2.5) * _WC_LightShade.x;
+                // 흰색(채도와 밝기로 본 흰 물감)에는 넣지 않는다. 흰 새처럼 흰 물체는 깨끗하게 남는다.
+                half3 albedoHsv = RgbToHsv(albedo);
+                half notWhite = saturate(albedoHsv.y * 5.0 + (1.0 - albedoHsv.z) * 5.0);
+                half chip = saturate(abs(drop) * 2.5) * _WC_LightShade.x * notWhite;
                 lightColor = lerp(lightColor, PastelChip(drop, pattern.a), chip * warmZone * 0.8);
                 // 그림자 안쪽 진하기는 고르지 않다(물감이 고르게 펴지지 않은 것처럼).
                 half shadowAmount = _WC_ShadowDepth * (1.0 + (pattern.a - 0.5) * 2.0 * _WC_ShadowUneven);
@@ -409,9 +412,8 @@ Shader "ThatGameJam/WatercolorFlat"
 
                 color = Dilute(saturate(color), dilute * 0.5);
                 color = Accumulate(color, accumulate * _WC_PigmentThickness);
-                // 종이에도 파스텔 조각이 아주 옅게 남는다.
-                half3 paperColor = lerp(1.0, PastelChip(drop, pattern.a), chip * 0.5 * objectOnly);
-                color = lerp(color, paperColor, paper);
+                // 종이(흰색)에는 파스텔 조각을 넣지 않는다.
+                color = lerp(color, 1.0, paper);
 
                 // 색연필: 구운 연필 덩어리 안에서만 선이 보인다. 선 색은 그 자리 물감 색을 더 쌓은 색이라 색마다 다르다.
                 // 빛 쪽에 남긴 흰 종이에는 긋지 않는다. 선은 주로 형태 그림자 쪽(덩어리 노멀이 빛을 등진 쪽)에 모인다.
