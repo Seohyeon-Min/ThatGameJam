@@ -59,6 +59,37 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("Largest colour drop, in % of screen height. Used when baking.")]
         [Range(0.5f, 50f)] public float chaosDropSizeMaxPercent = 9f;
 
+        [Header("Pencil")]
+        [Tooltip("How visible the coloured-pencil strokes are. 0 = off. Applies immediately.")]
+        [Range(0f, 1f)] public float pencilStrength = 0.6f;
+
+        [Tooltip("How much darker (richer, bluer, never greyer) the pencil lead is than the paint under it. Applies immediately.")]
+        [Range(0f, 2f)] public float pencilDarkness = 0.9f;
+
+        [Tooltip("Length of one pencil stroke on screen, in % of screen height. Same size near and far. Applies immediately.")]
+        [Range(0.5f, 10f)] public float strokeLengthPercent = 3f;
+
+        [Tooltip("Width of a stroke on screen, in pixels at 1080p. Applies immediately (rebuilds the stroke texture once).")]
+        [Range(0.5f, 8f)] public float strokeWidth = 2.5f;
+
+        [Tooltip("How much stroke widths differ from each other. 0 = all the same. Applies immediately.")]
+        [Range(0f, 1f)] public float strokeWidthVariation = 0.2f;
+
+        [Tooltip("How densely strokes are packed side by side. Applies immediately.")]
+        [Range(0f, 1f)] public float strokeDensity = 0.7f;
+
+        [Tooltip("Direction of the strokes on screen, in degrees (0 = horizontal). Applies immediately.")]
+        [Range(-90f, 90f)] public float strokeAngle = 35f;
+
+        [Tooltip("How much each pencil patch turns its strokes away from that direction, in degrees. Applies immediately.")]
+        [Range(0f, 90f)] public float strokeAngleJitter = 10f;
+
+        [Tooltip("Size of a pencil patch, in % of screen height. Used when baking.")]
+        [Range(1f, 50f)] public float pencilPatchSizePercent = 10f;
+
+        [Tooltip("Chance that a chunk of the surface gets a pencil patch. Used when baking.")]
+        [Range(0f, 1f)] public float pencilPatchChance = 0.4f;
+
         [Header("Light and Shadow")]
         [Tooltip("How far the zone next to the light (paper) turns toward yellow on the colour wheel, strongest at the light and fading with distance. 100% = up to 30 degrees.")]
         [Range(0f, 100f)] public float lightYellowPercent = 30f;
@@ -157,6 +188,9 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalFloat("_WC_ShadowRagged", s.shadowRaggedness);
         Shader.SetGlobalFloat("_WC_ShadowUneven", s.shadowUnevenness);
         Shader.SetGlobalTexture("_WC_FloorPattern", FloorPatternTexture);
+        Shader.SetGlobalTexture("_WC_PencilStrokes", PencilStrokesTexture(s));
+        Shader.SetGlobalVector("_WC_Pencil", new Vector4(s.pencilStrength, s.pencilDarkness,
+            s.strokeAngle * Mathf.Deg2Rad, s.strokeAngleJitter * Mathf.Deg2Rad));
         s_Active = s;
 
     }
@@ -183,6 +217,84 @@ public class WatercolorManager : MonoBehaviour
             ? new Vector4(0f, share * camera.orthographicSize * 2f, 0f, 0f)
             : new Vector4(share * 2f * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad), 0f, 0f, 0f);
         Shader.SetGlobalVector(FloorDetailId, detail);
+
+        // Same idea for pencil strokes: world size of one stroke-texture tile at distance d.
+        float tile = s_Active.strokeLengthPercent / 100f / StrokeShareOfTile;
+        Vector4 pencil = camera.orthographic
+            ? new Vector4(0f, tile * camera.orthographicSize * 2f, 0f, 0f)
+            : new Vector4(tile * 2f * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad), 0f, 0f, 0f);
+        Shader.SetGlobalVector(PencilScaleId, pencil);
+    }
+
+    static readonly int PencilScaleId = Shader.PropertyToID("_WC_PencilScale");
+
+    // Coloured-pencil strokes: parallel, evenly wide horizontal strokes packed like hatching (the shader rotates them).
+    // Built once and rebuilt only when width, width variation, density or length change. Average stroke length is
+    // StrokeShareOfTile of the tile.
+    const float StrokeShareOfTile = 0.12f;
+    static Texture2D s_PencilStrokes;
+    static Vector4 s_PencilKey = new Vector4(-1f, 0f, 0f, 0f);
+
+    static Texture2D PencilStrokesTexture(Settings st)
+    {
+        var key = new Vector4(st.strokeWidth, st.strokeWidthVariation, st.strokeDensity, st.strokeLengthPercent);
+        if (s_PencilStrokes != null && key == s_PencilKey)
+            return s_PencilStrokes;
+        s_PencilKey = key;
+
+        const int size = 512;
+        // One tile covers (length / StrokeShareOfTile) of the screen height; convert the on-screen width (1080p px) to texels.
+        float tileScreenPixels = st.strokeLengthPercent / 100f / StrokeShareOfTile * 1080f;
+        float baseWidth = Mathf.Max(0.6f, st.strokeWidth * size / tileScreenPixels);
+        int count = Mathf.RoundToInt(Mathf.Lerp(300f, 3000f, st.strokeDensity) * Mathf.Clamp(2.5f / Mathf.Max(baseWidth, 0.6f), 0.4f, 3f));
+
+        var ink = new float[size * size];
+        var random = new System.Random(20231);
+        float R(float a, float b) => a + (float)random.NextDouble() * (b - a);
+        for (int n = 0; n < count; n++)
+        {
+            float cx = R(0, size), cy = R(0, size);
+            float length = size * StrokeShareOfTile * R(0.6f, 1.4f);
+            // Hatching: almost the same direction for every stroke.
+            float angle = R(-0.03f, 0.03f);
+            float width = baseWidth * (1f + R(-1f, 1f) * st.strokeWidthVariation * 0.6f);
+            float pressure = R(0.6f, 1f);
+            float dx = Mathf.Cos(angle), dy = Mathf.Sin(angle);
+            int x0 = Mathf.FloorToInt(cx - length * 0.5f - width - 2), x1 = Mathf.CeilToInt(cx + length * 0.5f + width + 2);
+            int y0 = Mathf.FloorToInt(cy - length * 0.5f * Mathf.Abs(dy) - width - 2), y1 = Mathf.CeilToInt(cy + length * 0.5f * Mathf.Abs(dy) + width + 2);
+            for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    float px = x + 0.5f - cx, py = y + 0.5f - cy;
+                    float along = px * dx + py * dy;
+                    float across = Mathf.Abs(-px * dy + py * dx);
+                    float t = along / (length * 0.5f);
+                    if (Mathf.Abs(t) > 1f)
+                        continue;
+                    // Even width along the stroke; only the very ends taper. The edge is anti-aliased.
+                    float taper = Mathf.Clamp01((1f - Mathf.Abs(t)) * 6f);
+                    float a = Mathf.Clamp01(width * 0.5f * (0.5f + 0.5f * taper) - across + 0.5f) * pressure * (0.6f + 0.4f * taper);
+                    int i = ((y % size + size) % size) * size + ((x % size + size) % size);
+                    ink[i] = 1f - (1f - ink[i]) * (1f - a);
+                }
+        }
+        var pixels = new Color32[size * size];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            byte v = (byte)(ink[i] * 255f);
+            pixels[i] = new Color32(v, v, v, v);
+        }
+        if (s_PencilStrokes == null)
+            s_PencilStrokes = new Texture2D(size, size, TextureFormat.RGBA32, true, true)
+            {
+                name = "WatercolorPencilStrokes",
+                hideFlags = HideFlags.HideAndDontSave,
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Trilinear,
+            };
+        s_PencilStrokes.SetPixels32(pixels);
+        s_PencilStrokes.Apply(true, true);
+        return s_PencilStrokes;
     }
 
     // Floor pattern texture: FloorCells x FloorCells blotches per tile, so a repeat is many screens apart.

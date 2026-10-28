@@ -51,7 +51,8 @@ Shader "ThatGameJam/WatercolorFlat"
         SAMPLER(sampler_BaseMap);
         TEXTURE3D(_PatternTex);
         SAMPLER(sampler_PatternTex);
-        TEXTURE3D(_ChaosTex); // 색 물방울: 0.5 = 변화 없음, 0/1 = 색상환에서 -/+ 최대
+        TEXTURE3D(_ChaosTex); // r: 색 물방울(0.5 = 변화 없음), g: 연필 덩어리, b: 덩어리별 연필 각도(0.5 = 기본 각도)
+        TEXTURE2D(_WC_PencilStrokes); // 연필 선 텍스처(가로로 그은 짧은 선들). WatercolorManager 가 한 번 만든다.
 
         // SRP Batcher 를 쓰려면 모든 패스가 같은 머티리얼 상수 버퍼를 선언해야 한다.
         CBUFFER_START(UnityPerMaterial)
@@ -84,6 +85,32 @@ Shader "ThatGameJam/WatercolorFlat"
         half _WC_ShadowEdge;
         half _WC_ShadowRagged;
         half _WC_ShadowUneven;
+        float4 _WC_Pencil;        // 연필 세기, 연필 진하기, 기본 각도(라디안), 덩어리별 각도 흔들림(라디안)
+        float4 _WC_PencilScale;   // 연필 선 텍스처 한 장의 월드 크기 = x * 거리 + y
+
+        // 연필 선: 카메라가 보는 평면에 그은 선이라 종이에 그린 것처럼 보이고, 위치는 물체에 붙어 있다
+        // (물체 원점 기준). 바닥 무늬와 같은 방식으로 거리와 상관없이 화면에서 같은 길이다.
+        half PencilStrokes(float3 positionWS, half angle)
+        {
+            float3 rel = positionWS - GetObjectToWorldMatrix()._m03_m13_m23;
+            float3 right = UNITY_MATRIX_V[0].xyz;
+            float3 up = UNITY_MATRIX_V[1].xyz;
+            float2 p = float2(dot(rel, right), dot(rel, up));
+            float s, c;
+            sincos(angle, s, c);
+            p = float2(c * p.x + s * p.y, -s * p.x + c * p.y);
+
+            float distance = length(positionWS - GetCameraPositionWS());
+            float wanted = max(_WC_PencilScale.x * distance + _WC_PencilScale.y, 1e-4);
+            float level = log2(wanted);
+            float baseLevel = floor(level);
+            float blend = level - baseLevel;
+            float tileA = exp2(baseLevel);
+            half a = SAMPLE_TEXTURE2D(_WC_PencilStrokes, sampler_LinearRepeat, p / tileA + frac(baseLevel * float2(0.6180, 0.7549))).r;
+            half b = SAMPLE_TEXTURE2D(_WC_PencilStrokes, sampler_LinearRepeat, p / (tileA * 2.0) + frac((baseLevel + 1.0) * float2(0.6180, 0.7549))).r;
+            return lerp(a, b, blend);
+        }
+
         float4 _WC_FloorDetail;   // 바닥 얼룩 하나의 월드 크기 = x * 거리 + y (카메라마다 WatercolorManager 가 정한다)
         TEXTURE2D(_WC_FloorPattern); // 바닥 무늬. 한 장에 얼룩이 FLOOR_CELLS x FLOOR_CELLS 개라 반복이 화면 여러 개만큼 떨어져 있다.
         #define FLOOR_CELLS 24.0
@@ -319,6 +346,19 @@ Shader "ThatGameJam/WatercolorFlat"
                 color = Dilute(saturate(color), dilute * 0.5);
                 color = Accumulate(color, accumulate * _WC_PigmentThickness);
                 color = lerp(color, 1.0, paper);
+
+                // 색연필: 구운 연필 덩어리 안에서만 선이 보인다. 선 색은 그 자리 물감 색을 더 쌓은 색이라 색마다 다르다.
+                // 빛 쪽에 남긴 흰 종이에는 긋지 않는다.
+                if (_HasPattern > 0.5 && _WC_Pencil.x > 0)
+                {
+                    half3 pencilMap = SAMPLE_TEXTURE3D(_ChaosTex, sampler_PatternTex, input.patternUV).rgb;
+                    half angle = _WC_Pencil.z + (pencilMap.b * 2.0 - 1.0) * _WC_Pencil.w;
+                    // 선 텍스처는 필압이 약한 선이 많아서 두 배 가까이 키워 쓴다.
+                    half stroke = saturate(PencilStrokes(input.positionWS, angle) * 1.8) * pencilMap.g * _WC_Pencil.x * (1.0 - paper);
+                    half3 lead = Accumulate(saturate(lightColor), _WC_Pencil.y);
+                    color = lerp(color, min(color, lead), saturate(stroke));
+                }
+
                 color = SRGBToLinear(color);
 
                 color = MixFog(color, input.fogFactor);

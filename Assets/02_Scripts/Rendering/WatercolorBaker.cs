@@ -84,6 +84,10 @@ public static class WatercolorBaker
     public static string Bake(WatercolorPaintedModel model)
     {
         Transform root = model.transform;
+        // The model's previous bake, found through its pattern. Its folder can differ from the new one (the object id
+        // changes when the scene is rebuilt), so it is deleted after this bake instead of being left behind.
+        string oldPattern = model.pattern != null ? AssetDatabase.GetAssetPath(model.pattern) : "";
+        string oldFolder = oldPattern.Length > 0 ? oldPattern.Substring(0, oldPattern.LastIndexOf('/')) : null;
         string folder = EnsureFolder(model);
         var groups = new Dictionary<Material, List<Part>>();
         var allBounds = new Bounds();
@@ -124,6 +128,7 @@ public static class WatercolorBaker
             ScreenSize(style.chaosChunkSizePercent), style.chaosSplitChance,
             ScreenSize(Mathf.Min(style.chaosDropSizeMinPercent, style.chaosDropSizeMaxPercent)),
             ScreenSize(Mathf.Max(style.chaosDropSizeMinPercent, style.chaosDropSizeMaxPercent)),
+            ScreenSize(style.pencilPatchSizePercent), style.pencilPatchChance,
             folder + "/Chaos.asset");
         model.pattern = pattern;
         model.modelBounds = allBounds;
@@ -191,6 +196,7 @@ public static class WatercolorBaker
         PrefabUtility.RecordPrefabInstancePropertyModifications(model);
         EditorSceneManager.MarkSceneDirty(model.gameObject.scene);
         AssetDatabase.SaveAssets();
+        DeleteOldBake(oldFolder, folder);
         return $"{root.name}: {pieces} pieces in {masses} masses ({groups.Count} colours) -> {folder}";
     }
 
@@ -341,58 +347,71 @@ public static class WatercolorBaker
         return SaveAsset(texture, path);
     }
 
-    // Colour chaos: the model is split into Voronoi chunks of `chunk` size; each chunk gets, with `chance`, one colour
-    // drop centred on its feature point with a random radius in [dropMin, dropMax] and a random signed hue amount.
-    // A voxel only takes the drop of the chunk it belongs to, so drops stay inside their chunk.
-    // Stored as 0.5 + 0.5 * amount (0.5 = no change); the shader scales it by the manager's hue range.
-    static Texture3D BakeChaos(int nx, int ny, int nz, Bounds bounds, int seed, float chunk, float chance, float dropMin, float dropMax, string path)
+    // One Voronoi "drop" field: space is split into chunks of `chunk` size; each chunk gets, with `chance`, one drop
+    // centred on its feature point, with a random radius in [dropMin, dropMax]. A point only takes the drop of the
+    // chunk it belongs to, so drops stay inside their chunk. Returns the drop's coverage (1 at the centre, 0 at the
+    // edge, slightly ragged) and a random value per chunk in `cellRandom`.
+    static float Drop(Vector3 q, float chunk, float chance, float dropMin, float dropMax, int salt, Vector3 edgeOffset, out float cellRandom)
+    {
+        Vector3 c = q / chunk;
+        int cx = Mathf.FloorToInt(c.x), cy = Mathf.FloorToInt(c.y), cz = Mathf.FloorToInt(c.z);
+        float best = float.MaxValue;
+        int bx = 0, by = 0, bz = 0;
+        for (int dz = -1; dz <= 1; dz++)
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int px = cx + dx, py = cy + dy, pz = cz + dz;
+                    var point = new Vector3(px + Hash(px, py, pz + salt), py + Hash(px + salt, py, pz), pz + Hash(px, py + salt, pz)) * chunk;
+                    float d = (point - q).sqrMagnitude;
+                    if (d < best) { best = d; bx = px; by = py; bz = pz; }
+                }
+        cellRandom = Hash(bx, by, bz + 17 * salt);
+        if (Hash(bx + 11 * salt, by, bz) >= chance)
+            return 0f;
+        float radius = Mathf.Lerp(dropMin, dropMax, Hash(bx, by + 13 * salt, bz));
+        float t = Mathf.Sqrt(best) / Mathf.Max(radius, 1e-4f) + (Noise(q / Mathf.Max(radius * 0.35f, 1e-4f) + edgeOffset) - 0.5f) * 0.3f;
+        return 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+    }
+
+    // r: colour chaos drop (0.5 = no change, 0/1 = -/+ full hue shift).
+    // g: pencil patch coverage. b: pencil stroke angle offset for the patch (0.5 = none).
+    static Texture3D BakeChaos(int nx, int ny, int nz, Bounds bounds, int seed,
+        float chunk, float chance, float dropMin, float dropMax,
+        float pencilChunk, float pencilChance, string path)
     {
         chunk = Mathf.Max(chunk, 1e-4f);
+        pencilChunk = Mathf.Max(pencilChunk, 1e-4f);
         int s = seed * 7919;
-        var values = new byte[nx * ny * nz];
+        var pixels = new Color32[nx * ny * nz];
         var edgeOffset = new Vector3(seed % 53, 17.3f, 91.7f);
+        var pencilEdge = edgeOffset + new Vector3(41.1f, 7.7f, 3.3f);
         for (int z = 0, i = 0; z < nz; z++)
             for (int y = 0; y < ny; y++)
                 for (int x = 0; x < nx; x++, i++)
                 {
                     Vector3 q = new Vector3((x + 0.5f) / nx * bounds.size.x, (y + 0.5f) / ny * bounds.size.y, (z + 0.5f) / nz * bounds.size.z);
-                    Vector3 c = q / chunk;
-                    int cx = Mathf.FloorToInt(c.x), cy = Mathf.FloorToInt(c.y), cz = Mathf.FloorToInt(c.z);
 
-                    // Nearest chunk feature point (3x3x3 neighbourhood).
-                    float best = float.MaxValue;
-                    int bx = 0, by = 0, bz = 0;
-                    Vector3 bestPoint = Vector3.zero;
-                    for (int dz = -1; dz <= 1; dz++)
-                        for (int dy = -1; dy <= 1; dy++)
-                            for (int dx = -1; dx <= 1; dx++)
-                            {
-                                int px = cx + dx, py = cy + dy, pz = cz + dz;
-                                var point = new Vector3(px + Hash(px, py, pz + s), py + Hash(px + s, py, pz), pz + Hash(px, py + s, pz)) * chunk;
-                                float d = (point - q).sqrMagnitude;
-                                if (d < best) { best = d; bx = px; by = py; bz = pz; bestPoint = point; }
-                            }
+                    float coverage = Drop(q, chunk, chance, dropMin, dropMax, s, edgeOffset, out float h);
+                    float signedAmount = (h < 0.5f ? -1f : 1f) * Mathf.Lerp(0.4f, 1f, Mathf.Abs(h * 2f - 1f));
+                    float chaos = signedAmount * coverage;
 
-                    float amount = 0f;
-                    if (Hash(bx + 11 * s, by, bz) < chance)
-                    {
-                        float radius = Mathf.Lerp(dropMin, dropMax, Hash(bx, by + 13 * s, bz));
-                        float h = Hash(bx, by, bz + 17 * s);
-                        float signedAmount = (h < 0.5f ? -1f : 1f) * Mathf.Lerp(0.4f, 1f, Mathf.Abs(h * 2f - 1f));
-                        // Drop: strongest at the centre, fading to the edge; the edge is slightly ragged like a real drop.
-                        float t = Mathf.Sqrt(best) / Mathf.Max(radius, 1e-4f) + (Noise(q / Mathf.Max(radius * 0.35f, 1e-4f) + edgeOffset) - 0.5f) * 0.3f;
-                        amount = signedAmount * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
-                    }
-                    values[i] = (byte)Mathf.RoundToInt((0.5f + 0.5f * amount) * 255f);
+                    // Pencil patches: one patch per chosen chunk, filling most of it.
+                    float patch = Drop(q, pencilChunk, pencilChance, pencilChunk * 0.6f, pencilChunk * 1.0f, s + 101, pencilEdge, out float angle);
+
+                    pixels[i] = new Color32(
+                        (byte)Mathf.RoundToInt((0.5f + 0.5f * chaos) * 255f),
+                        (byte)Mathf.RoundToInt(patch * 255f),
+                        (byte)Mathf.RoundToInt(angle * 255f),
+                        255);
                 }
 
-        var texture = new Texture3D(nx, ny, nz, TextureFormat.R8, false)
+        var texture = new Texture3D(nx, ny, nz, TextureFormat.RGBA32, false)
         {
-            name = "WatercolorChaos",
             wrapMode = TextureWrapMode.Clamp,
             filterMode = FilterMode.Bilinear,
         };
-        texture.SetPixelData(values, 0);
+        texture.SetPixels32(pixels);
         texture.Apply(false);
         return SaveAsset(texture, path);
     }
@@ -449,6 +468,18 @@ public static class WatercolorBaker
         Object.DestroyImmediate(asset);
         EditorUtility.SetDirty(existing);
         return existing;
+    }
+
+    // Deletes a model's previous bake folder once nothing in the open scenes uses it any more. A duplicated model
+    // still points at the original's folder, so a folder another model uses is kept.
+    static void DeleteOldBake(string oldFolder, string newFolder)
+    {
+        if (string.IsNullOrEmpty(oldFolder) || oldFolder == newFolder || !oldFolder.StartsWith(BakeRoot + "/") || !AssetDatabase.IsValidFolder(oldFolder))
+            return;
+        foreach (var other in Object.FindObjectsByType<WatercolorPaintedModel>())
+            if (other.pattern != null && AssetDatabase.GetAssetPath(other.pattern).StartsWith(oldFolder + "/"))
+                return;
+        AssetDatabase.DeleteAsset(oldFolder);
     }
 
     static string EnsureFolder(WatercolorPaintedModel model)
