@@ -387,7 +387,7 @@ Changes outside the plan:
 - The fog map (`Sam_Fog_Test`) is neither rebuilt nor tested until the basics are settled. When the user says the fog map work starts, it is rebuilt with the code of that time
 - The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
 - The dev time scale is 2x (work record 09)
-- Roadside trees come in 8 kinds, told apart only by colour for now. They are tall bare trunks, placed densely and at random across the road in stage 1, and neighbours differ in kind (2026-10-28 work record 01)
+- Roadside trees come in 8 kinds, told apart only by colour for now. They are tall bare trunks, placed at random in two rows along both edges of the road, and neighbours differ in kind. Trees on the camera side may hide the road. A stage uses only some kinds (stage 1 uses 5) (2026-10-28 work records 01, 02)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 

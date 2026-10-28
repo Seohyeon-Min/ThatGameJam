@@ -23,8 +23,8 @@ public static class BuildSamTestScene
         new(0.40f, 0.28f, 0.20f), new(0.30f, 0.30f, 0.33f), new(0.85f, 0.82f, 0.75f), new(0.55f, 0.24f, 0.22f),
         new(0.38f, 0.46f, 0.25f), new(0.30f, 0.40f, 0.62f), new(0.46f, 0.32f, 0.56f), new(0.72f, 0.56f, 0.24f),
     };
-    // The forest on the far side of the road reaches this far past the road's edge (x -5).
-    const float ForestDepth = 11f;
+    // The banks reach this far past the road's edges (x -5 and 5) on both sides, under the roadside trees.
+    const float RoadsideWidth = 4f;
     // Average distance between neighbouring trees; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
     const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
@@ -112,12 +112,12 @@ public static class BuildSamTestScene
         Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
         Material wood = Mat("Trunk", new Color(0.35f, 0.25f, 0.18f));
 
-        // Banks and streams run on into the forest on the far side.
-        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, ForestDepth);     // z -2 .. 8
-        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, ForestDepth);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, ForestDepth);  // z 22.5 .. 27
-        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, ForestDepth);
-        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, ForestDepth); // z 20 .. 22.5
+        // Banks and streams run on under the roadside trees.
+        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, RoadsideWidth);     // z -2 .. 8
+        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, RoadsideWidth);     // z 12 .. 20
+        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, RoadsideWidth);  // z 22.5 .. 27
+        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, RoadsideWidth);
+        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, RoadsideWidth); // z 20 .. 22.5
 
         // 1-1: the fallen log is already a bridge; the stump shows it once stood.
         GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
@@ -127,8 +127,11 @@ public static class BuildSamTestScene
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
 
-        // Only on the far side of the road, so they do not hide the road from the camera. Not in the streams.
-        PlaceForest(treePrefabs, root, new Vector2(-5f - ForestDepth, -4.6f), new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
+        // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
+        // A stage shows only some of the kinds; the others are for other stages.
+        PlaceRoadsideTrees(new[] { treePrefabs[0], treePrefabs[1], treePrefabs[2], treePrefabs[3], treePrefabs[4] }, root,
+            new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
+            new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
 
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
@@ -569,17 +572,17 @@ public static class BuildSamTestScene
         return routeObject.AddComponent<BabyRoute>();
     }
 
-    // A bank of snow whose top is at y = 0, `length` long along Z, 10 wide plus `farSide` more on the -X side.
-    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material, float farSide = 0f)
+    // A bank of snow whose top is at y = 0, `length` long along Z, 10 wide plus `sides` more on each side.
+    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
     {
-        GameObject ground = Primitive(PrimitiveType.Cube, name, center + new Vector3(-farSide / 2f, -0.25f, 0f), new Vector3(10f + farSide, 0.5f, length), material, parent);
+        GameObject ground = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.25f, new Vector3(10f + 2f * sides, 0.5f, length), material, parent);
         ground.layer = groundLayer;
     }
 
     // Water is not walkable ground; clicks pass through to the click plane.
-    static void Water(GameObject parent, string name, Vector3 center, float length, Material material, float farSide = 0f)
+    static void Water(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
     {
-        GameObject water = Primitive(PrimitiveType.Cube, name, center + new Vector3(-farSide / 2f, -0.45f, 0f), new Vector3(10f + farSide, 0.3f, length), material, parent);
+        GameObject water = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.45f, new Vector3(10f + 2f * sides, 0.3f, length), material, parent);
         Object.DestroyImmediate(water.GetComponent<Collider>());
     }
 
@@ -601,14 +604,15 @@ public static class BuildSamTestScene
         return prefabs;
     }
 
-    // Fills the X range over each Z range with trees on a jittered grid. A tree never has the same kind as a tree next to it.
-    // The seed is fixed so rebuilding gives the same forest.
-    static void PlaceForest(GameObject[] prefabs, GameObject parent, Vector2 xRange, Vector2[] zRanges)
+    // Fills each X range over each Z range with trees on a jittered grid. A tree never has the same kind as a tree next to it.
+    // The seed is fixed so rebuilding gives the same trees.
+    static void PlaceRoadsideTrees(GameObject[] prefabs, GameObject parent, Vector2[] xRanges, Vector2[] zRanges)
     {
         var random = new System.Random(1);
         var placed = new System.Collections.Generic.List<(Vector3 position, int kind)>();
         var freeKinds = new System.Collections.Generic.List<int>();
         const float jitter = TreeSpacing * 0.3f;
+        foreach (Vector2 xRange in xRanges)
         foreach (Vector2 zRange in zRanges)
             for (float x = xRange.x + jitter; x <= xRange.y - jitter; x += TreeSpacing)
                 for (float z = zRange.x + jitter; z <= zRange.y - jitter; z += TreeSpacing)
