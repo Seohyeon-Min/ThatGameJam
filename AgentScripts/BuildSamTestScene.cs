@@ -155,9 +155,12 @@ public static class BuildSamTestScene
         StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
-        // When the bird nears the log, the camera eases onto the log and stream until the log has fallen.
-        // The area is small, so the camera barely moves while locked; the bird can still reach the log's top (z 20.9).
-        Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector3(0f, 0f, 17.5f), new Vector2(2f, 1f));
+        // When the bird enters the band at z 15 .. 17, the camera eases onto the log and stream until the log has fallen or the bird
+        // flies out of x ±8, z 13.5 .. 21.5. The lock area takes in the roadside rows, so perching there keeps the lock.
+        // The camera area is small, so the camera barely moves while locked; the bird can still reach the log's top (z 20.9) and,
+        // staying on screen (±6, ±5 around the camera's point), still reach every edge of the lock area to leave it (ADR 0014).
+        // The band is 2 deep, so even a slow frame (a third of a second at the bird's speed) does not skip it.
+        Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector2(16f, 2f), new Vector3(0f, 0f, 17.5f), new Vector2(6f, 1f), new Vector2(16f, 8f));
 
         // The road and the terrain beside it, z -2 .. 27.
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,
@@ -220,8 +223,8 @@ public static class BuildSamTestScene
         RestLight(root, route[route.Count - 1].position);
 
         // When the bird nears a fog section, the camera eases onto it until the section is through.
-        Zone(root, fog31, new Vector3(0f, 0f, 4f), new Vector3(0f, 0f, 11.5f), new Vector2(6f, 9f));
-        Zone(root, fog32, new Vector3(0f, 0f, 20f), new Vector3(0f, 0f, 28f), new Vector2(6f, 13f));
+        Zone(root, fog31, new Vector3(0f, 0f, 7f), new Vector2(10f, 1f), new Vector3(0f, 0f, 11.5f), new Vector2(6f, 9f), new Vector2(16f, 11f));
+        Zone(root, fog32, new Vector3(0f, 0f, 21f), new Vector2(10f, 1f), new Vector3(0f, 0f, 28f), new Vector2(6f, 13f), new Vector2(16f, 15f));
 
         // The road covers every path tile, dead ends included: x -6.25 .. 7.25, z -2 .. 39.75.
         return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route,
@@ -648,8 +651,9 @@ public static class BuildSamTestScene
         return birdCamera;
     }
 
-    // Once the bird crosses the trigger's Z, the camera stays inside the area until the blocker opens.
-    static void Zone(GameObject parent, PathBlocker blocker, Vector3 trigger, Vector3 areaCenter, Vector2 areaSize)
+    // When the bird enters the trigger band (across the road), the camera stays inside the area until the bird leaves the lock area
+    // or the blocker opens (ADR 0014).
+    static void Zone(GameObject parent, PathBlocker blocker, Vector3 trigger, Vector2 triggerSize, Vector3 areaCenter, Vector2 areaSize, Vector2 lockSize)
     {
         GameObject zoneObject = Child(parent, $"CameraZone_{blocker.name}", areaCenter);
         GameObject triggerObject = Child(zoneObject, "Trigger", trigger);
@@ -658,7 +662,9 @@ public static class BuildSamTestScene
         {
             so.FindProperty("blocker").objectReferenceValue = blocker;
             so.FindProperty("trigger").objectReferenceValue = triggerObject.transform;
+            so.FindProperty("triggerSize").vector2Value = triggerSize;
             so.FindProperty("areaSize").vector2Value = areaSize;
+            so.FindProperty("lockSize").vector2Value = lockSize;
         });
     }
 
@@ -677,11 +683,11 @@ public static class BuildSamTestScene
         ground.layer = groundLayer;
     }
 
-    // Water is not walkable ground; clicks pass through to the click plane.
+    // Water is not walkable ground, but clicking it sends the bird there: its collider is on the click plane's layer.
     static void Water(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
     {
         GameObject water = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.45f, new Vector3(10f + 2f * sides, 0.3f, length), material, parent);
-        Object.DestroyImmediate(water.GetComponent<Collider>());
+        water.layer = clickPlaneLayer;
     }
 
     // Each tree kind comes bare and with leaves. A rough trunk with branches forking upward (Tommy's tree01 mesh); the leafy one adds

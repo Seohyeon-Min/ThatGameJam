@@ -30,6 +30,7 @@ public class BirdController : MonoBehaviour
     InputAction cryAction;
     InputAction pointAction;
     int clickMask;
+    int groundMask;
     int interactableLayer;
     State state;
     // Horizontal target while flying. Y is unused; the bird's height follows altitude.
@@ -56,6 +57,7 @@ public class BirdController : MonoBehaviour
         altitude = transform.position.y;
         baseScale = transform.localScale;
         clickMask = LayerMask.GetMask("Ground", "Interactable", "ClickPlane");
+        groundMask = LayerMask.GetMask("Ground", "ClickPlane");
         interactableLayer = LayerMask.NameToLayer("Interactable");
 
         moveAction = new InputAction("Move", InputActionType.Button, "<Mouse>/leftButton");
@@ -114,9 +116,12 @@ public class BirdController : MonoBehaviour
 
     void Update()
     {
-        bool hasHit = Physics.Raycast(Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>()), out RaycastHit hit,
-            Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
+        Ray ray = Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>());
+        bool hasHit = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
         Perchable hovered = hasHit ? PerchableAt(hit) : null;
+        // Something the bird cannot perch on now (a branch off screen, a fallen log) does not catch the click: it goes to what lies behind.
+        if (hasHit && hovered == null && hit.collider.gameObject.layer == interactableLayer)
+            hasHit = Physics.Raycast(ray, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
         ShowPerchCursor(hovered != null);
 
         if (moveAction.WasPressedThisFrame() && hasHit && !DevTools.Covers(pointAction.ReadValue<Vector2>()))
