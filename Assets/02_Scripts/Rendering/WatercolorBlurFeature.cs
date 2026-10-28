@@ -70,6 +70,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
     static readonly int BlitScaleBiasId = Shader.PropertyToID("_BlitScaleBias");
     static readonly int BlurParamsId = Shader.PropertyToID("_BlurParams");
     static readonly int BlurDepthId = Shader.PropertyToID("_BlurDepth");
+    static readonly int PaperId = Shader.PropertyToID("_Paper");
+    static readonly int PaperTexId = Shader.PropertyToID("_PaperTex");
 
     // Copied when the draw is recorded, so each camera keeps its own values on the shared material.
     static readonly MaterialPropertyBlock s_Props = new MaterialPropertyBlock();
@@ -81,6 +83,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
         public TextureHandle source;
         public Vector4 blurParams;
         public Vector4 blurDepth;
+        public Vector4 paper;
+        public Texture paperTexture;
     }
 
     readonly Material m_Material;
@@ -106,6 +110,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
 
         if (cameraData.cameraType == CameraType.Preview || cameraData.cameraType == CameraType.Reflection)
             return;
+        if (cameraData.cameraType == CameraType.SceneView && WatercolorManager.PlainSceneView)
+            return;
         if (!cameraData.postProcessEnabled || resourceData.isActiveTargetBackBuffer)
             return;
 
@@ -128,6 +134,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
             data.source = source;
             data.blurParams = new Vector4(stepPixels / width, stepPixels / height, 1f / m_Volume.colorThreshold.value, m_Volume.blurIntensity.value);
             data.blurDepth = new Vector4(m_Volume.depthThreshold.value, 0f, 0f, 0f);
+            data.paper = m_Volume.PaperParams((float)width / height);
+            data.paperTexture = m_Volume.paperTexture.value != null ? m_Volume.paperTexture.value : Texture2D.whiteTexture;
 
             builder.UseTexture(source);
             // The shader reads the depth through URP's global binding; declaring it keeps the graph ordering right.
@@ -142,6 +150,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
                 props.SetVector(BlitScaleBiasId, new Vector4(1f, 1f, 0f, 0f));
                 props.SetVector(BlurParamsId, d.blurParams);
                 props.SetVector(BlurDepthId, d.blurDepth);
+                props.SetVector(PaperId, d.paper);
+                props.SetTexture(PaperTexId, d.paperTexture);
                 ctx.cmd.DrawProcedural(Matrix4x4.identity, d.material, d.pass, MeshTopology.Triangles, 3, 1, props);
             });
         }
