@@ -117,7 +117,7 @@ Each stage is a prefab. That way several people can build different stages in th
 - The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only three values to the Animator: `Moving`, `Perched` (landing or perched), and `Refuse` (head shake). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it plays `Bird_Hover` (on trial, ADR 0011), and one wingbeat right after taking off; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
 - The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
 - Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies over the road and the terrain beside it (x ±13) and perches anywhere on screen (ADR 0009, ADR 0013), though not past the front and back ends of the area it may fly over (ADR 0010).
-- Clicking past the current stage's sunlit spot, or dragging past it with the button held, makes the bird land on the nearest branch on screen and shake its head (`Bird_Refuse`). If already perched it shakes its head in place. With no branch on screen it stays (ADR 0011, ADR 0012).
+- Clicking or dragging past the current stage's sunlit spot makes the bird fly up to that line. Reaching it while its target is still past it, the bird lands on the nearest branch on screen and shakes its head (`Bird_Refuse`). With no branch on screen it stays (ADR 0011, ADR 0012, ADR 0016).
 - The bird is on the `Bird` layer. Where trees or leaves hide it, the hidden part shows as a flat sky blue silhouette, done with the stencil by two Render Objects features (`BirdVisible`, `BirdSilhouette`) on both URP renderers. The setup is `AgentScripts/SetupBirdSilhouette.cs`.
 
 ### 4.2 Cry (§2.1, §9.3, §15.7)
@@ -424,6 +424,7 @@ Changes outside the plan:
 - The bird's area widened to the terrain beside the road (x ±13), with wider ground (x ±22) and more trees beyond (ADR 0013, 2026-10-28 work record 12)
 - A camera zone locks when the bird enters its trigger band and unlocks when it leaves the wider lock area. Clicking water moves the bird (ADR 0014, 2026-10-28 work record 13)
 - The bird is kept inside the actual screen, not a fixed box. The log's camera zone unlocks near the map's edge (ADR 0015, 2026-10-28 work record 14)
+- Refusal happens when the bird reaches the closed line, not where the click landed (ADR 0016, 2026-10-28 work record 15)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:

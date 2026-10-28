@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
 // right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed
-// (beyond the current stage's sunlit spot), it lands on the nearest branch instead and shakes its head (ADR 0011, ADR 0012).
+// (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
 // Flies at the current map's fixed altitude inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015).
 // The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
@@ -39,7 +39,7 @@ public class BirdController : MonoBehaviour
     // Horizontal target while flying. Y is unused; the bird's height follows altitude.
     Vector3 target;
     float altitude;
-    // Where it flies, in X and Z (GameFlow.FlyArea). Past its far Z end the way ahead is closed: the bird refuses to go there (ADR 0012).
+    // Where it flies, in X and Z (GameFlow.FlyArea). Past its far Z end the way ahead is closed: the bird refuses there (ADR 0012, ADR 0016).
     Bounds bounds = new(Vector3.zero, Vector3.positiveInfinity);
     // Shakes its head once it has landed.
     bool refusePending;
@@ -107,7 +107,7 @@ public class BirdController : MonoBehaviour
             transform.position = new Vector3(transform.position.x, y, transform.position.z);
     }
 
-    // Where it flies, in X and Z. It also stays on screen, and refuses to go past the area's far Z end.
+    // Where it flies, in X and Z. It also stays on screen, and refuses at the area's far Z end.
     public void SetArea(Bounds area)
     {
         bounds = area;
@@ -131,12 +131,7 @@ public class BirdController : MonoBehaviour
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
-        {
-            if (hit.point.z > bounds.max.z)
-                Refuse();
-            else
-                target = hit.point;
-        }
+            target = hit.point;
 
         bool cried = cryAction.WasPressedThisFrame();
         if (cried && Time.time >= nextCryTime)
@@ -178,21 +173,14 @@ public class BirdController : MonoBehaviour
         return true;
     }
 
-    // Sent where the way is still closed: lands on the nearest branch and shakes its head there, or at once if already perched,
-    // or once landed if it is landing on a branch. A device it was heading for or landing on is given up, so refusing never opens one.
-    // With no branch on screen it stays where it is.
+    // Reached the closed way: lands on the nearest branch on screen and shakes its head there. With no branch on screen it stays.
     void Refuse()
     {
         following = false;
-        if (state == State.Perched)
-            animator.SetTrigger(RefuseParam);
-        else if ((state == State.Landing && perch.IsIdleSpot) || PerchNearby())
+        if (PerchNearby())
             refusePending = true;
         else
-        {
-            LeavePerch();
             target = transform.position;
-        }
     }
 
     void Click(RaycastHit hit, Perchable hovered)
@@ -205,11 +193,6 @@ public class BirdController : MonoBehaviour
             return;
         }
 
-        if (hit.point.z > bounds.max.z)
-        {
-            Refuse();
-            return;
-        }
         LeavePerch();
         // The target itself is not clamped: the bird presses against the edge of its area,
         // and moves on as the area moves (the camera follows, or a gate opens).
@@ -256,6 +239,9 @@ public class BirdController : MonoBehaviour
         float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
         Face(flat - position);
         transform.position = new Vector3(flat.x, y, flat.z);
+        // Heading past the far end of its area, it has reached the line where the way is closed (ADR 0016).
+        if (target.z > bounds.max.z && flat.z >= bounds.max.z - 0.01f)
+            Refuse();
     }
 
     void FlyToPerch()
