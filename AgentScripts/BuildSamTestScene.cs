@@ -17,16 +17,18 @@ public static class BuildSamTestScene
     const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
     const string TreePrefabFolder = "Assets/03_Prefabs/Trees";
-    // One per tree kind. Grey box: the kinds differ only by colour until the art's models arrive.
-    static readonly Color[] TreeColors =
+    // Wood and leaf colours per tree kind. Grey box: the kinds differ only by colour until the art's models arrive.
+    static readonly (Color wood, Color leaves)[] TreeKinds =
     {
-        new(0.40f, 0.28f, 0.20f), new(0.30f, 0.30f, 0.33f), new(0.85f, 0.82f, 0.75f), new(0.55f, 0.24f, 0.22f),
-        new(0.38f, 0.46f, 0.25f), new(0.30f, 0.40f, 0.62f), new(0.46f, 0.32f, 0.56f), new(0.72f, 0.56f, 0.24f),
+        (new(0.40f, 0.28f, 0.20f), new(0.25f, 0.42f, 0.30f)), (new(0.30f, 0.30f, 0.33f), new(0.45f, 0.55f, 0.25f)),
+        (new(0.85f, 0.82f, 0.75f), new(0.75f, 0.68f, 0.25f)), (new(0.55f, 0.24f, 0.22f), new(0.25f, 0.45f, 0.48f)),
     };
     // The banks reach this far past the road's edges (x -5 and 5) on both sides, under the roadside trees.
     const float RoadsideWidth = 4f;
     // Average distance between neighbouring trees; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
+    // Trees closer than this are next to each other: the grid neighbours along X and Z, not the diagonal ones.
+    const float TreeNeighbourDistance = TreeSpacing * 1.3f;
     const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
     const string BirdModelPrefabPath = "Assets/03_Prefabs/Bird-Animated.prefab";
     const string BirdAnimatorPath = "Assets/01_Arts/Models/Bird/Bird.controller";
@@ -49,8 +51,8 @@ public static class BuildSamTestScene
     public static string Build()
     {
         NewScene();
-        GameObject[] treePrefabs = BuildTreePrefabs();
-        return Finish(ScenePath, BuildStage1(treePrefabs), BuildStage2());
+        var (bareTrees, _) = BuildTreePrefabs();
+        return Finish(ScenePath, BuildStage1(bareTrees), BuildStage2());
     }
 
     // Step 2: the fog stage alone (3-0 start, 3-1 half fog, 3-2 full fog, a rest area).
@@ -105,7 +107,7 @@ public static class BuildSamTestScene
 
     // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream; the stage ends in the sunlit spot right after it.
     // The road runs along +Z.
-    static Stage BuildStage1(GameObject[] treePrefabs)
+    static Stage BuildStage1(GameObject[] bareTrees)
     {
         var root = new GameObject("Stage1");
         Material snow = Mat("Snow", new Color(0.92f, 0.95f, 1f));
@@ -128,8 +130,8 @@ public static class BuildSamTestScene
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
 
         // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
-        // A stage shows only some of the kinds; the others are for other stages.
-        PlaceRoadsideTrees(new[] { treePrefabs[0], treePrefabs[1], treePrefabs[2], treePrefabs[3], treePrefabs[4] }, root,
+        // Stage 1 has the bare trees; the leafy ones are for other stages.
+        PlaceRoadsideTrees(bareTrees, root,
             new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
             new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
 
@@ -416,6 +418,13 @@ public static class BuildSamTestScene
         Object.DestroyImmediate(ring.GetComponent<Collider>());
         var marker = ring.AddComponent<ClickMarker>();
 
+        // The Bird layer gets the see-through silhouette (AgentScripts/SetupBirdSilhouette.cs).
+        int birdLayer = LayerMask.NameToLayer("Bird");
+        if (birdLayer < 0)
+            throw new System.InvalidOperationException("No Bird layer. Run AgentScripts/SetupBirdSilhouette.cs first.");
+        foreach (Transform part in bird.GetComponentsInChildren<Transform>(true))
+            part.gameObject.layer = birdLayer;
+
         var controller = bird.AddComponent<BirdController>();
         Set(controller, so =>
         {
@@ -586,25 +595,64 @@ public static class BuildSamTestScene
         Object.DestroyImmediate(water.GetComponent<Collider>());
     }
 
-    // A tall bare trunk per tree kind, no crown (the director's reference pictures). Decoration only (plan Q7: no perching).
-    static GameObject[] BuildTreePrefabs()
+    // Each tree kind comes bare and with leaves. A rough trunk with branches forking upward (Tommy's tree01 mesh); the leafy one adds
+    // clumps of leaves at the branch tips. Decoration only (plan Q7: no perching).
+    static (GameObject[] bare, GameObject[] leafy) BuildTreePrefabs()
     {
         if (!AssetDatabase.IsValidFolder(TreePrefabFolder))
             AssetDatabase.CreateFolder("Assets/03_Prefabs", "Trees");
-        var prefabs = new GameObject[TreeColors.Length];
-        for (int i = 0; i < prefabs.Length; i++)
+        var bare = new GameObject[TreeKinds.Length];
+        var leafy = new GameObject[TreeKinds.Length];
+        for (int i = 0; i < TreeKinds.Length; i++)
         {
-            string name = $"Tree_{i + 1}";
-            var root = new GameObject(name);
-            GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 5f, 0f), new Vector3(0.35f, 5f, 0.35f), Mat(name, TreeColors[i]), root);
-            Object.DestroyImmediate(trunk.GetComponent<Collider>());
-            prefabs[i] = PrefabUtility.SaveAsPrefabAsset(root, $"{TreePrefabFolder}/{name}.prefab");
-            Object.DestroyImmediate(root);
+            Material wood = Mat($"Tree_{i + 1}", TreeKinds[i].wood);
+            Material leaves = Mat($"TreeLeaves_{i + 1}", TreeKinds[i].leaves);
+            bare[i] = SaveTree($"Tree_{i + 1}_Bare", wood, null);
+            leafy[i] = SaveTree($"Tree_{i + 1}_Leafy", wood, leaves);
         }
-        return prefabs;
+        return (bare, leafy);
     }
 
-    // Fills each X range over each Z range with trees on a jittered grid. A tree never has the same kind as a tree next to it.
+    static GameObject SaveTree(string name, Material wood, Material leaves)
+    {
+        var root = new GameObject(name);
+        Limb(root, "Trunk", Vector3.zero, Vector3.up, 5f, 0.4f, wood);
+        Vector3 top = Limb(root, "TrunkTop", new Vector3(0f, 5f, 0f), Vector3.up, 3.5f, 0.28f, wood);
+        var tips = new System.Collections.Generic.List<Vector3> { top };
+        // Start height, direction around the trunk, lean from upright, length, thickness.
+        (float y, float yaw, float lean, float length, float thickness)[] branches =
+        {
+            (4f, 30f, 35f, 3f, 0.16f), (5.5f, 160f, 30f, 2.8f, 0.14f), (6.5f, 260f, 25f, 2.4f, 0.12f), (7.5f, 90f, 20f, 2f, 0.1f),
+        };
+        foreach (var b in branches)
+            tips.Add(Limb(root, "Branch", new Vector3(0f, b.y, 0f), Quaternion.Euler(0f, b.yaw, 0f) * Quaternion.Euler(b.lean, 0f, 0f) * Vector3.up,
+                b.length, b.thickness, wood));
+        if (leaves != null)
+            foreach (Vector3 tip in tips)
+                for (int i = 0; i < 3; i++)
+                {
+                    // Three tilted blocks per tip, not one round ball.
+                    Quaternion turn = Quaternion.Euler(25f * i, 120f * i + tip.y * 40f, 15f * i);
+                    GameObject clump = Primitive(PrimitiveType.Cube, "Leaves", tip + turn * new Vector3(0.45f, 0f, 0f), Vector3.one * 1.2f, leaves, root);
+                    clump.transform.rotation = turn;
+                    Object.DestroyImmediate(clump.GetComponent<Collider>());
+                }
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{TreePrefabFolder}/{name}.prefab");
+        Object.DestroyImmediate(root);
+        return prefab;
+    }
+
+    // A cylinder from `from` along `direction`; returns its far end.
+    static Vector3 Limb(GameObject parent, string name, Vector3 from, Vector3 direction, float length, float thickness, Material material)
+    {
+        GameObject limb = Primitive(PrimitiveType.Cylinder, name, from + direction * (length / 2f), new Vector3(thickness, length / 2f, thickness), material, parent);
+        limb.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+        Object.DestroyImmediate(limb.GetComponent<Collider>());
+        return from + direction * length;
+    }
+
+    // Fills each X range over each Z range with trees on a jittered grid, each turned and sized a little at random.
+    // A tree takes a kind that no tree next to it has; if every kind is taken, the kind whose nearest tree is farthest.
     // The seed is fixed so rebuilding gives the same trees.
     static void PlaceRoadsideTrees(GameObject[] prefabs, GameObject parent, Vector2[] xRanges, Vector2[] zRanges)
     {
@@ -619,16 +667,25 @@ public static class BuildSamTestScene
                 {
                     var position = new Vector3(x + Jitter(random, jitter), 0f, z + Jitter(random, jitter));
                     freeKinds.Clear();
+                    int farthestKind = 0;
+                    float farthest = -1f;
                     for (int kind = 0; kind < prefabs.Length; kind++)
-                        if (!placed.Exists(t => t.kind == kind && Vector3.Distance(t.position, position) < TreeSpacing * 1.6f))
+                    {
+                        float nearest = float.MaxValue;
+                        foreach (var t in placed)
+                            if (t.kind == kind)
+                                nearest = Mathf.Min(nearest, Vector3.Distance(t.position, position));
+                        if (nearest >= TreeNeighbourDistance)
                             freeKinds.Add(kind);
-                    int chosen = freeKinds[random.Next(freeKinds.Count)];
+                        if (nearest > farthest)
+                            (farthest, farthestKind) = (nearest, kind);
+                    }
+                    int chosen = freeKinds.Count > 0 ? freeKinds[random.Next(freeKinds.Count)] : farthestKind;
                     placed.Add((position, chosen));
 
                     var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[chosen], parent.transform);
-                    tree.transform.position = position;
-                    float thickness = Mathf.Lerp(0.8f, 1.4f, (float)random.NextDouble());
-                    tree.transform.localScale = new Vector3(thickness, Mathf.Lerp(0.8f, 1.2f, (float)random.NextDouble()), thickness);
+                    tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
+                    tree.transform.localScale = Vector3.one * Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
                 }
     }
 

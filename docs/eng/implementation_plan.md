@@ -41,7 +41,7 @@ The code in the current `Sam_Test` scene is a test made before the design doc. I
 | `Obstacle.cs` | Disappears when the bird clears it | Every obstacle resolves on its own over time and gives 3-step signals (§3) | Replace with the natural resolution timer in 4.4 |
 | `PerchPoint.cs` | A perch point whose marker blinks when you get close | The interaction targets are logs and snow-laden branches (§2.1) | Keep using it as the perch position. Remove the marker that blinks on approach. On mouse hover, only the cursor changes (Q6) |
 | `QuarterViewCamera.cs` | Always follows the target | Follows only in the intro; fixed cameras per section in stages (§2.5) | Replace with the camera rig in 4.7 |
-| `Tree.prefab` | Roadside tree. You can perch on its branches | The design doc says nothing about perching on roadside trees | Keep it only as decoration and remove the perch point (Q7). Replaced on 2026-10-28 by 8 colour-coded kinds (`Trees/Tree_1` to `Tree_8`) |
+| `Tree.prefab` | Roadside tree. You can perch on its branches | The design doc says nothing about perching on roadside trees | Keep it only as decoration and remove the perch point (Q7). Replaced on 2026-10-28 by 4 kinds x bare/leafy (`Trees/Tree_N_Bare`, `Tree_N_Leafy`) |
 
 The `AGENTS.md` rule "use only the direction of the mouse wheel" has no use now, because the design no longer uses the wheel. `AGENTS.md` was not changed.
 
@@ -113,6 +113,7 @@ Each stage is a prefab. That way several people can build different stages in th
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
 - The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only two values to the Animator: `Moving` and `Perched` (landing or perched). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it flaps; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
 - The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
+- The bird is on the `Bird` layer. Where trees or leaves hide it, the hidden part shows as a flat sky blue silhouette, done with the stencil by two Render Objects features (`BirdVisible`, `BirdSilhouette`) on both URP renderers. The setup is `AgentScripts/SetupBirdSilhouette.cs`.
 
 ### 4.2 Cry (§2.1, §9.3, §15.7)
 
@@ -387,7 +388,8 @@ Changes outside the plan:
 - The fog map (`Sam_Fog_Test`) is neither rebuilt nor tested until the basics are settled. When the user says the fog map work starts, it is rebuilt with the code of that time
 - The Sunlit Rest Area is not a separate section; it sits right after the last device (ADR 0006, work record 08)
 - The dev time scale is 2x (work record 09)
-- Roadside trees come in 8 kinds, told apart only by colour for now. They are tall bare trunks, placed at random in two rows along both edges of the road, and neighbours differ in kind. Trees on the camera side may hide the road. A stage uses only some kinds (stage 1 uses 5) (2026-10-28 work records 01, 02)
+- Roadside trees come in 4 kinds, each bare and leafy, told apart by colour for now. Trunks have branches forking upward. They are placed at random in two rows along both edges of the road, and neighbours differ in kind. Trees on the camera side may hide the road. Stage 1 uses the 4 bare kinds (2026-10-28 work records 01 to 03)
+- The hidden bird shows as a silhouette (2026-10-28 work record 03)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
