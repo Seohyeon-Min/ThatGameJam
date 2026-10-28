@@ -54,7 +54,7 @@ Names are suggestions. Each component does one thing.
 | Component | What it does |
 |---|---|
 | `GameFlow` | Runs the order intro → tutorial → stages 1·2·3 → ending. Knows the current stage. Sets where the bird may fly (ADR 0010) |
-| `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, road range, Sunlit Rest Area, seasonal effect |
+| `Stage` | Settings for one stage. Start positions of the baby and the bird, bird altitude, road range, Sunlit Rest Area |
 | `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range `GameFlow` has opened, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, and within the screen around this point. One Cinemachine camera follows this point (ADR 0005, ADR 0007, ADR 0008) |
 | `CameraZone` | One device's camera zone. When the bird crosses the trigger line, the camera locks to a rectangle; when the device is solved, it unlocks (ADR 0007, ADR 0008) |
 | `BirdController` | Click movement, perching, cry, altitude |
@@ -66,6 +66,8 @@ Names are suggestions. Each component does one thing.
 | `NaturalTimer` | Time until natural resolution, 3-step signals, resolution. All five points in the §3.2 table use it |
 | Sunlit Rest Area | The last point of the baby's path (`BabyRoute`) and the light on it. When the baby reaches the last point, it falls asleep and raises `ReachedRest`. There is no separate component or section for it (ADR 0006) |
 | `GameTuning` | A ScriptableObject that holds time and speed values (`Assets/04_Data/`) |
+| `Season` | The season level. `AdvanceSeason()`, `OnSeasonChanged(int)` (4.15) |
+| `SeasonDebugTint` | Debug only. Tints the environment redder per season level. Deleted once effect assets arrive |
 | Stage devices | `WingUmbrella`, `LeaningLog`, `SnowBranch`, `RabbitFamily`, `FogField`, `FogTrail`, `FogAnimal`, `HiddenObstacle`, `CloudCover`, `Ending`, seasonal effects |
 | `DevTools` | For development. Fast-forward time, skip stages. A row of buttons at the top of the screen. Turned off in release builds |
 | `TreeGenerator` | Level tool. Scatters tree prefabs over areas. Generate and Clear buttons in the Inspector |
@@ -186,7 +188,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 ### 4.6 Sunlit Rest Area, Stage Transition, Game Flow (§10, §11)
 
 - The Sunlit Rest Area is not a special section (ADR 0006). Put one portal-like light at the end of the baby's path, right after the stage's last device. Do not build more path or ground past it.
-- When the baby reaches the end of the path: the baby lies down and falls asleep → the stage's seasonal effect → `GameFlow` starts the next stage right there (ADR 0010).
+- When the baby reaches the end of the path: the baby lies down and falls asleep → the season goes up one level (4.15) → `GameFlow` starts the next stage right there (ADR 0010).
 - Next stage: the baby stays asleep where it is (`Sleeping`) and its wake timer runs again. The bird's altitude eases to the new stage's value. The new stage is added to the road the bird may fly over.
 - Where the bird may fly: the road of every stage up to the current one. In the current stage it goes forward only up to the limit line of the first device not yet opened (the Z of `PathBlocker.birdLimit`). Backwards is always open (ADR 0010).
 - Only the dev tool's "next stage" teleports. It leaves the baby asleep at the current stage's sunlit spot and starts the next stage. The bird moves to the next stage's start.
@@ -306,6 +308,8 @@ This is the hardest and riskiest part. A prototype built separately from the oth
 
 ### 4.15 Seasonal Change Effects (§10.2, §15.9)
 
+The season is the level (from 0) of the `Season` component. Each time the baby falls asleep at a sunlit spot and the next stage starts, `AdvanceSeason()` raises it by one and the `OnSeasonChanged(int level)` event fires. The effects below hook onto this event. In Play Mode the Inspector's "Advance Season" and "Apply Level" (to the typed level) buttons test it. Until effect assets arrive, the debug-only `SeasonDebugTint` tints everything but the baby and the bird redder per level. No material changes. Deleting the scene's `SeasonDebugTint` object removes it.
+
 | When | Effect | Code approach |
 |---|---|---|
 | End of tutorial | The falling snow stops | Stop new emission from the snow particles |
@@ -414,6 +418,7 @@ Changes outside the plan:
 - The baby now uses the art's girl model and animations. Where each clip is used is in 4.3 (2026-10-28 work record 07)
 - The stages join on one road and the teleport is gone. The bird goes only as far as the next device. Done in `Sam_Test` first; it moves to the director's main map when that arrives (ADR 0010, 2026-10-28 work record 08)
 - Clicking past a closed way makes the bird land on a nearby branch and shake its head. In-place flight switched to `Bird_Hover` on trial (ADR 0011, 2026-10-28 work record 09)
+- The season level system (`Season`) and the debug red tint (`SeasonDebugTint`). No real environment change yet (4.15, 2026-10-28 work record 10)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:

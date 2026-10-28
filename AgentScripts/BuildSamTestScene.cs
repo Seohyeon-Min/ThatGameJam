@@ -91,6 +91,10 @@ public static class BuildSamTestScene
         var flow = new GameObject("GameFlow");
         var gameFlow = flow.AddComponent<GameFlow>();
         flow.AddComponent<DevTools>();
+        var season = flow.AddComponent<Season>();
+        // Debug only, on its own object so deleting the object removes it.
+        var tint = new GameObject("SeasonDebugTint").AddComponent<SeasonDebugTint>();
+        Set(tint, so => so.FindProperty("season").objectReferenceValue = season);
         Set(gameFlow, so =>
         {
             SerializedProperty list = so.FindProperty("stages");
@@ -98,6 +102,7 @@ public static class BuildSamTestScene
             for (int i = 0; i < stages.Length; i++)
                 list.GetArrayElementAtIndex(i).objectReferenceValue = stages[i];
             so.FindProperty("birdCamera").objectReferenceValue = birdCamera;
+            so.FindProperty("season").objectReferenceValue = season;
         });
 
         EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), scenePath);

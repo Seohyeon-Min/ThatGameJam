@@ -37,7 +37,7 @@ public class DevTools : MonoBehaviour
                 () => CurrentTimer()?.ResolveNaturally()),
             (() => "By bird", "Resolves what the baby waits for now as if the bird did it. The baby looks up at the bird. (F3)",
                 () => CurrentTimer()?.ResolveByBird()),
-            (() => "Next stage", "Puts the baby asleep at this stage's sunlit spot, as if it had walked the stage, and starts the next stage there. The bird comes along. (F4)",
+            (() => "Next stage", "Puts the baby asleep at this stage's sunlit spot, as if it had walked the stage: the season advances and the next stage starts there. The bird comes along. (F4)",
                 () => GameFlow.Instance.SkipToNextStage()),
         };
     }

@@ -1,8 +1,6 @@
 using UnityEngine;
-using UnityEngine.Events;
 
-// One stage's setup: where the baby and bird start, the baby's route, the bird's altitude, the road area,
-// and the season effect played after the baby falls asleep in the rest area (design doc §10, §11).
+// One stage's setup: where the baby and bird start, the baby's route, the bird's altitude, and the road area (design doc §10, §11).
 // The stages lie one after another along +Z on one long road; each starts where the last one's route ended (ADR 0010).
 public class Stage : MonoBehaviour
 {
@@ -12,7 +10,6 @@ public class Stage : MonoBehaviour
     public float birdAltitude = 3f;
     // World-space area of the stage's road, in X and Z. The bird flies over this and the earlier stages' areas (ADR 0007, ADR 0010).
     public Bounds area = new(Vector3.zero, new Vector3(6f, 1f, 30f));
-    public UnityEvent seasonEffect;
 
     // How far along +Z the bird may fly: the first blocker on the route that is still closed, else the end of the stage (ADR 0010).
     public float BirdForwardLimit
