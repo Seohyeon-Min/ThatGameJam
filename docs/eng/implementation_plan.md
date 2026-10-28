@@ -154,6 +154,18 @@ Each stage is a prefab. That way several people can build different stages in th
 
 **Animation list** (to hand to art): walk, stand and wait, crouch, sit and rest, sleep, toss and turn, rub eyes, stretch, look up, look around, peek, watch (as the rabbits pass by).
 
+The clips of the art's girl model (`Assets/01_Arts/Models/Girl/NPC-Girl-Animated.fbx`, 2026-10-28) are used like this. The Animator is `Girl.controller`, built by the builder, and `Baby` passes only three values: `Walking`, `Asleep`, `LookAround`.
+
+| Situation | Clip |
+|---|---|
+| Stage start, asleep | `Girl_Sleep`, looping |
+| Waking | Walks only after `Girl_GetUp` (12.6 s) ends. Then, if the bird woke it, it breathes and turns toward the bird. If it woke by itself, `Girl_Idle_LookAround` |
+| Walking | `Girl_Walk` |
+| Waiting at a device, looking up after the bird helped, waiting for a trail in the fog | Standing idles. Each time one of breathing (`Girl_Idle_Breathing`), humming (`Girl_Idle_Hum`), or stretching (`Girl_Idle_Stretch`) ends, the next is picked at random |
+| Reaching the sunlit spot | `Girl_LieDown` → `Girl_Sleep`. The season effect and transition start after lying down ends |
+
+No clip yet: crouch, sit and rest, the waiting signals (toss and turn, rub eyes, stretch), look up, peek, watch. At crouch and sit stops the baby waits standing. `Girl_Run` is not used.
+
 ### 4.4 Natural Resolution Timer and Waiting Signals (§3)
 
 The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have the same shape. Time passes, signals grow in 3 steps, and it ends when time runs out or the bird solves it first. So it is built as one `NaturalTimer` component.
@@ -397,6 +409,7 @@ Changes outside the plan:
 - The hidden bird shows as a silhouette (2026-10-28 work record 03)
 - The bird perches on roadside tree branches and, idle for 2 s, goes to the nearest one. Q7 reversed (ADR 0009, 2026-10-28 work record 04)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
+- The baby now uses the art's girl model and animations. Where each clip is used is in 4.3 (2026-10-28 work record 07)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:
@@ -406,6 +419,9 @@ Remaining work and open issues:
 - Temporary values: the bird's screen range (`birdRange` on `BirdCamera`), the camera zones' triggers and ranges, the 1-second ease, and the fog clearing width, re-join range, and animal answer range
 - Each builder run changes `_SrcBlend` on the transparent test materials (`ClickMarker.mat`, `RestLight.mat`, `AnimalGlow.mat`). The builder setting blend values directly and the Editor's automatic adjustment seem to use different values. These changes are left uncommitted; fix them when the builder is next touched
 - Only the user's own test was done by hand with a real mouse. All other checks used a virtual mouse
+- The baby's feet slide while walking. The walk clip's stride gives a no-slide speed of about 0.1 m/s (0.08 m/s at this game's size), but the baby walks at 1.2 m/s. Either the art makes a walk with a longer stride or the walking speed is decided again
+- Each wake-up waits for `Girl_GetUp`, 12.6 s. Four times adds about 50 s to the playtime (§1.4)
+- The baby in `Sam_Fog_Test` is still the old grey capsule, so with the current code it has no Animator and does not work. It changes when the fog map is rebuilt
 
 ## 7. Risks
 

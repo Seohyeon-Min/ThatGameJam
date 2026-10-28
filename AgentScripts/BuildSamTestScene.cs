@@ -27,6 +27,10 @@ public static class BuildSamTestScene
     const float RoadsideWidth = 4f;
     // Average distance between neighbouring trees; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
+    const string GirlModelPath = "Assets/01_Arts/Models/Girl/NPC-Girl-Animated.fbx";
+    const string GirlAnimatorPath = "Assets/01_Arts/Models/Girl/Girl.controller";
+    // 1.3 tall in the model; about 1 here, the height the baby's collider and the levels were made for.
+    const float BabyModelScale = 0.8f;
     const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
     const string BirdModelPrefabPath = "Assets/03_Prefabs/Bird-Animated.prefab";
     const string BirdAnimatorPath = "Assets/01_Arts/Models/Bird/Bird.controller";
@@ -366,6 +370,8 @@ public static class BuildSamTestScene
         return log;
     }
 
+    // The girl model from the art (Assets/01_Arts/Models/Girl, import settings by AgentScripts/SetupGirlModel.cs) under the Baby.
+    // The model faces -X, so it is turned to face +Z. Its feet are at its origin.
     static Baby BuildBaby()
     {
         var root = new GameObject("Baby");
@@ -376,13 +382,12 @@ public static class BuildSamTestScene
         capsule.height = 1f;
         capsule.radius = 0.25f;
 
-        GameObject visual = Primitive(PrimitiveType.Capsule, "Visual", Vector3.zero, Vector3.one * 0.5f, Mat("Child", new Color(1f, 0.6f, 0.4f)), root);
-        visual.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-        Object.DestroyImmediate(visual.GetComponent<Collider>());
-        // Shows which way the baby faces; the capsule alone is symmetric.
-        GameObject face = Primitive(PrimitiveType.Cube, "Face", Vector3.zero, new Vector3(0.3f, 0.15f, 0.2f), Mat("Face", new Color(0.3f, 0.2f, 0.2f)), visual);
-        face.transform.localPosition = new Vector3(0f, 0.5f, 0.45f);
-        Object.DestroyImmediate(face.GetComponent<Collider>());
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(GirlModelPath), root.transform);
+        model.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+        model.transform.localScale = Vector3.one * BabyModelScale;
+        var animator = model.GetComponent<Animator>();
+        animator.runtimeAnimatorController = BuildBabyAnimator(out AnimationClip getUp, out AnimationClip lieDown);
+        animator.applyRootMotion = false;
 
         GameObject wake = Child(root, "WakeTimer", Vector3.zero);
         var timer = wake.AddComponent<NaturalTimer>();
@@ -392,9 +397,92 @@ public static class BuildSamTestScene
         Set(baby, so =>
         {
             so.FindProperty("wakeTimer").objectReferenceValue = timer;
-            so.FindProperty("visual").objectReferenceValue = visual.transform;
+            so.FindProperty("animator").objectReferenceValue = animator;
+            so.FindProperty("getUpClip").objectReferenceValue = getUp;
+            so.FindProperty("lieDownClip").objectReferenceValue = lieDown;
         });
         return baby;
+    }
+
+    // Rebuilds the baby's Animator Controller from the model's clips, along the art's flow (its README):
+    // idles or Walk -> LieDown -> Sleep (loop) -> GetUp -> Idle. Parameters: Walking, Asleep, LookAround (Baby), IdleVariant (RandomIdle).
+    // Standing still, the baby breathes, then hums or stretches at random. Run is not used: the baby only walks.
+    static AnimatorController BuildBabyAnimator(out AnimationClip getUpClip, out AnimationClip lieDownClip)
+    {
+        var clips = new System.Collections.Generic.Dictionary<string, AnimationClip>();
+        foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(GirlModelPath))
+        {
+            if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
+                clips[clip.name] = clip;
+        }
+        getUpClip = clips["Girl_GetUp"];
+        lieDownClip = clips["Girl_LieDown"];
+
+        // Rebuilt in place, so its GUID and the scenes' references to it stay.
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(GirlAnimatorPath)
+            ?? AnimatorController.CreateAnimatorControllerAtPath(GirlAnimatorPath);
+        foreach (AnimatorControllerParameter parameter in controller.parameters)
+            controller.RemoveParameter(parameter);
+        foreach (ChildAnimatorState child in controller.layers[0].stateMachine.states)
+            controller.layers[0].stateMachine.RemoveState(child.state);
+        controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("Asleep", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("LookAround", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("IdleVariant", AnimatorControllerParameterType.Int);
+        AnimatorStateMachine machine = controller.layers[0].stateMachine;
+
+        AnimatorState State(string name, string clip, Vector2 position)
+        {
+            AnimatorState state = machine.AddState(name, position);
+            state.motion = clips[clip];
+            return state;
+        }
+        AnimatorState sleep = State("Sleep", "Girl_Sleep", new Vector2(0f, 0f));
+        AnimatorState getUpState = State("GetUp", "Girl_GetUp", new Vector2(250f, -120f));
+        AnimatorState lieDown = State("LieDown", "Girl_LieDown", new Vector2(250f, 120f));
+        AnimatorState[] idles =
+        {
+            State("Idle", "Girl_Idle_Breathing", new Vector2(550f, -120f)),
+            State("Hum", "Girl_Idle_Hum", new Vector2(550f, 0f)),
+            State("Stretch", "Girl_Idle_Stretch", new Vector2(550f, 120f)),
+        };
+        AnimatorState lookAround = State("LookAround", "Girl_Idle_LookAround", new Vector2(850f, -120f));
+        AnimatorState walk = State("Walk", "Girl_Walk", new Vector2(850f, 120f));
+        machine.defaultState = sleep;
+
+        AnimatorStateTransition Go(AnimatorState from, AnimatorState to, float duration, float? exitTime = null)
+        {
+            AnimatorStateTransition transition = from.AddTransition(to);
+            transition.duration = duration;
+            transition.hasExitTime = exitTime.HasValue;
+            transition.exitTime = exitTime ?? 0f;
+            return transition;
+        }
+
+        // The README's poses match exactly: GetUp ends standing, LieDown ends in Sleep's pose.
+        Go(sleep, getUpState, 0.2f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Asleep");
+        Go(getUpState, idles[0], 0.2f, 1f);
+        Go(lieDown, sleep, 0f, 1f);
+        foreach (AnimatorState idle in idles)
+        {
+            idle.AddStateMachineBehaviour<RandomIdle>();
+            for (int i = 0; i < idles.Length; i++)
+                Go(idle, idles[i], 0.3f, 1f).AddCondition(AnimatorConditionMode.Equals, i, "IdleVariant");
+            Go(idle, lookAround, 0.3f).AddCondition(AnimatorConditionMode.If, 0f, "LookAround");
+        }
+        Go(lookAround, idles[0], 0.3f).AddCondition(AnimatorConditionMode.IfNot, 0f, "LookAround");
+        // Lying down is listed first: the baby stops walking and falls asleep in the same frame, and the first true transition wins.
+        // Baby waits the LieDown clip's length from that frame.
+        foreach (AnimatorState standing in new[] { idles[0], idles[1], idles[2], lookAround })
+        {
+            Go(standing, lieDown, 0.3f).AddCondition(AnimatorConditionMode.If, 0f, "Asleep");
+            Go(standing, walk, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Walking");
+        }
+        Go(walk, lieDown, 0.3f).AddCondition(AnimatorConditionMode.If, 0f, "Asleep");
+        Go(walk, idles[0], 0.2f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
+
+        AssetDatabase.SaveAssets();
+        return controller;
     }
 
     // The bird model from the art (Assets/03_Prefabs/Bird-Animated.prefab) under the controller. The controller's transform is
@@ -434,7 +522,7 @@ public static class BuildSamTestScene
 
     // Rebuilds the bird's Animator Controller from the model's clips, along the art's flow (its README):
     // Glide <-> Flap -> Landing -> a random perch idle -> Takeoff -> Flap. While gliding, one wingbeat every BirdGlideFlapInterval. Parameters: Moving and Perched (BirdController),
-    // IdleVariant (RandomPerchIdle).
+    // IdleVariant (RandomIdle).
     static AnimatorController BuildBirdAnimator()
     {
         var clips = new System.Collections.Generic.Dictionary<string, AnimationClip>();
@@ -507,7 +595,7 @@ public static class BuildSamTestScene
         Go(landing, idles[0], 0f, 1f);
         foreach (AnimatorState idle in idles)
         {
-            idle.AddStateMachineBehaviour<RandomPerchIdle>();
+            idle.AddStateMachineBehaviour<RandomIdle>();
             for (int i = 0; i < idles.Length; i++)
                 Go(idle, idles[i], 0f, 1f).AddCondition(AnimatorConditionMode.Equals, i, "IdleVariant");
             Go(idle, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");

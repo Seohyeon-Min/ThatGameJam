@@ -8,8 +8,18 @@ public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Resting }
 // and looks up at the bird whenever the bird was the one who helped (design doc §2.2, §4).
 public class Baby : CryListener
 {
+    static readonly int WalkingParam = Animator.StringToHash("Walking");
+    static readonly int AsleepParam = Animator.StringToHash("Asleep");
+    static readonly int LookAroundParam = Animator.StringToHash("LookAround");
+    static readonly int SleepState = Animator.StringToHash("Sleep");
+
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
+    [SerializeField] Animator animator;
+    // The baby starts walking when this has played.
+    [SerializeField] AnimationClip getUpClip;
+    // The baby is asleep at the rest spot when this has played.
+    [SerializeField] AnimationClip lieDownClip;
 
     public static Baby Instance { get; private set; }
 
@@ -18,7 +28,7 @@ public class Baby : CryListener
     // The blocker the baby is standing in front of, else null.
     public PathBlocker CurrentBlocker { get; private set; }
 
-    // Reached the last point of its route and fell asleep there.
+    // Reached the last point of its route and has lain down to sleep there.
     public event Action ReachedRest;
 
     BabyRoute route;
@@ -29,8 +39,6 @@ public class Baby : CryListener
     {
         Instance = this;
         wakeTimer.Resolved += byBird => StartCoroutine(WakeAndWalk(byBird));
-        visualPosition = visual.localPosition;
-        visualScale = visual.localScale;
     }
 
     public void PlaceAsleep(Transform start, BabyRoute route)
@@ -40,7 +48,11 @@ public class Baby : CryListener
         this.route = route;
         CurrentBlocker = null;
         State = BabyState.Sleeping;
-        pose = Pose.Lying;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(LookAroundParam, false);
+        animator.SetBool(AsleepParam, true);
+        // Already lying: no lying-down animation after the move.
+        animator.Play(SleepState, 0, 0f);
         wakeTimer.ResetTimer();
         wakeTimer.Begin();
     }
@@ -55,18 +67,20 @@ public class Baby : CryListener
     {
         State = BabyState.Waking;
         GameTuning tuning = GameTuning.Current;
+        animator.SetBool(AsleepParam, false);
+        yield return new WaitForSeconds(getUpClip.length);
         if (byBird)
             yield return LookUp(tuning.babyLookUpDuration);
         else
         {
-            pose = Pose.LookAround;
+            animator.SetBool(LookAroundParam, true);
             yield return new WaitForSeconds(tuning.babyLookAroundDuration);
+            animator.SetBool(LookAroundParam, false);
         }
 
         for (int i = 0; i < route.Count; i++)
         {
             State = BabyState.Walking;
-            pose = Pose.Stand;
             yield return WalkTo(route[i].position);
 
             if (!route[i].TryGetComponent(out StopPoint stop))
@@ -76,8 +90,9 @@ public class Baby : CryListener
             PathBlocker blocker = stop.Blocker;
             if (!blocker.IsOpen)
             {
+                // Waits standing whatever the stop's pose: the model has no crouch or sit yet.
                 State = BabyState.Waiting;
-                pose = WaitPoseToPose(stop.Pose);
+                StandStill();
                 CurrentBlocker = blocker;
                 blocker.BeginWaiting();
                 yield return new WaitUntil(() => blocker.IsOpen);
@@ -91,7 +106,9 @@ public class Baby : CryListener
         }
 
         State = BabyState.Resting;
-        pose = Pose.Lying;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(AsleepParam, true);
+        yield return new WaitForSeconds(lieDownClip.length);
         ReachedRest?.Invoke();
     }
 
@@ -104,19 +121,19 @@ public class Baby : CryListener
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
     public bool StepToward(Vector3 target)
     {
-        pose = Pose.Stand;
+        animator.SetBool(WalkingParam, true);
         TurnToward(target - transform.position);
         transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.babyWalkSpeed * Time.deltaTime);
         return transform.position == target;
     }
 
     // Standing still while a blocker leads the baby.
-    public void StandStill() => pose = Pose.Stand;
+    public void StandStill() => animator.SetBool(WalkingParam, false);
 
-    // Turns the body toward the bird; the head tilt is part of the pose.
+    // Stands and turns toward the bird. The model has no look-up animation yet.
     IEnumerator LookUp(float duration)
     {
-        pose = Pose.LookUp;
+        StandStill();
         for (float time = 0f; time < duration; time += Time.deltaTime)
         {
             TurnToward(BirdController.Instance.transform.position - transform.position);
@@ -130,59 +147,4 @@ public class Baby : CryListener
         if (direction.sqrMagnitude > 0.0001f)
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(direction), turnSpeed * Time.deltaTime);
     }
-
-    #region Placeholder poses: moves the grey capsule "Visual". Delete when the Animator arrives.
-
-    enum Pose { Stand, Crouch, Sit, Lying, LookUp, LookAround }
-
-    [SerializeField] Transform visual;
-
-    Pose pose = Pose.Lying;
-    Vector3 visualPosition;
-    Vector3 visualScale;
-
-    static Pose WaitPoseToPose(WaitPose waitPose) => waitPose switch
-    {
-        WaitPose.Crouch => Pose.Crouch,
-        WaitPose.Sit => Pose.Sit,
-        _ => Pose.Stand,
-    };
-
-    void LateUpdate()
-    {
-        Quaternion rotation = Quaternion.identity;
-        Vector3 scale = visualScale;
-        Vector3 position = visualPosition;
-        switch (pose)
-        {
-            case Pose.Crouch:
-                scale = Vector3.Scale(visualScale, new Vector3(1.15f, 0.55f, 1.15f));
-                position *= 0.55f;
-                break;
-            case Pose.Sit:
-                scale = Vector3.Scale(visualScale, new Vector3(1f, 0.7f, 1f));
-                position *= 0.7f;
-                rotation = Quaternion.Euler(-15f, 0f, 0f);
-                break;
-            case Pose.Lying:
-                // Rustling grows with the wake signals (rustling, rubbing eyes, stretching).
-                float wiggle = State == BabyState.Sleeping ? Mathf.Sin(Time.time * 6f) * 4f * wakeTimer.SignalLevel : 0f;
-                rotation = Quaternion.Euler(0f, wiggle, 90f);
-                position = new Vector3(0f, visualScale.x * 0.5f, 0f); // Unity capsule radius
-                break;
-            case Pose.LookUp:
-                rotation = Quaternion.Euler(-25f, 0f, 0f);
-                break;
-            case Pose.LookAround:
-                rotation = Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 4f) * 12f);
-                break;
-        }
-        float blend = 1f - Mathf.Exp(-12f * Time.deltaTime);
-        visual.SetLocalPositionAndRotation(
-            Vector3.Lerp(visual.localPosition, position, blend),
-            Quaternion.Slerp(visual.localRotation, rotation, blend));
-        visual.localScale = Vector3.Lerp(visual.localScale, scale, blend);
-    }
-
-    #endregion
 }

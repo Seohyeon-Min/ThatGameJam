@@ -1,7 +1,8 @@
 using UnityEngine;
 
-// On a perch idle state: each time one starts, picks which idle plays after it, so the bird does not loop one idle forever.
-public class RandomPerchIdle : StateMachineBehaviour
+// On an idle state: each time one starts, picks which idle plays after it, so a character does not loop one idle forever.
+// The bird's perch idles and the baby's standing idles use it.
+public class RandomIdle : StateMachineBehaviour
 {
     static readonly int IdleVariant = Animator.StringToHash("IdleVariant");
 
