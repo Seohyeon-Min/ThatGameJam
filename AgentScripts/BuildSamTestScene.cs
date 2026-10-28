@@ -7,7 +7,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Builds the grey-box test scenes. Sam_Test.unity: stage 1 (fallen log, leaning log, sunlit rest area) and a minimal stage 2
-// to test the stage transition; also rebuilds Assets/03_Prefabs/Tree.prefab (decoration only). Sam_Fog_Test.unity: the fog stage.
+// to test the stage transition; also rebuilds the roadside tree prefabs in Assets/03_Prefabs/Trees (decoration only).
+// Sam_Fog_Test.unity: the fog stage.
 // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.Build
 public static class BuildSamTestScene
 {
@@ -15,7 +16,17 @@ public static class BuildSamTestScene
     const string FogScenePath = "Assets/00_Scenes/Sam_Fog_Test.unity";
     const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
-    const string TreePrefabPath = "Assets/03_Prefabs/Tree.prefab";
+    const string TreePrefabFolder = "Assets/03_Prefabs/Trees";
+    // One per tree kind. Grey box: the kinds differ only by colour until the art's models arrive.
+    static readonly Color[] TreeColors =
+    {
+        new(0.40f, 0.28f, 0.20f), new(0.30f, 0.30f, 0.33f), new(0.85f, 0.82f, 0.75f), new(0.55f, 0.24f, 0.22f),
+        new(0.38f, 0.46f, 0.25f), new(0.30f, 0.40f, 0.62f), new(0.46f, 0.32f, 0.56f), new(0.72f, 0.56f, 0.24f),
+    };
+    // The forest on the far side of the road reaches this far past the road's edge (x -5).
+    const float ForestDepth = 11f;
+    // Average distance between neighbouring trees; dense like the director's reference pictures.
+    const float TreeSpacing = 1.7f;
     const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
     const string BirdModelPrefabPath = "Assets/03_Prefabs/Bird-Animated.prefab";
     const string BirdAnimatorPath = "Assets/01_Arts/Models/Bird/Bird.controller";
@@ -38,8 +49,8 @@ public static class BuildSamTestScene
     public static string Build()
     {
         NewScene();
-        GameObject treePrefab = BuildTreePrefab();
-        return Finish(ScenePath, BuildStage1(treePrefab), BuildStage2());
+        GameObject[] treePrefabs = BuildTreePrefabs();
+        return Finish(ScenePath, BuildStage1(treePrefabs), BuildStage2());
     }
 
     // Step 2: the fog stage alone (3-0 start, 3-1 half fog, 3-2 full fog, a rest area).
@@ -94,18 +105,19 @@ public static class BuildSamTestScene
 
     // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream; the stage ends in the sunlit spot right after it.
     // The road runs along +Z.
-    static Stage BuildStage1(GameObject treePrefab)
+    static Stage BuildStage1(GameObject[] treePrefabs)
     {
         var root = new GameObject("Stage1");
         Material snow = Mat("Snow", new Color(0.92f, 0.95f, 1f));
         Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
         Material wood = Mat("Trunk", new Color(0.35f, 0.25f, 0.18f));
 
-        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow);     // z -2 .. 8
-        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow);  // z 22.5 .. 27
-        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water);
-        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water); // z 20 .. 22.5
+        // Banks and streams run on into the forest on the far side.
+        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, ForestDepth);     // z -2 .. 8
+        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, ForestDepth);     // z 12 .. 20
+        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, ForestDepth);  // z 22.5 .. 27
+        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, ForestDepth);
+        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, ForestDepth); // z 20 .. 22.5
 
         // 1-1: the fallen log is already a bridge; the stump shows it once stood.
         GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
@@ -115,10 +127,8 @@ public static class BuildSamTestScene
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
 
-
-        // Only on the far side of the road, so they do not hide the road from the camera.
-        foreach (float z in new[] { 2f, 15f, 24f })
-            PlaceTree(treePrefab, root, new Vector3(-4.5f, 0f, z), 90f);
+        // Only on the far side of the road, so they do not hide the road from the camera. Not in the streams.
+        PlaceForest(treePrefabs, root, new Vector2(-5f - ForestDepth, -4.6f), new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
 
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
@@ -559,38 +569,66 @@ public static class BuildSamTestScene
         return routeObject.AddComponent<BabyRoute>();
     }
 
-    // A bank of snow whose top is at y = 0, `length` long along Z.
-    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material)
+    // A bank of snow whose top is at y = 0, `length` long along Z, 10 wide plus `farSide` more on the -X side.
+    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material, float farSide = 0f)
     {
-        GameObject ground = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.25f, new Vector3(10f, 0.5f, length), material, parent);
+        GameObject ground = Primitive(PrimitiveType.Cube, name, center + new Vector3(-farSide / 2f, -0.25f, 0f), new Vector3(10f + farSide, 0.5f, length), material, parent);
         ground.layer = groundLayer;
     }
 
     // Water is not walkable ground; clicks pass through to the click plane.
-    static void Water(GameObject parent, string name, Vector3 center, float length, Material material)
+    static void Water(GameObject parent, string name, Vector3 center, float length, Material material, float farSide = 0f)
     {
-        GameObject water = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.45f, new Vector3(10f, 0.3f, length), material, parent);
+        GameObject water = Primitive(PrimitiveType.Cube, name, center + new Vector3(-farSide / 2f, -0.45f, 0f), new Vector3(10f + farSide, 0.3f, length), material, parent);
         Object.DestroyImmediate(water.GetComponent<Collider>());
     }
 
-    // Trunk and crown. Decoration only (plan Q7: no perching on roadside trees).
-    static GameObject BuildTreePrefab()
+    // A tall bare trunk per tree kind, no crown (the director's reference pictures). Decoration only (plan Q7: no perching).
+    static GameObject[] BuildTreePrefabs()
     {
-        var root = new GameObject("Tree");
-        GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 2f, 0f), new Vector3(0.4f, 2f, 0.4f), Mat("Trunk", new Color(0.35f, 0.25f, 0.18f)), root);
-        Object.DestroyImmediate(trunk.GetComponent<Collider>());
-        GameObject crown = Primitive(PrimitiveType.Sphere, "Crown", new Vector3(0f, 4.6f, 0f), Vector3.one * 2.4f, Mat("Leaves", new Color(0.3f, 0.45f, 0.35f)), root);
-        Object.DestroyImmediate(crown.GetComponent<Collider>());
-        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, TreePrefabPath);
-        Object.DestroyImmediate(root);
-        return prefab;
+        if (!AssetDatabase.IsValidFolder(TreePrefabFolder))
+            AssetDatabase.CreateFolder("Assets/03_Prefabs", "Trees");
+        var prefabs = new GameObject[TreeColors.Length];
+        for (int i = 0; i < prefabs.Length; i++)
+        {
+            string name = $"Tree_{i + 1}";
+            var root = new GameObject(name);
+            GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 5f, 0f), new Vector3(0.35f, 5f, 0.35f), Mat(name, TreeColors[i]), root);
+            Object.DestroyImmediate(trunk.GetComponent<Collider>());
+            prefabs[i] = PrefabUtility.SaveAsPrefabAsset(root, $"{TreePrefabFolder}/{name}.prefab");
+            Object.DestroyImmediate(root);
+        }
+        return prefabs;
     }
 
-    static void PlaceTree(GameObject prefab, GameObject parent, Vector3 position, float yaw)
+    // Fills the X range over each Z range with trees on a jittered grid. A tree never has the same kind as a tree next to it.
+    // The seed is fixed so rebuilding gives the same forest.
+    static void PlaceForest(GameObject[] prefabs, GameObject parent, Vector2 xRange, Vector2[] zRanges)
     {
-        var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent.transform);
-        tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+        var random = new System.Random(1);
+        var placed = new System.Collections.Generic.List<(Vector3 position, int kind)>();
+        var freeKinds = new System.Collections.Generic.List<int>();
+        const float jitter = TreeSpacing * 0.3f;
+        foreach (Vector2 zRange in zRanges)
+            for (float x = xRange.x + jitter; x <= xRange.y - jitter; x += TreeSpacing)
+                for (float z = zRange.x + jitter; z <= zRange.y - jitter; z += TreeSpacing)
+                {
+                    var position = new Vector3(x + Jitter(random, jitter), 0f, z + Jitter(random, jitter));
+                    freeKinds.Clear();
+                    for (int kind = 0; kind < prefabs.Length; kind++)
+                        if (!placed.Exists(t => t.kind == kind && Vector3.Distance(t.position, position) < TreeSpacing * 1.6f))
+                            freeKinds.Add(kind);
+                    int chosen = freeKinds[random.Next(freeKinds.Count)];
+                    placed.Add((position, chosen));
+
+                    var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[chosen], parent.transform);
+                    tree.transform.position = position;
+                    float thickness = Mathf.Lerp(0.8f, 1.4f, (float)random.NextDouble());
+                    tree.transform.localScale = new Vector3(thickness, Mathf.Lerp(0.8f, 1.2f, (float)random.NextDouble()), thickness);
+                }
     }
+
+    static float Jitter(System.Random random, float amount) => ((float)random.NextDouble() * 2f - 1f) * amount;
 
     static GameObject Child(GameObject parent, string name, Vector3 position)
     {
