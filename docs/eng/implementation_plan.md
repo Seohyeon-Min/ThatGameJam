@@ -116,7 +116,7 @@ Each stage is a prefab. That way several people can build different stages in th
 - The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only three values to the Animator: `Moving`, `Perched` (landing or perched), and `Refuse` (head shake). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it plays `Bird_Hover` (on trial, ADR 0011), and one wingbeat right after taking off; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
 - The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
 - Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies on the road but perches anywhere on screen (ADR 0009), though not past the front and back ends of the road it may fly over (ADR 0010).
-- Clicking past the limit line of a device not yet opened, or dragging past it with the button held, makes the bird land on the nearest branch on screen and shake its head (`Bird_Refuse`). If already perched it shakes its head in place. With no branch on screen it stays (ADR 0011).
+- Clicking past the current stage's sunlit spot, or dragging past it with the button held, makes the bird land on the nearest branch on screen and shake its head (`Bird_Refuse`). If already perched it shakes its head in place. With no branch on screen it stays (ADR 0011, ADR 0012).
 - The bird is on the `Bird` layer. Where trees or leaves hide it, the hidden part shows as a flat sky blue silhouette, done with the stencil by two Render Objects features (`BirdVisible`, `BirdSilhouette`) on both URP renderers. The setup is `AgentScripts/SetupBirdSilhouette.cs`.
 
 ### 4.2 Cry (§2.1, §9.3, §15.7)
@@ -190,7 +190,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 - The Sunlit Rest Area is not a special section (ADR 0006). Put one portal-like light at the end of the baby's path, right after the stage's last device. Do not build more path or ground past it.
 - When the baby reaches the end of the path: the baby lies down and falls asleep → the season goes up one level (4.15) → `GameFlow` starts the next stage right there (ADR 0010).
 - Next stage: the baby stays asleep where it is (`Sleeping`) and its wake timer runs again. The bird's altitude eases to the new stage's value. The new stage is added to the road the bird may fly over.
-- Where the bird may fly: the road of every stage up to the current one. In the current stage it goes forward only up to the limit line of the first device not yet opened (the Z of `PathBlocker.birdLimit`). Backwards is always open (ADR 0010).
+- Where the bird may fly: the road of every stage up to the current one. In the current stage it goes forward only up to the Z of that stage's sunlit spot (the last point of the baby's route). Devices do not hold it back. Backwards is always open (ADR 0010, ADR 0012).
 - Only the dev tool's "next stage" teleports. It leaves the baby asleep at the current stage's sunlit spot and starts the next stage. The bird moves to the next stage's start.
 - The light of the Sunlit Rest Area (a gap in the clouds and sunlight) is art work (§16). The code only turns it on and off.
 - The Sunlit Rest Area in the last stage starts off. It turns on when the clouds are broken through or part (§10.3, 4.13).
@@ -419,6 +419,7 @@ Changes outside the plan:
 - The stages join on one road and the teleport is gone. The bird goes only as far as the next device. Done in `Sam_Test` first; it moves to the director's main map when that arrives (ADR 0010, 2026-10-28 work record 08)
 - Clicking past a closed way makes the bird land on a nearby branch and shake its head. In-place flight switched to `Bird_Hover` on trial (ADR 0011, 2026-10-28 work record 09)
 - The season level system (`Season`) and the debug red tint (`SeasonDebugTint`). No real environment change yet (4.15, 2026-10-28 work record 10)
+- The bird is limited per stage, not per device. It goes only as far as the current stage's sunlit spot (ADR 0012, 2026-10-28 work record 11)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:

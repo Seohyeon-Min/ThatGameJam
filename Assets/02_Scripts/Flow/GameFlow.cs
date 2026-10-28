@@ -16,7 +16,7 @@ public class GameFlow : MonoBehaviour
 
     public Stage CurrentStage => stages[current];
 
-    // Where the bird may fly: every stage's road up to the current one, and in the current stage only up to its first closed blocker.
+    // Where the bird may fly: every stage's area up to the current one, and in the current stage only up to its sunlit spot (ADR 0012).
     // The stages' areas follow each other along +Z.
     public Bounds FlyArea
     {

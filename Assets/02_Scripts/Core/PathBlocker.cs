@@ -5,12 +5,7 @@ using UnityEngine;
 // A StopPoint on the route refers to one. Opening comes after any opening animation, so the baby never walks into a half-open way.
 public abstract class PathBlocker : MonoBehaviour
 {
-    // A line across the road; its Z is as far as the bird may fly while this is closed (ADR 0010). None: the bird is not held back.
-    [SerializeField] Transform birdLimit;
-
     public event Action<bool> Opened;
-
-    public Transform BirdLimit => birdLimit;
 
     public bool IsOpen { get; private set; }
     public bool OpenedByBird { get; private set; }

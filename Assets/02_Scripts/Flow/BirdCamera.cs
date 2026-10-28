@@ -47,7 +47,7 @@ public class BirdCamera : MonoBehaviour
         transform.position = point;
 
         // The bird flies on the road and on screen. It may perch anywhere on screen across the road (roadside trees stand beyond it),
-        // but not past the road's ends, so no branch takes it beyond a closed blocker or into a stage not yet open (ADR 0010).
+        // but not past the area's ends, so no branch takes it beyond the current stage's sunlit spot (ADR 0012).
         Vector3 range = new(birdRange.x, 0f, birdRange.y);
         Vector3 perchMin = new(point.x - range.x, 0f, Mathf.Max(area.min.z, point.z - range.z));
         Vector3 perchMax = new(point.x + range.x, 0f, Mathf.Min(area.max.z, point.z + range.z));

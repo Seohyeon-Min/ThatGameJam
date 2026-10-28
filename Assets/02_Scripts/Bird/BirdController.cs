@@ -4,8 +4,8 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed,
-// it lands on the nearest branch instead and shakes its head (ADR 0011).
+// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed
+// (beyond the current stage's sunlit spot), it lands on the nearest branch instead and shakes its head (ADR 0011, ADR 0012).
 // Flies at the current map's fixed altitude inside the area BirdCamera gives, and perches only on screen.
 // The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
@@ -37,7 +37,7 @@ public class BirdController : MonoBehaviour
     float altitude;
     Bounds bounds = new(Vector3.zero, Vector3.positiveInfinity);
     Bounds view = new(Vector3.zero, Vector3.positiveInfinity);
-    // The bird refuses to go past this Z: the way ahead is closed there (ADR 0010).
+    // The bird refuses to go past this Z: the way ahead is closed there (ADR 0012).
     float forwardLimit = float.PositiveInfinity;
     // Shakes its head once it has landed.
     bool refusePending;

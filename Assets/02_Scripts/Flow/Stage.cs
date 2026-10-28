@@ -11,19 +11,8 @@ public class Stage : MonoBehaviour
     // World-space area of the stage's road, in X and Z. The bird flies over this and the earlier stages' areas (ADR 0007, ADR 0010).
     public Bounds area = new(Vector3.zero, new Vector3(6f, 1f, 30f));
 
-    // How far along +Z the bird may fly: the first blocker on the route that is still closed, else the end of the stage (ADR 0010).
-    public float BirdForwardLimit
-    {
-        get
-        {
-            for (int i = 0; i < route.Count; i++)
-            {
-                if (route[i].TryGetComponent(out StopPoint stop) && !stop.Blocker.IsOpen && stop.Blocker.BirdLimit != null)
-                    return stop.Blocker.BirdLimit.position.z;
-            }
-            return area.max.z;
-        }
-    }
+    // How far along +Z the bird may fly while this is the current stage: its sunlit spot, the last point of the route (ADR 0012).
+    public float BirdForwardLimit => route[route.Count - 1].position.z;
 
     void OnDrawGizmos()
     {

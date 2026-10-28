@@ -133,9 +133,6 @@ public static class BuildSamTestScene
         Primitive(PrimitiveType.Cylinder, "Stump", new Vector3(0f, 0.35f, 7.2f), new Vector3(0.65f, 0.35f, 0.65f), wood, root);
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
-        // Until the log falls, the bird flies no farther than the middle of stream 2; it can still perch on the log's top (ADR 0010).
-        GameObject logLimit = Child(leaningLog.gameObject, "BirdLimit", new Vector3(0f, 0f, 21f));
-        Set(leaningLog, so => so.FindProperty("birdLimit").objectReferenceValue = logLimit.transform);
 
         // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
         // Stage 1 has the bare trees; the leafy ones are for other stages.
