@@ -1,12 +1,14 @@
 using Unity.Cinemachine;
 using Unity.Cinemachine.TargetTracking;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
 // Builds the grey-box test scenes. Sam_Test.unity: stage 1 (fallen log, leaning log, sunlit rest area) and a minimal stage 2
-// to test the stage transition; also rebuilds Assets/03_Prefabs/Tree.prefab (decoration only). Sam_Fog_Test.unity: the fog stage.
+// to test the stage transition; also rebuilds the roadside tree prefabs in Assets/03_Prefabs/Trees (decoration only).
+// Sam_Fog_Test.unity: the fog stage.
 // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.Build
 public static class BuildSamTestScene
 {
@@ -14,7 +16,28 @@ public static class BuildSamTestScene
     const string FogScenePath = "Assets/00_Scenes/Sam_Fog_Test.unity";
     const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
-    const string TreePrefabPath = "Assets/03_Prefabs/Tree.prefab";
+    const string TreePrefabFolder = "Assets/03_Prefabs/Trees";
+    // Wood and leaf colours per tree kind. Grey box: the kinds differ only by colour until the art's models arrive.
+    static readonly (Color wood, Color leaves)[] TreeKinds =
+    {
+        (new(0.40f, 0.28f, 0.20f), new(0.25f, 0.42f, 0.30f)), (new(0.30f, 0.30f, 0.33f), new(0.45f, 0.55f, 0.25f)),
+        (new(0.85f, 0.82f, 0.75f), new(0.75f, 0.68f, 0.25f)), (new(0.55f, 0.24f, 0.22f), new(0.25f, 0.45f, 0.48f)),
+    };
+    // The banks reach this far past the road's edges (x -5 and 5) on both sides, under the roadside trees.
+    const float RoadsideWidth = 4f;
+    // Average distance between neighbouring trees; dense like the director's reference pictures.
+    const float TreeSpacing = 1.7f;
+    // Trees closer than this are next to each other: the grid neighbours along X and Z, not the diagonal ones.
+    const float TreeNeighbourDistance = TreeSpacing * 1.3f;
+    const string BirdModelPath = "Assets/01_Arts/Models/Bird/Bird-Animated.fbx";
+    const string BirdModelPrefabPath = "Assets/03_Prefabs/Bird-Animated.prefab";
+    const string BirdAnimatorPath = "Assets/01_Arts/Models/Bird/Bird.controller";
+    // Wingspan about 2.2 (5.4 in the model), next to the baby's height of 1, so it reads from the quarter-view camera.
+    const float BirdModelScale = 0.4f;
+    // Where the toes are in the model while perched (Bird_PerchIdle), in model space.
+    static readonly Vector3 BirdModelPerchedToes = new(0f, 0.38f, -1.07f);
+    // Seconds of gliding between single wingbeats. Less than the Bird_Glide clip (2.5).
+    const float BirdGlideFlapInterval = 2f;
     const float BirdAltitude = 2.5f;
     // Seen from behind-right of the road, so the +Z road runs from lower-left to upper-right on screen (director's sketch).
     static readonly Vector3 CameraOffset = new(10f, 10f, -10f);
@@ -28,8 +51,8 @@ public static class BuildSamTestScene
     public static string Build()
     {
         NewScene();
-        GameObject treePrefab = BuildTreePrefab();
-        return Finish(ScenePath, BuildStage1(treePrefab), BuildStage2());
+        var (bareTrees, _) = BuildTreePrefabs();
+        return Finish(ScenePath, BuildStage1(bareTrees), BuildStage2());
     }
 
     // Step 2: the fog stage alone (3-0 start, 3-1 half fog, 3-2 full fog, a rest area).
@@ -84,18 +107,19 @@ public static class BuildSamTestScene
 
     // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream; the stage ends in the sunlit spot right after it.
     // The road runs along +Z.
-    static Stage BuildStage1(GameObject treePrefab)
+    static Stage BuildStage1(GameObject[] bareTrees)
     {
         var root = new GameObject("Stage1");
         Material snow = Mat("Snow", new Color(0.92f, 0.95f, 1f));
         Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
         Material wood = Mat("Trunk", new Color(0.35f, 0.25f, 0.18f));
 
-        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow);     // z -2 .. 8
-        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow);  // z 22.5 .. 27
-        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water);
-        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water); // z 20 .. 22.5
+        // Banks and streams run on under the roadside trees.
+        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, RoadsideWidth);     // z -2 .. 8
+        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, RoadsideWidth);     // z 12 .. 20
+        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, RoadsideWidth);  // z 22.5 .. 27
+        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, RoadsideWidth);
+        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, RoadsideWidth); // z 20 .. 22.5
 
         // 1-1: the fallen log is already a bridge; the stump shows it once stood.
         GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
@@ -105,10 +129,11 @@ public static class BuildSamTestScene
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
 
-
-        // Only on the far side of the road, so they do not hide the road from the camera.
-        foreach (float z in new[] { 2f, 15f, 24f })
-            PlaceTree(treePrefab, root, new Vector3(-4.5f, 0f, z), 90f);
+        // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
+        // Stage 1 has the bare trees; the leafy ones are for other stages.
+        PlaceRoadsideTrees(bareTrees, root,
+            new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
+            new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
 
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
@@ -120,11 +145,13 @@ public static class BuildSamTestScene
         StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
-        // The camera stops at z 19 until the leaning log has fallen.
-        Gate(root, leaningLog, 19f);
+        // When the bird nears the log, the camera eases onto the log and stream until the log has fallen.
+        // The area is small, so the camera barely moves while locked; the bird can still reach the log's top (z 20.9).
+        Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector3(0f, 0f, 17.5f), new Vector2(2f, 1f));
 
+        // The road is the ground strip, z -2 .. 27.
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(6f, 1f, 25f)));
+            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(10f, 1f, 29f)));
     }
 
     // Just a start and a rest area, to see the transition from stage 1.
@@ -136,7 +163,7 @@ public static class BuildSamTestScene
         RestLight(root, new Vector3(60f, 0f, 9f));
         BabyRoute route = Route(root, new Vector3(60f, 0f, 4f), new Vector3(60f, 0f, 9f));
         return StageComponent(root, new Vector3(60f, 0f, 0f), new Vector3(61.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(60f, 0f, 5f), new Vector3(6f, 1f, 10f)));
+            new Bounds(new Vector3(60f, 0f, 5f), new Vector3(10f, 1f, 14f)));
     }
 
     // The ground is only paths (correct ones and dead ends); everything else is dark water hidden under the fog.
@@ -180,12 +207,13 @@ public static class BuildSamTestScene
         StopAt(route[2], fog32);
         RestLight(root, route[route.Count - 1].position);
 
-        // The camera stops short of the next fog until a section is through, so the bird cannot clear it early.
-        Gate(root, fog31, 16f);
-        Gate(root, fog32, 34f);
+        // When the bird nears a fog section, the camera eases onto it until the section is through.
+        Zone(root, fog31, new Vector3(0f, 0f, 4f), new Vector3(0f, 0f, 11.5f), new Vector2(6f, 9f));
+        Zone(root, fog32, new Vector3(0f, 0f, 20f), new Vector3(0f, 0f, 28f), new Vector2(6f, 13f));
 
+        // The road covers every path tile, dead ends included: x -6.25 .. 7.25, z -2 .. 39.75.
         return StageComponent(root, new Vector3(0f, 0f, -1f), new Vector3(1.5f, BirdAltitude, -2f), route,
-            new Bounds(new Vector3(0f, 0f, 18.75f), new Vector3(8f, 1f, 37.5f)));
+            new Bounds(new Vector3(0.5f, 0f, 18.875f), new Vector3(13.5f, 1f, 41.75f)));
     }
 
     // The sunlit spot at the end of a route: a narrow shaft of light, like a portal.
@@ -295,14 +323,14 @@ public static class BuildSamTestScene
         tile.layer = groundLayer;
     }
 
-    static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, Bounds cameraArea)
+    static Stage StageComponent(GameObject root, Vector3 babyStart, Vector3 birdStart, BabyRoute route, Bounds roadArea)
     {
         var stage = root.AddComponent<Stage>();
         stage.babyStart = Child(root, "BabyStart", babyStart).transform;
         stage.birdStart = Child(root, "BirdStart", birdStart).transform;
         stage.route = route;
         stage.birdAltitude = BirdAltitude;
-        stage.area = cameraArea;
+        stage.area = roadArea;
         return stage;
     }
 
@@ -321,7 +349,8 @@ public static class BuildSamTestScene
         Object.DestroyImmediate(snowCap.GetComponent<Collider>());
 
         GameObject perchPoint = Child(pivot, "PerchPoint", Vector3.zero);
-        perchPoint.transform.localPosition = new Vector3(0f, LeaningLogLength + 0.3f, 0f);
+        // On the snow cap: the bird's feet stand here.
+        perchPoint.transform.localPosition = new Vector3(0f, LeaningLogLength + 0.15f, 0f);
         var top = trunk.AddComponent<Perchable>();
         Set(top, so => so.FindProperty("perchPoint").objectReferenceValue = perchPoint.transform);
 
@@ -370,21 +399,126 @@ public static class BuildSamTestScene
         return baby;
     }
 
+    // The bird model from the art (Assets/03_Prefabs/Bird-Animated.prefab) under the controller. The controller's transform is
+    // the feet: the model is turned to face +Z (it faces -Z) and shifted so its perched toes sit on that point.
     static BirdController BuildBird()
     {
-        GameObject bird = Primitive(PrimitiveType.Sphere, "Bird", Vector3.zero, Vector3.one * 0.5f, Mat("Bird", Color.white), null);
-        Object.DestroyImmediate(bird.GetComponent<Collider>());
-        GameObject beak = Primitive(PrimitiveType.Cube, "Beak", Vector3.zero, new Vector3(0.3f, 0.3f, 0.6f), Mat("Beak", new Color(1f, 0.75f, 0.2f)), bird);
-        beak.transform.localPosition = new Vector3(0f, 0f, 0.55f);
-        Object.DestroyImmediate(beak.GetComponent<Collider>());
+        var bird = new GameObject("Bird");
+        var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BirdModelPrefabPath);
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab, bird.transform);
+        model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        model.transform.localScale = Vector3.one * BirdModelScale;
+        model.transform.localPosition = -(model.transform.localRotation * BirdModelPerchedToes) * BirdModelScale;
+        var animator = model.GetComponent<Animator>();
+        animator.runtimeAnimatorController = BuildBirdAnimator();
+        animator.applyRootMotion = false;
 
         GameObject ring = Primitive(PrimitiveType.Cylinder, "ClickMarker", Vector3.zero, new Vector3(0.6f, 0.01f, 0.6f),
             Mat("ClickMarker", new Color(1f, 1f, 1f, 0.8f), transparent: true), null);
         Object.DestroyImmediate(ring.GetComponent<Collider>());
         var marker = ring.AddComponent<ClickMarker>();
 
+        // The Bird layer gets the see-through silhouette (AgentScripts/SetupBirdSilhouette.cs).
+        int birdLayer = LayerMask.NameToLayer("Bird");
+        if (birdLayer < 0)
+            throw new System.InvalidOperationException("No Bird layer. Run AgentScripts/SetupBirdSilhouette.cs first.");
+        foreach (Transform part in bird.GetComponentsInChildren<Transform>(true))
+            part.gameObject.layer = birdLayer;
+
         var controller = bird.AddComponent<BirdController>();
-        Set(controller, so => so.FindProperty("clickMarker").objectReferenceValue = marker);
+        Set(controller, so =>
+        {
+            so.FindProperty("animator").objectReferenceValue = animator;
+            so.FindProperty("clickMarker").objectReferenceValue = marker;
+        });
+        return controller;
+    }
+
+    // Rebuilds the bird's Animator Controller from the model's clips, along the art's flow (its README):
+    // Glide <-> Flap -> Landing -> a random perch idle -> Takeoff -> Flap. While gliding, one wingbeat every BirdGlideFlapInterval. Parameters: Moving and Perched (BirdController),
+    // IdleVariant (RandomPerchIdle).
+    static AnimatorController BuildBirdAnimator()
+    {
+        var clips = new System.Collections.Generic.Dictionary<string, AnimationClip>();
+        foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(BirdModelPath))
+        {
+            if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
+                clips[clip.name] = clip;
+        }
+
+        // Rebuilt in place, so its GUID and the scenes' references to it stay.
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(BirdAnimatorPath)
+            ?? AnimatorController.CreateAnimatorControllerAtPath(BirdAnimatorPath);
+        foreach (AnimatorControllerParameter parameter in controller.parameters)
+            controller.RemoveParameter(parameter);
+        foreach (ChildAnimatorState child in controller.layers[0].stateMachine.states)
+            controller.layers[0].stateMachine.RemoveState(child.state);
+        controller.AddParameter("Moving", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("Perched", AnimatorControllerParameterType.Bool);
+        controller.AddParameter("IdleVariant", AnimatorControllerParameterType.Int);
+        AnimatorStateMachine machine = controller.layers[0].stateMachine;
+
+        AnimatorState State(string clip, Vector2 position)
+        {
+            AnimatorState state = machine.AddState(clip.Replace("Bird_", ""), position);
+            state.motion = clips[clip];
+            return state;
+        }
+        AnimatorState flap = State("Bird_Flap", new Vector2(300f, 0f));
+        AnimatorState glide = State("Bird_Glide", new Vector2(300f, 120f));
+        AnimatorState glideFlap = State("Bird_Flap", new Vector2(300f, 240f));
+        glideFlap.name = "GlideFlap";
+        AnimatorState landing = State("Bird_Landing", new Vector2(600f, 60f));
+        AnimatorState[] idles =
+        {
+            State("Bird_PerchIdle", new Vector2(900f, -60f)),
+            State("Bird_PerchIdle_Preen", new Vector2(900f, 60f)),
+            State("Bird_PerchIdle_LeanBack", new Vector2(900f, 180f)),
+        };
+        AnimatorState takeoff = State("Bird_Takeoff", new Vector2(600f, 300f));
+        machine.defaultState = flap;
+
+        AnimatorStateTransition Go(AnimatorState from, AnimatorState to, float duration, float? exitTime = null)
+        {
+            AnimatorStateTransition transition = from.AddTransition(to);
+            transition.duration = duration;
+            transition.hasExitTime = exitTime.HasValue;
+            transition.exitTime = exitTime ?? 0f;
+            return transition;
+        }
+
+        // Flight changes only while not perched, so arriving at a perch (Moving and Perched change together) goes straight to Landing.
+        // A flight blend already under way is cut by the destination's Landing transition.
+        AnimatorStateTransition Fly(AnimatorStateTransition transition)
+        {
+            transition.AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+            transition.interruptionSource = TransitionInterruptionSource.Destination;
+            return transition;
+        }
+        Fly(Go(glide, flap, 0.25f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        Fly(Go(flap, glide, 0.25f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        // One Flap cycle, then back to gliding, which starts its clip again.
+        Fly(Go(glide, glideFlap, 0.25f, BirdGlideFlapInterval / clips["Bird_Glide"].length));
+        Fly(Go(glideFlap, glide, 0.25f, 1f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        Fly(Go(glideFlap, flap, 0.1f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        Go(glideFlap, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        // Glide ends in Landing's first pose; from Flap it blends.
+        Go(glide, landing, 0.1f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        Go(flap, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        // The perched poses match exactly, so these cut.
+        Go(landing, idles[0], 0f, 1f);
+        foreach (AnimatorState idle in idles)
+        {
+            idle.AddStateMachineBehaviour<RandomPerchIdle>();
+            for (int i = 0; i < idles.Length; i++)
+                Go(idle, idles[i], 0f, 1f).AddCondition(AnimatorConditionMode.Equals, i, "IdleVariant");
+            Go(idle, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+        }
+        Go(landing, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+        // Takeoff ends in Flap's first pose.
+        Go(takeoff, flap, 0.15f, 1f);
+
+        AssetDatabase.SaveAssets();
         return controller;
     }
 
@@ -425,12 +559,18 @@ public static class BuildSamTestScene
         return fader;
     }
 
-    // The camera cannot move past z until the blocker opens.
-    static void Gate(GameObject parent, PathBlocker blocker, float z)
+    // Once the bird crosses the trigger's Z, the camera stays inside the area until the blocker opens.
+    static void Zone(GameObject parent, PathBlocker blocker, Vector3 trigger, Vector3 areaCenter, Vector2 areaSize)
     {
-        GameObject gateObject = Child(parent, $"CameraGate_{blocker.name}", new Vector3(parent.transform.position.x, 0f, z));
-        var gate = gateObject.AddComponent<CameraGate>();
-        Set(gate, so => so.FindProperty("blocker").objectReferenceValue = blocker);
+        GameObject zoneObject = Child(parent, $"CameraZone_{blocker.name}", areaCenter);
+        GameObject triggerObject = Child(zoneObject, "Trigger", trigger);
+        var zone = zoneObject.AddComponent<CameraZone>();
+        Set(zone, so =>
+        {
+            so.FindProperty("blocker").objectReferenceValue = blocker;
+            so.FindProperty("trigger").objectReferenceValue = triggerObject.transform;
+            so.FindProperty("areaSize").vector2Value = areaSize;
+        });
     }
 
     static BabyRoute Route(GameObject parent, params Vector3[] points)
@@ -441,38 +581,129 @@ public static class BuildSamTestScene
         return routeObject.AddComponent<BabyRoute>();
     }
 
-    // A bank of snow whose top is at y = 0, `length` long along Z.
-    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material)
+    // A bank of snow whose top is at y = 0, `length` long along Z, 10 wide plus `sides` more on each side.
+    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
     {
-        GameObject ground = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.25f, new Vector3(10f, 0.5f, length), material, parent);
+        GameObject ground = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.25f, new Vector3(10f + 2f * sides, 0.5f, length), material, parent);
         ground.layer = groundLayer;
     }
 
     // Water is not walkable ground; clicks pass through to the click plane.
-    static void Water(GameObject parent, string name, Vector3 center, float length, Material material)
+    static void Water(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
     {
-        GameObject water = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.45f, new Vector3(10f, 0.3f, length), material, parent);
+        GameObject water = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.45f, new Vector3(10f + 2f * sides, 0.3f, length), material, parent);
         Object.DestroyImmediate(water.GetComponent<Collider>());
     }
 
-    // Trunk and crown. Decoration only (plan Q7: no perching on roadside trees).
-    static GameObject BuildTreePrefab()
+    // Each tree kind comes bare and with leaves. A rough trunk with branches forking upward (Tommy's tree01 mesh); the leafy one adds
+    // clumps of leaves at the branch tips. The bird can perch on one branch of every tree.
+    static (GameObject[] bare, GameObject[] leafy) BuildTreePrefabs()
     {
-        var root = new GameObject("Tree");
-        GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 2f, 0f), new Vector3(0.4f, 2f, 0.4f), Mat("Trunk", new Color(0.35f, 0.25f, 0.18f)), root);
-        Object.DestroyImmediate(trunk.GetComponent<Collider>());
-        GameObject crown = Primitive(PrimitiveType.Sphere, "Crown", new Vector3(0f, 4.6f, 0f), Vector3.one * 2.4f, Mat("Leaves", new Color(0.3f, 0.45f, 0.35f)), root);
-        Object.DestroyImmediate(crown.GetComponent<Collider>());
-        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, TreePrefabPath);
+        if (!AssetDatabase.IsValidFolder(TreePrefabFolder))
+            AssetDatabase.CreateFolder("Assets/03_Prefabs", "Trees");
+        var bare = new GameObject[TreeKinds.Length];
+        var leafy = new GameObject[TreeKinds.Length];
+        for (int i = 0; i < TreeKinds.Length; i++)
+        {
+            Material wood = Mat($"Tree_{i + 1}", TreeKinds[i].wood);
+            Material leaves = Mat($"TreeLeaves_{i + 1}", TreeKinds[i].leaves);
+            bare[i] = SaveTree($"Tree_{i + 1}_Bare", wood, null);
+            leafy[i] = SaveTree($"Tree_{i + 1}_Leafy", wood, leaves);
+        }
+        return (bare, leafy);
+    }
+
+    static GameObject SaveTree(string name, Material wood, Material leaves)
+    {
+        var root = new GameObject(name);
+        Limb(root, "Trunk", Vector3.zero, Vector3.up, 5f, 0.4f, wood);
+        Vector3 top = Limb(root, "TrunkTop", new Vector3(0f, 5f, 0f), Vector3.up, 3.5f, 0.28f, wood);
+        var tips = new System.Collections.Generic.List<Vector3> { top };
+        // Start height, direction around the trunk, lean from upright, length, thickness.
+        (float y, float yaw, float lean, float length, float thickness)[] branches =
+        {
+            (4f, 30f, 35f, 3f, 0.16f), (5.5f, 160f, 30f, 2.8f, 0.14f), (6.5f, 260f, 25f, 2.4f, 0.12f), (7.5f, 90f, 20f, 2f, 0.1f),
+        };
+        foreach (var b in branches)
+            tips.Add(Limb(root, "Branch", new Vector3(0f, b.y, 0f), Quaternion.Euler(0f, b.yaw, 0f) * Quaternion.Euler(b.lean, 0f, 0f) * Vector3.up,
+                b.length, b.thickness, wood));
+
+        // Every tree has one low, nearly level branch the bird perches on, a little above its flying height.
+        // Clicking near the perch point lands the bird there; left idle, the bird lands on the nearest one by itself.
+        Vector3 perchFrom = new(0f, 2.6f, 0f);
+        Vector3 perchDirection = Quaternion.Euler(75f, 0f, 0f) * Vector3.up;
+        const float perchThickness = 0.14f;
+        tips.Add(Limb(root, "PerchBranch", perchFrom, perchDirection, 1.8f, perchThickness, wood));
+        GameObject spot = Child(root, "PerchPoint", perchFrom + perchDirection * 1.25f + Vector3.up * (perchThickness / 2f));
+        spot.layer = interactableLayer;
+        var clickArea = spot.AddComponent<SphereCollider>();
+        clickArea.isTrigger = true;
+        clickArea.radius = 0.6f;
+        var perchable = spot.AddComponent<Perchable>();
+        Set(perchable, so => so.FindProperty("idleSpot").boolValue = true);
+        if (leaves != null)
+            foreach (Vector3 tip in tips)
+                for (int i = 0; i < 3; i++)
+                {
+                    // Three tilted blocks per tip, not one round ball.
+                    Quaternion turn = Quaternion.Euler(25f * i, 120f * i + tip.y * 40f, 15f * i);
+                    GameObject clump = Primitive(PrimitiveType.Cube, "Leaves", tip + turn * new Vector3(0.45f, 0f, 0f), Vector3.one * 1.2f, leaves, root);
+                    clump.transform.rotation = turn;
+                    Object.DestroyImmediate(clump.GetComponent<Collider>());
+                }
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{TreePrefabFolder}/{name}.prefab");
         Object.DestroyImmediate(root);
         return prefab;
     }
 
-    static void PlaceTree(GameObject prefab, GameObject parent, Vector3 position, float yaw)
+    // A cylinder from `from` along `direction`; returns its far end.
+    static Vector3 Limb(GameObject parent, string name, Vector3 from, Vector3 direction, float length, float thickness, Material material)
     {
-        var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent.transform);
-        tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+        GameObject limb = Primitive(PrimitiveType.Cylinder, name, from + direction * (length / 2f), new Vector3(thickness, length / 2f, thickness), material, parent);
+        limb.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+        Object.DestroyImmediate(limb.GetComponent<Collider>());
+        return from + direction * length;
     }
+
+    // Fills each X range over each Z range with trees on a jittered grid, each turned and sized a little at random.
+    // A tree takes a kind that no tree next to it has; if every kind is taken, the kind whose nearest tree is farthest.
+    // The seed is fixed so rebuilding gives the same trees.
+    static void PlaceRoadsideTrees(GameObject[] prefabs, GameObject parent, Vector2[] xRanges, Vector2[] zRanges)
+    {
+        var random = new System.Random(1);
+        var placed = new System.Collections.Generic.List<(Vector3 position, int kind)>();
+        var freeKinds = new System.Collections.Generic.List<int>();
+        const float jitter = TreeSpacing * 0.3f;
+        foreach (Vector2 xRange in xRanges)
+        foreach (Vector2 zRange in zRanges)
+            for (float x = xRange.x + jitter; x <= xRange.y - jitter; x += TreeSpacing)
+                for (float z = zRange.x + jitter; z <= zRange.y - jitter; z += TreeSpacing)
+                {
+                    var position = new Vector3(x + Jitter(random, jitter), 0f, z + Jitter(random, jitter));
+                    freeKinds.Clear();
+                    int farthestKind = 0;
+                    float farthest = -1f;
+                    for (int kind = 0; kind < prefabs.Length; kind++)
+                    {
+                        float nearest = float.MaxValue;
+                        foreach (var t in placed)
+                            if (t.kind == kind)
+                                nearest = Mathf.Min(nearest, Vector3.Distance(t.position, position));
+                        if (nearest >= TreeNeighbourDistance)
+                            freeKinds.Add(kind);
+                        if (nearest > farthest)
+                            (farthest, farthestKind) = (nearest, kind);
+                    }
+                    int chosen = freeKinds.Count > 0 ? freeKinds[random.Next(freeKinds.Count)] : farthestKind;
+                    placed.Add((position, chosen));
+
+                    var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[chosen], parent.transform);
+                    tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
+                    tree.transform.localScale = Vector3.one * Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
+                }
+    }
+
+    static float Jitter(System.Random random, float amount) => ((float)random.NextDouble() * 2f - 1f) * amount;
 
     static GameObject Child(GameObject parent, string name, Vector3 position)
     {

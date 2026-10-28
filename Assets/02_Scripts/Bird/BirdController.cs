@@ -4,9 +4,15 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Flies at the current map's fixed altitude and stays inside the area the camera can show (BirdCamera).
+// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself.
+// Flies at the current map's fixed altitude inside the area BirdCamera gives, and perches only on screen.
+// The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
 {
+    static readonly int PerchedParam = Animator.StringToHash("Perched");
+    static readonly int MovingParam = Animator.StringToHash("Moving");
+
+    [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
     [SerializeField] Texture2D perchCursor;
     [SerializeField] Vector2 perchCursorHotspot;
@@ -28,6 +34,8 @@ public class BirdController : MonoBehaviour
     Vector3 target;
     float altitude;
     Bounds bounds = new(Vector3.zero, Vector3.positiveInfinity);
+    Bounds view = new(Vector3.zero, Vector3.positiveInfinity);
+    float idleTime;
     bool following;
     Perchable perch;
     float landTime;
@@ -76,6 +84,7 @@ public class BirdController : MonoBehaviour
     {
         LeavePerch();
         following = false;
+        idleTime = 0f;
         transform.position = position;
         target = position;
     }
@@ -87,10 +96,12 @@ public class BirdController : MonoBehaviour
             transform.position = new Vector3(transform.position.x, y, transform.position.z);
     }
 
-    public void SetBounds(Bounds area)
+    // area: where it flies. onScreen: where it may perch.
+    public void SetBounds(Bounds area, Bounds onScreen)
     {
         bounds = area;
-        if (state != State.Flying && !InBounds(perch.PerchPoint.position))
+        view = onScreen;
+        if (state != State.Flying && !OnScreen(perch.PerchPoint.position))
             LeavePerch();
     }
 
@@ -108,9 +119,11 @@ public class BirdController : MonoBehaviour
         else if (following && hasHit)
             target = hit.point;
 
-        if (cryAction.WasPressedThisFrame() && Time.time >= nextCryTime)
+        bool cried = cryAction.WasPressedThisFrame();
+        if (cried && Time.time >= nextCryTime)
             Cry();
 
+        Vector3 before = transform.position;
         switch (state)
         {
             case State.Flying: Fly(); break;
@@ -118,6 +131,29 @@ public class BirdController : MonoBehaviour
             case State.Landing: Land(); break;
             case State.Perched: transform.position = perch.PerchPoint.position; break;
         }
+        bool moved = transform.position != before;
+        // Glides while it moves and flaps while it hovers in place.
+        animator.SetBool(MovingParam, moved);
+        animator.SetBool(PerchedParam, state == State.Landing || state == State.Perched);
+
+        idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
+        if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
+            PerchNearby();
+    }
+
+    void PerchNearby()
+    {
+        idleTime = 0f;
+        Perchable nearest = null;
+        float nearestDistance = float.MaxValue;
+        foreach (Perchable perchable in Perchable.All)
+        {
+            float distance = Vector3.Distance(transform.position, perchable.PerchPoint.position);
+            if (perchable.IsIdleSpot && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
+                (nearest, nearestDistance) = (perchable, distance);
+        }
+        if (nearest != null)
+            StartPerch(nearest);
     }
 
     void Click(RaycastHit hit, Perchable hovered)
@@ -137,13 +173,13 @@ public class BirdController : MonoBehaviour
         clickMarker.Show(hit.point);
     }
 
-    // Null unless the hit is a perchable Interactable whose perch point is inside the bounds.
+    // Null unless the hit is a perchable Interactable whose perch point is on screen.
     Perchable PerchableAt(RaycastHit hit)
     {
         if (hit.collider.gameObject.layer != interactableLayer)
             return null;
         Perchable perchable = hit.collider.GetComponentInParent<Perchable>();
-        return perchable != null && perchable.CanPerch && InBounds(perchable.PerchPoint.position) ? perchable : null;
+        return perchable != null && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) ? perchable : null;
     }
 
     void StartPerch(Perchable perchable)
@@ -167,9 +203,10 @@ public class BirdController : MonoBehaviour
 
     void Fly()
     {
+        // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
-        Vector3 flat = Clamp(Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), new Vector3(target.x, 0f, target.z),
-            GameTuning.Current.birdSpeed * Time.deltaTime));
+        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Clamp(new Vector3(target.x, 0f, target.z)),
+            GameTuning.Current.birdSpeed * Time.deltaTime);
         float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
         Face(flat - position);
         transform.position = new Vector3(flat.x, y, flat.z);
@@ -232,8 +269,8 @@ public class BirdController : MonoBehaviour
         Cursor.SetCursor(show ? perchCursor : null, show ? perchCursorHotspot : Vector2.zero, CursorMode.Auto);
     }
 
-    bool InBounds(Vector3 point) =>
-        point.x >= bounds.min.x && point.x <= bounds.max.x && point.z >= bounds.min.z && point.z <= bounds.max.z;
+    bool OnScreen(Vector3 point) =>
+        point.x >= view.min.x && point.x <= view.max.x && point.z >= view.min.z && point.z <= view.max.z;
 
     Vector3 Clamp(Vector3 point) => new(
         Mathf.Clamp(point.x, bounds.min.x, bounds.max.x), point.y, Mathf.Clamp(point.z, bounds.min.z, bounds.max.z));

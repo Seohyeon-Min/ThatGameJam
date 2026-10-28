@@ -2,6 +2,7 @@
 
 ## 대화와 기록
 - 대화는 한국어로 한다.
+- 세션을 시작하면 `docs/kor/game_design.md`와 `docs/kor/implementation_plan.md`를 먼저 읽는다.
 - 작업 기록은 `docs/kor/`에 먼저 쓰고, `docs/eng/`에 같은 구조로 미러링한다. 지금은 `decisions/`와 `commit_history/`만 쓴다.
 - 기록 형식은 `docs/record-format-example.md`를 따른다.
 
