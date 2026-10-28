@@ -2,7 +2,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 
 // The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007). The bird also locks the zones (ADR 0008).
-// The bird flies on the road GameFlow opens to it (ADR 0010), and so does the point the camera follows; it perches anywhere on screen. While a device's camera zone is locked,
+// The bird flies over the area GameFlow opens to it, the road and the terrain beside it (ADR 0010, ADR 0013), and so does the point the camera follows; it perches anywhere on screen. While a device's camera zone is locked,
 // the point stays inside that zone's area, and the bird is also kept within view of the point so it never leaves the screen
 // (ADR 0003 Q3).
 public class BirdCamera : MonoBehaviour
@@ -46,7 +46,7 @@ public class BirdCamera : MonoBehaviour
         point.y = area.center.y;
         transform.position = point;
 
-        // The bird flies on the road and on screen. It may perch anywhere on screen across the road (roadside trees stand beyond it),
+        // The bird flies over the area and on screen. It may perch anywhere on screen across the area (trees stand beyond it),
         // but not past the area's ends, so no branch takes it beyond the current stage's sunlit spot (ADR 0012).
         Vector3 range = new(birdRange.x, 0f, birdRange.y);
         Vector3 perchMin = new(point.x - range.x, 0f, Mathf.Max(area.min.z, point.z - range.z));

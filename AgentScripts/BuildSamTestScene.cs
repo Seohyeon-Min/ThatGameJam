@@ -23,10 +23,18 @@ public static class BuildSamTestScene
         (new(0.40f, 0.28f, 0.20f), new(0.25f, 0.42f, 0.30f)), (new(0.30f, 0.30f, 0.33f), new(0.45f, 0.55f, 0.25f)),
         (new(0.85f, 0.82f, 0.75f), new(0.75f, 0.68f, 0.25f)), (new(0.55f, 0.24f, 0.22f), new(0.25f, 0.45f, 0.48f)),
     };
-    // The banks reach this far past the road's edges (x -5 and 5) on both sides, under the roadside trees.
-    const float RoadsideWidth = 4f;
-    // Average distance between neighbouring trees; dense like the director's reference pictures.
+    // The ground reaches this far past the road's edges (x -5 and 5) on both sides: the terrain the bird flies over among the trees
+    // (the director's sketch, ADR 0013).
+    const float TerrainWidth = 17f;
+    // Two dense rows of trees line the road this far past its edges.
+    const float RoadsideRowsWidth = 4f;
+    // Average distance between neighbouring trees by the road; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
+    // Farther out the trees stand sparser, with room to fly between them.
+    const float OuterTreeSpacing = 3.2f;
+    // Half the width of the area the bird flies over (the green box of the sketch). Trees stand beyond it to the ground's edge,
+    // so the camera following the bird to the box's edge still shows ground.
+    const float BirdAreaHalfWidth = 13f;
     const string GirlModelPath = "Assets/01_Arts/Models/Girl/NPC-Girl-Animated.fbx";
     const string GirlAnimatorPath = "Assets/01_Arts/Models/Girl/Girl.controller";
     // 1.3 tall in the model; about 1 here, the height the baby's collider and the levels were made for.
@@ -120,11 +128,11 @@ public static class BuildSamTestScene
         Material wood = Mat("Trunk", new Color(0.35f, 0.25f, 0.18f));
 
         // Banks and streams run on under the roadside trees.
-        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, RoadsideWidth);     // z -2 .. 8
-        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, RoadsideWidth);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, RoadsideWidth);  // z 22.5 .. 27
-        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, RoadsideWidth);
-        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, RoadsideWidth); // z 20 .. 22.5
+        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, TerrainWidth);     // z -2 .. 8
+        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, TerrainWidth);     // z 12 .. 20
+        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, TerrainWidth);  // z 22.5 .. 27
+        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, TerrainWidth);
+        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, TerrainWidth); // z 20 .. 22.5
 
         // 1-1: the fallen log is already a bridge; the stump shows it once stood.
         GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
@@ -134,11 +142,8 @@ public static class BuildSamTestScene
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
 
-        // Rows along both edges of the road, also on the camera side (the director accepts that they hide the road). Not in the streams.
         // Stage 1 has the bare trees; the leafy ones are for other stages.
-        RoadsideTrees(bareTrees, root,
-            new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
-            new[] { new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f) });
+        Forest(bareTrees, root, new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f));
 
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
@@ -154,9 +159,9 @@ public static class BuildSamTestScene
         // The area is small, so the camera barely moves while locked; the bird can still reach the log's top (z 20.9).
         Zone(root, leaningLog, new Vector3(0f, 0f, 16f), new Vector3(0f, 0f, 17.5f), new Vector2(2f, 1f));
 
-        // The road is the ground strip, z -2 .. 27.
+        // The road and the terrain beside it, z -2 .. 27.
         return StageComponent(root, new Vector3(0f, 0f, 0f), new Vector3(1.5f, BirdAltitude, -1f), route,
-            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(10f, 1f, 29f)));
+            new Bounds(new Vector3(0f, 0f, 12.5f), new Vector3(2f * BirdAreaHalfWidth, 1f, 29f)));
     }
 
     // Goes on from stage 1's sunlit spot (z 25) on the same road: just a walk to its own sunlit spot, to test going on to the next stage.
@@ -164,15 +169,13 @@ public static class BuildSamTestScene
     static Stage BuildStage2(GameObject[] leafyTrees)
     {
         var root = new GameObject("Stage2");
-        Ground(root, "Bank", new Vector3(0f, 0f, 34f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)), RoadsideWidth); // z 27 .. 41
-        RoadsideTrees(leafyTrees, root,
-            new[] { new Vector2(-5f - RoadsideWidth + 0.6f, -4.6f), new Vector2(4.6f, 5f + RoadsideWidth - 0.6f) },
-            new[] { new Vector2(27f, 41f) });
+        Ground(root, "Bank", new Vector3(0f, 0f, 34f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)), TerrainWidth); // z 27 .. 41
+        Forest(leafyTrees, root, new Vector2(27f, 41f));
         BabyRoute route = Route(root, new Vector3(0f, 0f, 30f), new Vector3(0f, 0f, 38.5f));
         RestLight(root, route[route.Count - 1].position);
         // The baby starts where stage 1 left it asleep. The bird start is only for the dev tool's skip.
         return StageComponent(root, new Vector3(0f, 0f, 25f), new Vector3(1.5f, BirdAltitude, 24f), route,
-            new Bounds(new Vector3(0f, 0f, 34f), new Vector3(10f, 1f, 14f)));
+            new Bounds(new Vector3(0f, 0f, 34f), new Vector3(2f * BirdAreaHalfWidth, 1f, 14f)));
     }
 
     // The ground is only paths (correct ones and dead ends); everything else is dark water hidden under the fog.
@@ -751,10 +754,21 @@ public static class BuildSamTestScene
         return from + direction * length;
     }
 
-    // A TreeGenerator over each X range times each Z range, with the seed fixed so rebuilding gives the same trees.
-    static void RoadsideTrees(GameObject[] prefabs, GameObject parent, Vector2[] xRanges, Vector2[] zRanges)
+    // Trees over the stage's ground: two dense rows along both edges of the road (also on the camera side; the director accepts that
+    // they hide the road), and sparser trees on the terrain out to the ground's edge. Not in the streams: only over the given Z ranges.
+    static void Forest(GameObject[] prefabs, GameObject parent, params Vector2[] zRanges)
     {
-        var generator = Child(parent, "RoadsideTrees", parent.transform.position).AddComponent<TreeGenerator>();
+        const float rowsEnd = 5f + RoadsideRowsWidth - 0.6f;
+        Trees(prefabs, parent, "RoadsideTrees", TreeSpacing, 1, zRanges,
+            new Vector2(-rowsEnd, -4.6f), new Vector2(4.6f, rowsEnd));
+        Trees(prefabs, parent, "TerrainTrees", OuterTreeSpacing, 2, zRanges,
+            new Vector2(-5f - TerrainWidth + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, 5f + TerrainWidth - 0.6f));
+    }
+
+    // A TreeGenerator over each X range times each Z range, with the seed fixed so rebuilding gives the same trees.
+    static void Trees(GameObject[] prefabs, GameObject parent, string name, float spacing, int seed, Vector2[] zRanges, params Vector2[] xRanges)
+    {
+        var generator = Child(parent, name, parent.transform.position).AddComponent<TreeGenerator>();
         Set(generator, so =>
         {
             SerializedProperty kinds = so.FindProperty("prefabs");
@@ -771,11 +785,11 @@ public static class BuildSamTestScene
                 area.FindPropertyRelative("min").vector2Value = new Vector2(x.x, z.x);
                 area.FindPropertyRelative("max").vector2Value = new Vector2(x.y, z.y);
             }
-            so.FindProperty("spacing").floatValue = TreeSpacing;
+            so.FindProperty("spacing").floatValue = spacing;
             so.FindProperty("jitter").floatValue = 0.3f;
             so.FindProperty("scaleRange").vector2Value = new Vector2(0.85f, 1.15f);
             so.FindProperty("randomRotation").boolValue = true;
-            so.FindProperty("seed").intValue = 1;
+            so.FindProperty("seed").intValue = seed;
         });
         generator.Generate();
     }
