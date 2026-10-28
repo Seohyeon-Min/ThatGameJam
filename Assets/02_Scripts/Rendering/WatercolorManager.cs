@@ -66,23 +66,37 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("How much darker (richer, bluer, never greyer) the pencil lead is than the paint under it. Applies immediately.")]
         [Range(0f, 2f)] public float pencilDarkness = 0.9f;
 
-        [Tooltip("Length of one pencil stroke on screen, in % of screen height. Same size near and far. Applies immediately.")]
+        [Tooltip("Length of one pencil stroke on screen, in % of screen height. Same size near and far. Strokes stay where they are and only grow or shrink; long strokes can run into the next ones in their row. Applies immediately (rebuilds the stroke texture once).")]
         [Range(0.5f, 10f)] public float strokeLengthPercent = 3f;
 
-        [Tooltip("Width of a stroke on screen, in pixels at 1080p. Applies immediately (rebuilds the stroke texture once).")]
+        [Tooltip("How much smaller pieces on screen get shorter strokes. 0 = same length everywhere; 1 = length shrinks with the piece's size on screen (a piece a quarter of the screen high or bigger keeps the full length). Only the length changes, not the width or spacing. Applies immediately.")]
+        [Range(0f, 1f)] public float strokeSizeInfluence = 0.5f;
+
+        [Tooltip("Width of a stroke on screen, in pixels at 1080p. Strokes stay where they are; only their width changes. Applies immediately.")]
         [Range(0.5f, 8f)] public float strokeWidth = 2.5f;
 
         [Tooltip("How much stroke widths differ from each other. 0 = all the same. Applies immediately.")]
         [Range(0f, 1f)] public float strokeWidthVariation = 0.2f;
 
-        [Tooltip("How densely strokes are packed side by side. Applies immediately.")]
-        [Range(0f, 1f)] public float strokeDensity = 0.7f;
+        [Tooltip("How tightly strokes are packed side by side and how few gaps they leave. Above 1 the lines nearly touch and the gaps between stacks close up. Strokes never pile up into a smudge. Applies immediately.")]
+        [Range(0f, 2f)] public float strokeDensity = 0.7f;
+
+        [Tooltip("How neatly neighbouring strokes line up into stacks, starting and ending at the same place like a ladder. 0 = scattered. Applies immediately.")]
+        [Range(0f, 1f)] public float strokeAlignment = 0.85f;
 
         [Tooltip("Direction of the strokes on screen, in degrees (0 = horizontal). Applies immediately.")]
         [Range(-90f, 90f)] public float strokeAngle = 35f;
 
-        [Tooltip("How much each pencil patch turns its strokes away from that direction, in degrees. Applies immediately.")]
+        [Tooltip("How much each stack of strokes turns away from that direction, in degrees. Every stack gets its own turn. Applies immediately (rebuilds the stroke texture once).")]
         [Range(0f, 90f)] public float strokeAngleJitter = 10f;
+
+        [Tooltip("How much the strokes gather on the form-shadow side (the side of a mass turned away from the light). 0 = anywhere in a patch, 1 = only on the shadow side. Applies immediately.")]
+        [FormerlySerializedAs("pencilEdgeFocus")]
+        [Range(0f, 1f)] public float pencilShadowFocus = 0.8f;
+
+        [Tooltip("How softly the strokes fade out across the line where a mass turns from the light, in % of screen height. Applies immediately.")]
+        [FormerlySerializedAs("pencilEdgeWidthPercent")]
+        [Range(0.5f, 20f)] public float pencilShadowFadePercent = 4f;
 
         [Tooltip("Size of a pencil patch, in % of screen height. Used when baking.")]
         [Range(1f, 50f)] public float pencilPatchSizePercent = 10f;
@@ -91,11 +105,38 @@ public class WatercolorManager : MonoBehaviour
         [Range(0f, 1f)] public float pencilPatchChance = 0.4f;
 
         [Header("Light and Shadow")]
-        [Tooltip("How far the zone next to the light (paper) turns toward yellow on the colour wheel, strongest at the light and fading with distance. 100% = up to 30 degrees.")]
-        [Range(0f, 100f)] public float lightYellowPercent = 30f;
+        [Tooltip("Light for the form: which side of each mass stays paper white, the cream and boundary bands, and the side the pencil strokes gather on. Uses this object's facing direction (blue arrow) and rotating it updates the view immediately. Only the Transform is used: use an empty object, or turn off the Light component if it is a copy of a light, otherwise that light also lights and casts shadows. Empty = the scene's main light. Cast shadows always come from the main light.")]
+        public Transform formLight;
 
-        [Tooltip("How far that yellow zone reaches from the light, in % of screen height.")]
+        // No longer used: the light side now fades toward Light Cream instead of turning yellow. Kept so saved
+        // values survive.
+        [HideInInspector] public float lightYellowPercent = 30f;
+
+        [Tooltip("How far the light zone next to the paper reaches, in % of screen height. In it the colour fades toward Light Cream, more the closer it is to the paper.")]
         [Range(0.1f, 20f)] public float lightYellowWidthPercent = 4f;
+
+        [Tooltip("Pale cream the light side fades toward: brighter, softer, only faintly warm. Not used on floors.")]
+        public Color lightCream = new Color(1f, 0.96f, 0.86f);
+
+        [Tooltip("How far the light side fades toward Light Cream at the paper's edge. 0 = keeps the paint colour. Not used on floors.")]
+        [Range(0f, 1f)] public float lightFade = 0.6f;
+
+        [Tooltip("How strongly the light side and the paper show scattered pastel chips (pink, mint, sky, lavender) from the baked colour drops. Works on white and grey too. Not used on floors.")]
+        [Range(0f, 1f)] public float lightPastelChips = 0.5f;
+
+        [Tooltip("On: cast shadows become clear mid-tone shadow hues (Shadow Darkening, Shadow Hue From/To). Off: the earlier cast shadows, darker and richer in the paint's own colour turning toward blue (Shadow Depth, Dark Pigment Blue %).")]
+        public bool pastelShadows = false;
+
+        [Tooltip("Saturation of cast shadows, both kinds. 0 = as they come out, below 0 = softer, -1 = grey. Applies immediately.")]
+        [Range(-1f, 1f)] public float shadowSaturation = 0f;
+
+        [Tooltip("Pastel Shadows only. How much cast shadows lower the brightness. Shadows keep their saturation and turn toward the shadow hues, so a low value gives clear mid-tone blues rather than dark ones.")]
+        [Range(0f, 1f)] public float shadowDarkening = 0.25f;
+
+        [Tooltip("Pastel Shadows only. Shadow hue range, in degrees on the colour wheel (180 teal, 220 blue, 270 violet). Shadows mix between the two with the baked noise.")]
+        [Range(0f, 360f)] public float shadowHueFrom = 185f;
+
+        [Range(0f, 360f)] public float shadowHueTo = 270f;
 
         [Tooltip("How far areas darkened by pigment (blotches, backrun rims, boundary bands, outlines, cast shadows) turn toward blue on the colour wheel, in proportion to how dark they get. 100% = up to 30 degrees.")]
         [FormerlySerializedAs("shadowBluePercent")]
@@ -172,7 +213,11 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalFloat("_WC_OutlineWidth", s.outlineWidthPercent / 100f);
         Shader.SetGlobalFloat("_WC_Blotches", s.blotches);
         Shader.SetGlobalFloat("_WC_Backruns", s.backruns);
-        Shader.SetGlobalFloat("_WC_WarmShift", s.lightYellowPercent / 100f);
+        // sRGB values as they are (not converted to linear), because the shader mixes colours in sRGB.
+        Shader.SetGlobalVector("_WC_LightCream", new Vector4(s.lightCream.r, s.lightCream.g, s.lightCream.b, s.lightFade));
+        Shader.SetGlobalVector("_WC_LightShade", new Vector4(s.lightPastelChips, s.shadowDarkening, s.shadowHueFrom / 360f, s.shadowHueTo / 360f));
+        Shader.SetGlobalFloat("_WC_PastelShadows", s.pastelShadows ? 1f : 0f);
+        Shader.SetGlobalFloat("_WC_ShadowSaturation", s.shadowSaturation);
         Shader.SetGlobalFloat("_WC_WarmWidth", s.lightYellowWidthPercent / 100f);
         Shader.SetGlobalFloat("_WC_CoolShift", s.darkPigmentBluePercent / 100f);
         Shader.SetGlobalFloat("_WC_ShadowDepth", s.shadowDepth);
@@ -190,7 +235,8 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalTexture("_WC_FloorPattern", FloorPatternTexture);
         Shader.SetGlobalTexture("_WC_PencilStrokes", PencilStrokesTexture(s));
         Shader.SetGlobalVector("_WC_Pencil", new Vector4(s.pencilStrength, s.pencilDarkness,
-            s.strokeAngle * Mathf.Deg2Rad, s.strokeAngleJitter * Mathf.Deg2Rad));
+            s.strokeAngle * Mathf.Deg2Rad, s.strokeWidth));
+        Shader.SetGlobalVector("_WC_PencilZone", new Vector4(s.pencilShadowFadePercent / 100f, s.pencilShadowFocus, s.strokeSizeInfluence, 0f));
         s_Active = s;
 
     }
@@ -204,11 +250,16 @@ public class WatercolorManager : MonoBehaviour
     // Tells WatercolorFlat which camera is about to render, so the Scene view can be drawn plain.
 
     static readonly int FloorDetailId = Shader.PropertyToID("_WC_FloorDetail");
+    static readonly int FormLightId = Shader.PropertyToID("_WC_FormLight");
     static Settings s_Active = new Settings();
 
     static void OnBeginCamera(ScriptableRenderContext context, Camera camera)
     {
         Shader.SetGlobalFloat(PlainId, PlainSceneView && camera.cameraType == CameraType.SceneView ? 1f : 0f);
+
+        // Read every frame, so rotating the form light shows at once. w = 0 means use the main light.
+        Transform form = s_Active.formLight;
+        Shader.SetGlobalVector(FormLightId, form != null ? (Vector4)(-form.forward) + new Vector4(0f, 0f, 0f, 1f) : Vector4.zero);
 
         // World size of one floor blotch at distance d is x * d + y, so it covers the same share of this camera's
         // screen everywhere (perspective: grows with distance; orthographic: constant).
@@ -218,8 +269,9 @@ public class WatercolorManager : MonoBehaviour
             : new Vector4(share * 2f * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad), 0f, 0f, 0f);
         Shader.SetGlobalVector(FloorDetailId, detail);
 
-        // Same idea for pencil strokes: world size of one stroke-texture tile at distance d.
-        float tile = s_Active.strokeLengthPercent / 100f / StrokeShareOfTile;
+        // Same idea for pencil strokes: world size of one stroke-texture tile at distance d. One texel is one pixel
+        // at 1080p, so strokes stay crisp.
+        float tile = PencilTexels / 1080f;
         Vector4 pencil = camera.orthographic
             ? new Vector4(0f, tile * camera.orthographicSize * 2f, 0f, 0f)
             : new Vector4(tile * 2f * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad), 0f, 0f, 0f);
@@ -228,61 +280,120 @@ public class WatercolorManager : MonoBehaviour
 
     static readonly int PencilScaleId = Shader.PropertyToID("_WC_PencilScale");
 
-    // Coloured-pencil strokes: parallel, evenly wide horizontal strokes packed like hatching (the shader rotates them).
-    // Built once and rebuilt only when width, width variation, density or length change. Average stroke length is
-    // StrokeShareOfTile of the tile.
-    const float StrokeShareOfTile = 0.12f;
+    // Coloured-pencil strokes: hatching. Strokes lie end to end on parallel lanes, so they stay separate lines and
+    // never pile up into a smudge. Horizontal here; the shader rotates them.
+    // r = distance to the nearest stroke's centre line (0..PencilMaxDistance texels, already divided by that stroke's
+    // width variation and end taper), g = pressure. The shader turns the distance into a line of the set width, so
+    // changing the width keeps every stroke in place.
+    // Built once and rebuilt only when width variation, density, length, alignment or angle jitter change.
+    const int PencilTexels = 512;
+    const float PencilMaxDistance = 8f;
+    // Lane spacing is measured in this fixed width, not the stroke width, so the layout does not move with the width.
+    const float PencilLaneWidth = 3f;
+    // Likewise the layout is measured in this fixed stroke length (3% of 1080p), not the set length.
+    const float PencilLayoutLength = 32f;
     static Texture2D s_PencilStrokes;
-    static Vector4 s_PencilKey = new Vector4(-1f, 0f, 0f, 0f);
+    static (float, float, float, float, float) s_PencilKey = (-1f, 0f, 0f, 0f, 0f);
 
     static Texture2D PencilStrokesTexture(Settings st)
     {
-        var key = new Vector4(st.strokeWidth, st.strokeWidthVariation, st.strokeDensity, st.strokeLengthPercent);
+        var key = (st.strokeWidthVariation, st.strokeDensity, st.strokeLengthPercent, st.strokeAlignment, st.strokeAngleJitter);
         if (s_PencilStrokes != null && key == s_PencilKey)
             return s_PencilStrokes;
         s_PencilKey = key;
 
-        const int size = 512;
-        // One tile covers (length / StrokeShareOfTile) of the screen height; convert the on-screen width (1080p px) to texels.
-        float tileScreenPixels = st.strokeLengthPercent / 100f / StrokeShareOfTile * 1080f;
-        float baseWidth = Mathf.Max(0.6f, st.strokeWidth * size / tileScreenPixels);
-        int count = Mathf.RoundToInt(Mathf.Lerp(300f, 3000f, st.strokeDensity) * Mathf.Clamp(2.5f / Mathf.Max(baseWidth, 0.6f), 0.4f, 3f));
+        const int size = PencilTexels;
+        // One texel is one pixel at 1080p, so the sizes in the settings are texels here. Strokes are laid out at a
+        // fixed length and then drawn longer or shorter around their own centres, so changing the length keeps every
+        // stroke in place.
+        float grow = Mathf.Min(st.strokeLengthPercent / 100f * 1080f, size * 0.8f) / PencilLayoutLength;
+        // Density 0-1: lanes go from three and a half lane widths apart to just under two, and more stacks are kept.
+        // Density 1-2: lanes close in to 1.1 lane widths, and the gaps between stacks shrink. The lane count is a whole
+        // number so the texture tiles.
+        float dense = Mathf.Clamp01(st.strokeDensity - 1f);
+        float laneStep = st.strokeDensity <= 1f ? Mathf.Lerp(3.5f, 1.8f, st.strokeDensity) : Mathf.Lerp(1.8f, 1.1f, dense);
+        int lanes = Mathf.Max(1, Mathf.RoundToInt(size / (PencilLaneWidth * laneStep)));
+        float spacing = (float)size / lanes;
+        float keep = st.strokeDensity <= 1f ? Mathf.Lerp(0.45f, 0.9f, st.strokeDensity) : Mathf.Lerp(0.9f, 1f, dense);
+        float gapScale = Mathf.Lerp(1f, 0.35f, dense);
+        float turn = st.strokeAngleJitter * Mathf.Deg2Rad;
 
-        var ink = new float[size * size];
+        var distance = new float[size * size];
+        for (int i = 0; i < distance.Length; i++)
+            distance[i] = PencilMaxDistance;
+        var pressureMap = new float[size * size];
         var random = new System.Random(20231);
         float R(float a, float b) => a + (float)random.NextDouble() * (b - a);
-        for (int n = 0; n < count; n++)
+        // Strokes come in stacks: a run of 4-10 neighbouring lanes shares where each stroke starts and ends, so the
+        // strokes line up like a ladder. Alignment sets how closely the ends match. Each block of a stack (one column)
+        // turns as a whole by its own angle, within the angle jitter.
+        float jitter = Mathf.Lerp(0.5f, 0.04f, st.strokeAlignment);
+        var columns = new System.Collections.Generic.List<Vector3>();
+        for (int lane = 0; lane < lanes;)
         {
-            float cx = R(0, size), cy = R(0, size);
-            float length = size * StrokeShareOfTile * R(0.6f, 1.4f);
-            // Hatching: almost the same direction for every stroke.
-            float angle = R(-0.03f, 0.03f);
-            float width = baseWidth * (1f + R(-1f, 1f) * st.strokeWidthVariation * 0.6f);
-            float pressure = R(0.6f, 1f);
+            int stack = Mathf.Min(lanes - lane, random.Next(4, 11));
+            float stackCenterY = (lane + stack * 0.5f) * spacing;
+            columns.Clear();
+            float first = R(0f, PencilLayoutLength), x = first;
+            while (true)
+            {
+                float length = PencilLayoutLength * R(0.7f, 1.3f);
+                // Stop before wrapping onto the first column.
+                if (x + length > size + first - PencilLayoutLength * 0.25f)
+                    break;
+                if (random.NextDouble() < keep)
+                    columns.Add(new Vector3(x, length, R(-turn, turn)));
+                x += length + PencilLayoutLength * R(0.25f, 0.6f) * gapScale;
+            }
+            for (int k = 0; k < stack; k++, lane++)
+            {
+                float laneY = (lane + 0.5f) * spacing;
+                foreach (var column in columns)
+                {
+                    // Now and then a line in the stack is missing.
+                    if (random.NextDouble() < 0.08)
+                        continue;
+                    float start = column.x + R(-jitter, jitter) * column.y;
+                    float length = column.y * (1f + R(-jitter, jitter));
+                    // Turn the stroke's centre around the block's centre, so the block keeps its ladder shape.
+                    float ox = start + length * 0.5f - (column.x + column.y * 0.5f);
+                    float oy = laneY + R(-0.08f, 0.08f) * spacing - stackCenterY;
+                    float cos = Mathf.Cos(column.z), sin = Mathf.Sin(column.z);
+                    DrawStroke(column.x + column.y * 0.5f + ox * cos - oy * sin, stackCenterY + ox * sin + oy * cos, length * grow, column.z + R(-0.008f, 0.008f),
+                        1f + R(-1f, 1f) * st.strokeWidthVariation * 0.6f, R(0.7f, 1f));
+                }
+            }
+        }
+
+        void DrawStroke(float cx, float cy, float length, float angle, float widthScale, float pressure)
+        {
             float dx = Mathf.Cos(angle), dy = Mathf.Sin(angle);
-            int x0 = Mathf.FloorToInt(cx - length * 0.5f - width - 2), x1 = Mathf.CeilToInt(cx + length * 0.5f + width + 2);
-            int y0 = Mathf.FloorToInt(cy - length * 0.5f * Mathf.Abs(dy) - width - 2), y1 = Mathf.CeilToInt(cy + length * 0.5f * Mathf.Abs(dy) + width + 2);
+            float reach = PencilMaxDistance * widthScale + 1f;
+            int x0 = Mathf.FloorToInt(cx - length * 0.5f - reach), x1 = Mathf.CeilToInt(cx + length * 0.5f + reach);
+            int y0 = Mathf.FloorToInt(cy - length * 0.5f * Mathf.Abs(dy) - reach), y1 = Mathf.CeilToInt(cy + length * 0.5f * Mathf.Abs(dy) + reach);
             for (int y = y0; y <= y1; y++)
                 for (int x = x0; x <= x1; x++)
                 {
                     float px = x + 0.5f - cx, py = y + 0.5f - cy;
                     float along = px * dx + py * dy;
-                    float across = Mathf.Abs(-px * dy + py * dx);
-                    float t = along / (length * 0.5f);
-                    if (Mathf.Abs(t) > 1f)
-                        continue;
-                    // Even width along the stroke; only the very ends taper. The edge is anti-aliased.
-                    float taper = Mathf.Clamp01((1f - Mathf.Abs(t)) * 6f);
-                    float a = Mathf.Clamp01(width * 0.5f * (0.5f + 0.5f * taper) - across + 0.5f) * pressure * (0.6f + 0.4f * taper);
+                    float across = -px * dy + py * dx;
+                    // Distance to the segment (round ends). Even width along the stroke; only the very ends taper.
+                    float beyond = Mathf.Max(Mathf.Abs(along) - length * 0.5f, 0f);
+                    float taper = Mathf.Clamp01((1f - Mathf.Abs(along) / (length * 0.5f)) * 6f);
+                    float d = Mathf.Sqrt(beyond * beyond + across * across) / (widthScale * (0.4f + 0.6f * taper));
                     int i = ((y % size + size) % size) * size + ((x % size + size) % size);
-                    ink[i] = 1f - (1f - ink[i]) * (1f - a);
+                    if (d < distance[i])
+                    {
+                        distance[i] = d;
+                        pressureMap[i] = pressure * (0.7f + 0.3f * taper);
+                    }
                 }
         }
+
         var pixels = new Color32[size * size];
         for (int i = 0; i < pixels.Length; i++)
         {
-            byte v = (byte)(ink[i] * 255f);
-            pixels[i] = new Color32(v, v, v, v);
+            pixels[i] = new Color32((byte)(Mathf.Min(distance[i] / PencilMaxDistance, 1f) * 255f), (byte)(pressureMap[i] * 255f), 0, 255);
         }
         if (s_PencilStrokes == null)
             s_PencilStrokes = new Texture2D(size, size, TextureFormat.RGBA32, true, true)
@@ -293,7 +404,8 @@ public class WatercolorManager : MonoBehaviour
                 filterMode = FilterMode.Trilinear,
             };
         s_PencilStrokes.SetPixels32(pixels);
-        s_PencilStrokes.Apply(true, true);
+        // Stays readable: it is rebuilt in place when the settings change.
+        s_PencilStrokes.Apply(true, false);
         return s_PencilStrokes;
     }
 

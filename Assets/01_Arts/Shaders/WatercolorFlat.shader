@@ -1,8 +1,9 @@
 // 평면에 칠한 수채화처럼 보이는 셰이더. 무늬는 매 프레임 계산하지 않고 굽기 도구가 만든 3D 텍스처를 한 번 읽는다.
 // - 색은 세 가지뿐이다: 본색, 빛(칠하지 않은 종이색), 드리운 그림자.
-//   "빛은 노랑, 어둠은 파랑": 빛(종이)에서 일정 거리까지의 띠는 노랑 쪽으로(빛에 가까울수록 강하게),
-//   안료가 쌓여 진해진 곳은 진한 만큼 파랑 쪽으로 돌린다.
-// - 모든 폭(경계 띠, 윤곽, 종이 경계 부드러움, 노랑 띠)은 화면 높이 비율이다. 화소마다 미분(fwidth)으로 바꿔서
+//   밝기 폭이 좁은 파스텔 수채화: 명암을 밝기보다 색 온도로 나타낸다. 빛(종이)에서 일정 거리까지의 띠는
+//   밝고 옅은 크림색 쪽으로 바래고(빛에 가까울수록 강하게) 파스텔 색 조각이 흩어진다. 드리운 그림자는 거의
+//   어두워지지 않고 채도를 지킨 맑은 청록·파랑·보라가 된다. 안료가 쌓여 진해진 곳은 진한 만큼 파랑 쪽으로 돈다.
+// - 모든 폭(경계 띠, 윤곽, 종이 경계 부드러움, 크림 띠)은 화면 높이 비율이다. 화소마다 미분(fwidth)으로 바꿔서
 //   작은 물체와 큰 물체가 화면에서 같은 굵기의 디테일을 갖는다.
 //   면 방향에 따른 어둠(형태 그림자)은 없다. 빛을 등진 면도 본색이다.
 // - 빛: 빛을 정면으로 받는 쪽을 흰색(종이)으로 남긴다. 화면 전체에 곱하는 종이 질감이 그 자리에 드러난다.
@@ -15,9 +16,9 @@
 // - 드리운 그림자도 수채화처럼 칠한다: 경계를 붓 자국처럼 흔들고, 경계에 안료가 고이고, 안쪽 진하기가 고르지 않다.
 //   바닥(Floor 체크)은 굽지 않고 바닥 무늬를 쓴다. 원근이 있어도 앞뒤 얼룩이 화면에서 같은 크기로 보여
 //   한 폭의 그림처럼 보이고, 무늬는 바닥에 붙어 있다. 그 밖의 굽지 않은 물체는 무늬가 없다.
-//   그림자 안에서는 밝기를 나누지 않는다(종이 영역, 노랑 띠, 빛 경계 띠 없음). 나머지 무늬는 똑같이 적용된다.
+//   그림자 안에서는 밝기를 나누지 않는다(종이 영역, 크림 띠, 빛 경계 띠 없음). 나머지 무늬는 똑같이 적용된다.
 // 머티리얼은 색(Base Map x Base Color)만 갖는다. 텍스처가 있으면 모든 계산이 그 텍스처 색을 기준으로 한다.
-// 칠하는 방식(안료 두께, 빛의 노랑 %, 그림자의 파랑 % 등)은 씬의 WatercolorManager 가 전역 값(_WC_*)으로 정한다.
+// 칠하는 방식(안료 두께, 빛 쪽 크림색, 그늘 색 등)은 씬의 WatercolorManager 가 전역 값(_WC_*)으로 정한다.
 // 굽지 않은 모델(Has Pattern 꺼짐)은 얼룩과 백런 없이 그린다.
 Shader "ThatGameJam/WatercolorFlat"
 {
@@ -52,7 +53,8 @@ Shader "ThatGameJam/WatercolorFlat"
         TEXTURE3D(_PatternTex);
         SAMPLER(sampler_PatternTex);
         TEXTURE3D(_ChaosTex); // r: 색 물방울(0.5 = 변화 없음), g: 연필 덩어리, b: 덩어리별 연필 각도(0.5 = 기본 각도)
-        TEXTURE2D(_WC_PencilStrokes); // 연필 선 텍스처(가로로 그은 짧은 선들). WatercolorManager 가 한 번 만든다.
+        TEXTURE2D(_WC_PencilStrokes); // 연필 선 텍스처(나란한 줄 위에 가로로 그은 선들, r 가장 가까운 선 중심까지 거리 g 필압). WatercolorManager 가 한 번 만든다.
+        #define PENCIL_MAX_DISTANCE 8.0
 
         // SRP Batcher 를 쓰려면 모든 패스가 같은 머티리얼 상수 버퍼를 선언해야 한다.
         CBUFFER_START(UnityPerMaterial)
@@ -68,11 +70,14 @@ Shader "ThatGameJam/WatercolorFlat"
         half _WC_BoundaryPigment;
         half _WC_BoundaryWidth;   // 화면 높이 비율
         half _WC_OutlineWidth;    // 화면 높이 비율
-        half _WC_WarmWidth;       // 화면 높이 비율
+        half _WC_WarmWidth;       // 빛 쪽 크림 띠 폭, 화면 높이 비율
+        half4 _WC_LightCream;     // rgb 빛 쪽이 바래 가는 크림색(sRGB), a 바래는 정도
+        half4 _WC_LightShade;     // x 빛 쪽 파스텔 조각 세기, y 그늘이 어두워지는 정도, zw 그늘 색상 범위(한 바퀴 = 1)
+        half _WC_PastelShadows;   // 1 = 맑은 그늘 색(Shade), 0 = 예전 그림자(Accumulate)
+        half _WC_ShadowSaturation; // 드리운 그림자 채도, -1~1 (0 = 그대로)
         half _WC_OutlinePigment;
         half _WC_Blotches;
         half _WC_Backruns;
-        half _WC_WarmShift;
         half _WC_CoolShift;
         half _WC_ShadowDepth;
         half _WC_ReceiveShadows;
@@ -85,11 +90,15 @@ Shader "ThatGameJam/WatercolorFlat"
         half _WC_ShadowEdge;
         half _WC_ShadowRagged;
         half _WC_ShadowUneven;
-        float4 _WC_Pencil;        // 연필 세기, 연필 진하기, 기본 각도(라디안), 덩어리별 각도 흔들림(라디안)
+        float4 _WC_Pencil;        // 연필 세기, 연필 진하기, 기본 각도(라디안), 선 굵기(1080p 화소 = 텍스처 칸)
         float4 _WC_PencilScale;   // 연필 선 텍스처 한 장의 월드 크기 = x * 거리 + y
+        float4 _WC_FormLight;     // 형태용 빛 방향(빛 쪽을 향함), w = 1 이면 사용. 0 이면 주 광원 방향을 쓴다.
+        float4 _WC_PencilZone;    // 형태 그림자 쪽 경계가 흐려지는 폭(화면 높이 비율), 그림자 쪽에 모이는 정도, 크기별 영향력
+        #define PENCIL_TILE_SHARE (512.0 / 1080.0) // 선 텍스처 한 장이 화면 높이에서 차지하는 비율
+        #define PENCIL_FULL_SIZE 0.25              // 화면 높이의 이 비율 이상인 조각은 선 길이를 줄이지 않는다
 
         // 연필 선: 카메라가 보는 평면에 그은 선이라 종이에 그린 것처럼 보이고, 위치는 물체에 붙어 있다
-        // (물체 원점 기준). 바닥 무늬와 같은 방식으로 거리와 상관없이 화면에서 같은 길이다.
+        // (물체 원점 기준). 물체까지 거리로 크기를 정해서 가깝든 멀든 화면에서 같은 길이다.
         half PencilStrokes(float3 positionWS, half angle)
         {
             float3 rel = positionWS - GetObjectToWorldMatrix()._m03_m13_m23;
@@ -100,15 +109,20 @@ Shader "ThatGameJam/WatercolorFlat"
             sincos(angle, s, c);
             p = float2(c * p.x + s * p.y, -s * p.x + c * p.y);
 
-            float distance = length(positionWS - GetCameraPositionWS());
-            float wanted = max(_WC_PencilScale.x * distance + _WC_PencilScale.y, 1e-4);
-            float level = log2(wanted);
-            float baseLevel = floor(level);
-            float blend = level - baseLevel;
-            float tileA = exp2(baseLevel);
-            half a = SAMPLE_TEXTURE2D(_WC_PencilStrokes, sampler_LinearRepeat, p / tileA + frac(baseLevel * float2(0.6180, 0.7549))).r;
-            half b = SAMPLE_TEXTURE2D(_WC_PencilStrokes, sampler_LinearRepeat, p / (tileA * 2.0) + frac((baseLevel + 1.0) * float2(0.6180, 0.7549))).r;
-            return lerp(a, b, blend);
+            // 크기는 물체마다 하나(원점까지 거리)라서 한 물체 안에서 두 배율을 섞지 않는다. 섞으면 선이 겹쳐 얼룩이 된다.
+            float distance = length(GetObjectToWorldMatrix()._m03_m13_m23 - GetCameraPositionWS());
+            float tile = max(_WC_PencilScale.x * distance + _WC_PencilScale.y, 1e-4);
+            // 화면에서 작은 조각일수록 선을 짧게 긋는다. 조각 크기는 렌더러 경계 상자의 가장 긴 변이고,
+            // 선 방향으로만 줄여서 굵기와 줄 간격은 그대로다.
+            float3 bounds = unity_RendererBounds_Max.xyz - unity_RendererBounds_Min.xyz;
+            float screenShare = max(bounds.x, max(bounds.y, bounds.z)) / tile * PENCIL_TILE_SHARE;
+            float shorten = max(pow(saturate(screenShare / PENCIL_FULL_SIZE), _WC_PencilZone.z), 0.15);
+            half2 stroke = SAMPLE_TEXTURE2D(_WC_PencilStrokes, sampler_LinearRepeat, p / (tile * float2(shorten, 1.0))).rg;
+            // 선 중심까지 거리로 굵기를 여기서 정한다. 그래서 굵기를 바꿔도 선은 제자리에서 굵기만 바뀌고,
+            // 가장자리는 화면 한 화소 폭으로 또렷하다.
+            float lineDistance = stroke.r * PENCIL_MAX_DISTANCE;
+            half cover = saturate((_WC_Pencil.w * 0.5 - lineDistance) / max(fwidth(lineDistance), 1e-3) + 0.5);
+            return cover * stroke.g;
         }
 
         float4 _WC_FloorDetail;   // 바닥 얼룩 하나의 월드 크기 = x * 거리 + y (카메라마다 WatercolorManager 가 정한다)
@@ -184,7 +198,6 @@ Shader "ThatGameJam/WatercolorFlat"
             };
 
 
-            #define HUE_YELLOW (1.0 / 6.0)
             #define HUE_BLUE 0.61
 
             // 색상환에서 target 쪽으로 가까운 방향으로 돌린다. amount 1 = 최대 30도.
@@ -212,6 +225,37 @@ Shader "ThatGameJam/WatercolorFlat"
                 half3 deep = pow(max(c, 1e-4), 1.0 + amount * 1.5);
                 half l = Luminance(deep);
                 return saturate(l + (deep - l) * (1.0 + amount * 0.1));
+            }
+
+            // 드리운 그림자: 그늘 색(hue) 쪽으로 색상환을 따라 돌린 색. RGB 로 섞거나 곱하면 보색끼리 만나
+            // 회색·올리브로 탁해지므로(갈색 + 파랑) 색상만 돌리고, 채도는 지키고(무채색은 그늘 색을 옅게 띤다),
+            // 명도는 조금만 내린다. 그래서 탁하거나 무겁지 않은 맑은 중간 밝기가 된다.
+            // 도는 방향은 그늘 색 범위의 가운데(mid)를 기준으로 정한다. 범위 끝 색마다 따로 정하면 같은 색이 자리마다
+            // 반대로 돌아(갈색이 한쪽은 초록, 한쪽은 보라) 얼룩덜룩해진다.
+            half3 Shade(half3 c, half amount, half hue, half mid)
+            {
+                amount = saturate(amount);
+                half3 hsv = RgbToHsv(c);
+                half d = mid - hsv.x;
+                d -= round(d);
+                d += hue - mid;
+                half turned = frac(hsv.x + d * saturate(amount * 1.5));
+                // 채도가 거의 없는 색은 원래 색상이 의미 없으니 그늘 색상을 그대로 쓴다.
+                hsv.x = lerp(hue, turned, saturate(hsv.y * 4.0));
+                // 채도는 지키되 너무 진한 색은 중간 채도로 눌러 맑은 그늘이 되게 한다.
+                hsv.y = clamp(hsv.y, 0.3 * amount, lerp(1.0, 0.5, amount));
+                hsv.z *= 1.0 - amount * _WC_LightShade.y;
+                return HsvToRgb(hsv);
+            }
+
+            // 빛 쪽 파스텔 색 조각: 색 물방울(drop, -1~1, 0 = 물방울 없음) 자리의 밝고 옅은 색.
+            // 무채색에도 보이도록 색상은 원래 색과 상관없이 정한다. 물방울 부호로 차가운 쪽(연두~하늘)과
+            // 따뜻한 쪽(라벤더~분홍)을 고르고, 그 안에서는 저주파 잡음(noise)으로 천천히 바꾼다.
+            // 물방울 값으로 바로 색상을 정하면 한 물방울 안에 무지개가 생긴다.
+            half3 PastelChip(half drop, half noise)
+            {
+                half hue = drop > 0.0 ? lerp(0.36, 0.56, noise) : lerp(0.74, 0.95, noise);
+                return HsvToRgb(half3(hue, 0.3, 1.0));
             }
 
             // 물에 밀려 안료가 옅어진 색: 종이(흰색) 쪽으로 간다.
@@ -259,10 +303,12 @@ Shader "ThatGameJam/WatercolorFlat"
                 albedo = saturate(lerp(Luminance(albedo).xxx, albedo, 1.0 + _WC_Saturation));
 
                 // 색 카오스: 같은 색 안에 떨어뜨린 다른 색 물방울. 굽기 때 정한 덩어리와 물방울 모양대로 색상을 돌린다.
-                // 채도가 거의 없는 색(회색, 흰색)은 색상이 의미가 없어서 거의 바뀌지 않는다.
+                // 채도가 거의 없는 색(회색, 흰색)은 색상이 의미가 없어서 거의 바뀌지 않는다(빛 쪽 파스텔 조각은 따로 보인다).
+                half drop = 0.0;
+                if (_HasPattern > 0.5)
+                    drop = SAMPLE_TEXTURE3D(_ChaosTex, sampler_PatternTex, input.patternUV).r * 2.0 - 1.0;
                 if (_HasPattern > 0.5 && _WC_ChaosHue > 0)
                 {
-                    half drop = SAMPLE_TEXTURE3D(_ChaosTex, sampler_PatternTex, input.patternUV).r * 2.0 - 1.0;
                     half3 hsv = RgbToHsv(albedo);
                     hsv.x = frac(hsv.x + drop * _WC_ChaosHue);
                     albedo = HsvToRgb(hsv);
@@ -296,24 +342,42 @@ Shader "ThatGameJam/WatercolorFlat"
                 // 드리운 그림자. 경계를 잡음으로 흔들어(붓 자국) 그림자 맵의 매끈한 선이 보이지 않게 한다.
                 half shadowAtten = lerp(1.0, mainLight.shadowAttenuation, _WC_ReceiveShadows * facing);
                 half cast = saturate((shadowAtten - 0.5) * (1.0 + 2.0 * _WC_ShadowRagged) + 0.5 + (pattern.r - 0.5) * _WC_ShadowRagged);
-                // 바닥은 윤곽, 경계 띠, 종이 영역, 노랑 띠를 쓰지 않는다. 넓은 면에서 윤곽(시선 각도 기준)은 멀수록
+                // 바닥은 윤곽, 경계 띠, 종이 영역, 크림 띠, 파스텔 조각을 쓰지 않는다. 넓은 면에서 윤곽(시선 각도 기준)은 멀수록
                 // 진해지는 그라데이션이 되고, 종이 영역은 바닥 전체를 하얗게 만든다.
                 half objectOnly = 1.0 - _Floor;
 
 
                 // 빛이 받는 정도. 경계 위치는 구운 얼룩으로 살짝 흔든다(Boundary Distortion).
-                half ndotlRaw = dot(normalWS, mainLight.direction) * 0.5 + 0.5;
+                // 형태(종이, 크림 띠, 경계 띠, 연필 쪽)는 형태용 빛을 따른다. 드리운 그림자와 위의 facing 은
+                // 그림자 맵을 만든 주 광원을 따라야 서로 맞는다.
+                float3 formLightDir = _WC_FormLight.w > 0.5 ? _WC_FormLight.xyz : mainLight.direction;
+                half ndotlRaw = dot(normalWS, formLightDir) * 0.5 + 0.5;
                 half ndotl = ndotlRaw + (pattern.r - 0.5) * 0.12;
                 half paperSoft = ScreenWidth(ndotlRaw, _WC_PaperSoftness);
                 half paperEdge = _WC_PaperThreshold - paperSoft;
 
-                // 노랑 띠: 빛(종이) 경계에서 화면 비율로 정한 거리까지, 빛에 가까울수록 노랑 쪽으로 더 돈다.
-                // 빛을 두 단계로 나누지 않았다면 빛이 더 넓게 퍼졌을 자리다.
+                // 빛 띠: 빛(종이) 경계에서 화면 비율로 정한 거리까지, 빛에 가까울수록 밝고 옅은 크림색 쪽으로 바랜다.
+                // 노랗게 물들이지 않으니 파랑이 녹색으로, 흰색이 탁한 노랑으로 가지 않는다. 바닥에는 쓰지 않는다.
                 half warmZone = smoothstep(paperEdge - ScreenWidth(ndotlRaw, _WC_WarmWidth), paperEdge, ndotl) * objectOnly;
-                // 그림자는 회색을 곱하지 않고 같은 물감을 더 쌓은 것처럼(그래서 파랑 쪽으로) 어둡게 한다.
-                half3 lightColor = ShiftHue(albedo, HUE_YELLOW, _WC_WarmShift * warmZone);
-                // 그림자 안쪽 진하기도 고르지 않다(물감이 고르게 펴지지 않은 것처럼).
-                half3 shadowColor = Accumulate(albedo, _WC_ShadowDepth * (1.0 + (pattern.a - 0.5) * 2.0 * _WC_ShadowUneven));
+                half3 lightColor = lerp(albedo, _WC_LightCream.rgb, _WC_LightCream.a * warmZone);
+                // 빛 쪽 파스텔 조각: 색 물방울 자리에 옅은 파스텔 색이 비친다. 물방울이 진할수록 또렷하다.
+                half chip = saturate(abs(drop) * 2.5) * _WC_LightShade.x;
+                lightColor = lerp(lightColor, PastelChip(drop, pattern.a), chip * warmZone * 0.8);
+                // 그림자 안쪽 진하기는 고르지 않다(물감이 고르게 펴지지 않은 것처럼).
+                half shadowAmount = _WC_ShadowDepth * (1.0 + (pattern.a - 0.5) * 2.0 * _WC_ShadowUneven);
+                half3 shadowColor;
+                if (_WC_PastelShadows > 0.5)
+                {
+                    // 맑은 그늘: 거의 어두워지지 않는 그늘 색. 그늘 색상은 구운 저주파 잡음으로 범위 안에서 섞인다.
+                    half shadowHue = lerp(_WC_LightShade.z, _WC_LightShade.w, saturate((pattern.a - 0.5) * 2.5 + 0.5 + (pattern.r - 0.5) * 0.6));
+                    shadowColor = Shade(albedo, shadowAmount, shadowHue, (_WC_LightShade.z + _WC_LightShade.w) * 0.5);
+                }
+                else
+                {
+                    // 예전 그림자: 회색을 곱하지 않고 같은 물감을 더 쌓은 것처럼(그래서 파랑 쪽으로) 어둡게 한다.
+                    shadowColor = Accumulate(albedo, shadowAmount);
+                }
+                shadowColor = saturate(lerp(Luminance(shadowColor).xxx, shadowColor, 1.0 + _WC_ShadowSaturation));
                 half3 color = lerp(shadowColor, lightColor, cast);
                 // N: 0~1 저주파 잡음. 경계를 따라 안료가 진한 곳과 거의 안 쌓인 곳이 생기게 한다.
                 half unevenness = 0.6 + 0.4 * pattern.a;
@@ -345,18 +409,26 @@ Shader "ThatGameJam/WatercolorFlat"
 
                 color = Dilute(saturate(color), dilute * 0.5);
                 color = Accumulate(color, accumulate * _WC_PigmentThickness);
-                color = lerp(color, 1.0, paper);
+                // 종이에도 파스텔 조각이 아주 옅게 남는다.
+                half3 paperColor = lerp(1.0, PastelChip(drop, pattern.a), chip * 0.5 * objectOnly);
+                color = lerp(color, paperColor, paper);
 
                 // 색연필: 구운 연필 덩어리 안에서만 선이 보인다. 선 색은 그 자리 물감 색을 더 쌓은 색이라 색마다 다르다.
-                // 빛 쪽에 남긴 흰 종이에는 긋지 않는다.
+                // 빛 쪽에 남긴 흰 종이에는 긋지 않는다. 선은 주로 형태 그림자 쪽(덩어리 노멀이 빛을 등진 쪽)에 모인다.
+                // 칠은 형태 그림자를 쓰지 않으니, 연필이 그 자리의 어둠을 대신 그리는 셈이다. 경계는 화면 비율 폭으로
+                // 흐려지고 무늬로 흔들어 매끈한 선이 보이지 않게 한다.
                 if (_HasPattern > 0.5 && _WC_Pencil.x > 0)
                 {
                     half3 pencilMap = SAMPLE_TEXTURE3D(_ChaosTex, sampler_PatternTex, input.patternUV).rgb;
-                    half angle = _WC_Pencil.z + (pencilMap.b * 2.0 - 1.0) * _WC_Pencil.w;
-                    // 선 텍스처는 필압이 약한 선이 많아서 두 배 가까이 키워 쓴다.
-                    half stroke = saturate(PencilStrokes(input.positionWS, angle) * 1.8) * pencilMap.g * _WC_Pencil.x * (1.0 - paper);
-                    half3 lead = Accumulate(saturate(lightColor), _WC_Pencil.y);
-                    color = lerp(color, min(color, lead), saturate(stroke));
+                    // 각도 흔들림은 선 텍스처 안에서 선 뭉치마다 따로 들어가 있다.
+                    half angle = _WC_Pencil.z;
+                    half fade = ScreenWidth(ndotlRaw, _WC_PencilZone.x);
+                    half shadowSide = 1.0 - smoothstep(0.5 - fade, 0.5 + fade, ndotlRaw + (pattern.r - 0.5) * 0.15);
+                    half zoneWeight = lerp(1.0, shadowSide, _WC_PencilZone.y);
+                    half stroke = PencilStrokes(input.positionWS, angle) * pencilMap.g * zoneWeight * _WC_Pencil.x * (1.0 - paper);
+                    // 지금 칠해진 색 위에 쌓는다. 그림자처럼 이미 어두운 곳에서도 선이 그 색보다 진하게 보인다.
+                    half3 lead = Accumulate(saturate(color), _WC_Pencil.y);
+                    color = lerp(color, lead, saturate(stroke));
                 }
 
                 color = SRGBToLinear(color);
