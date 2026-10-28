@@ -4,13 +4,15 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself.
+// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed,
+// it lands on the nearest branch instead and shakes its head (ADR 0011).
 // Flies at the current map's fixed altitude inside the area BirdCamera gives, and perches only on screen.
 // The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
 {
     static readonly int PerchedParam = Animator.StringToHash("Perched");
     static readonly int MovingParam = Animator.StringToHash("Moving");
+    static readonly int RefuseParam = Animator.StringToHash("Refuse");
 
     [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
@@ -35,6 +37,10 @@ public class BirdController : MonoBehaviour
     float altitude;
     Bounds bounds = new(Vector3.zero, Vector3.positiveInfinity);
     Bounds view = new(Vector3.zero, Vector3.positiveInfinity);
+    // The bird refuses to go past this Z: the way ahead is closed there (ADR 0010).
+    float forwardLimit = float.PositiveInfinity;
+    // Shakes its head once it has landed.
+    bool refusePending;
     float idleTime;
     bool following;
     Perchable perch;
@@ -96,11 +102,12 @@ public class BirdController : MonoBehaviour
             transform.position = new Vector3(transform.position.x, y, transform.position.z);
     }
 
-    // area: where it flies. onScreen: where it may perch.
-    public void SetBounds(Bounds area, Bounds onScreen)
+    // area: where it flies. onScreen: where it may perch. forward: the Z it refuses to go past.
+    public void SetBounds(Bounds area, Bounds onScreen, float forward)
     {
         bounds = area;
         view = onScreen;
+        forwardLimit = forward;
         if (state != State.Flying && !OnScreen(perch.PerchPoint.position))
             LeavePerch();
     }
@@ -117,7 +124,12 @@ public class BirdController : MonoBehaviour
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
-            target = hit.point;
+        {
+            if (hit.point.z > forwardLimit)
+                Refuse();
+            else
+                target = hit.point;
+        }
 
         bool cried = cryAction.WasPressedThisFrame();
         if (cried && Time.time >= nextCryTime)
@@ -132,7 +144,7 @@ public class BirdController : MonoBehaviour
             case State.Perched: transform.position = perch.PerchPoint.position; break;
         }
         bool moved = transform.position != before;
-        // Glides while it moves and flaps while it hovers in place.
+        // Glides while it moves and hovers in place otherwise.
         animator.SetBool(MovingParam, moved);
         animator.SetBool(PerchedParam, state == State.Landing || state == State.Perched);
 
@@ -141,7 +153,8 @@ public class BirdController : MonoBehaviour
             PerchNearby();
     }
 
-    void PerchNearby()
+    // False if no branch is on screen.
+    bool PerchNearby()
     {
         idleTime = 0f;
         Perchable nearest = null;
@@ -152,8 +165,27 @@ public class BirdController : MonoBehaviour
             if (perchable.IsIdleSpot && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
                 (nearest, nearestDistance) = (perchable, distance);
         }
-        if (nearest != null)
-            StartPerch(nearest);
+        if (nearest == null)
+            return false;
+        StartPerch(nearest);
+        return true;
+    }
+
+    // Sent where the way is still closed: lands on the nearest branch and shakes its head there, or at once if already perched,
+    // or once landed if it is landing on a branch. A device it was heading for or landing on is given up, so refusing never opens one.
+    // With no branch on screen it stays where it is.
+    void Refuse()
+    {
+        following = false;
+        if (state == State.Perched)
+            animator.SetTrigger(RefuseParam);
+        else if ((state == State.Landing && perch.IsIdleSpot) || PerchNearby())
+            refusePending = true;
+        else
+        {
+            LeavePerch();
+            target = transform.position;
+        }
     }
 
     void Click(RaycastHit hit, Perchable hovered)
@@ -166,6 +198,11 @@ public class BirdController : MonoBehaviour
             return;
         }
 
+        if (hit.point.z > forwardLimit)
+        {
+            Refuse();
+            return;
+        }
         LeavePerch();
         // The target itself is not clamped: the bird presses against the edge of its area,
         // and moves on as the area moves (the camera follows, or a gate opens).
@@ -196,6 +233,8 @@ public class BirdController : MonoBehaviour
         if (perch != null)
             perch.Released -= LeavePerch;
         perch = null;
+        refusePending = false;
+        animator.ResetTrigger(RefuseParam);
         if (state != State.Flying)
             target = transform.position;
         state = State.Flying;
@@ -232,6 +271,11 @@ public class BirdController : MonoBehaviour
             return;
         state = State.Perched;
         perch.NotifyPerched();
+        if (refusePending)
+        {
+            refusePending = false;
+            animator.SetTrigger(RefuseParam);
+        }
     }
 
     void Face(Vector3 direction)

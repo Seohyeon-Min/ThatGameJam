@@ -111,9 +111,10 @@ Each stage is a prefab. That way several people can build different stages in th
 - While left click is held, the target point keeps updating (Q12). This is handy when drawing a path in the fog.
 - A small circle briefly shows where you clicked (Q13).
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
-- The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only two values to the Animator: `Moving` and `Perched` (landing or perched). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it flaps; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
+- The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only three values to the Animator: `Moving`, `Perched` (landing or perched), and `Refuse` (head shake). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it plays `Bird_Hover` (on trial, ADR 0011), and one wingbeat right after taking off; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
 - The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
-- Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies on the road but perches anywhere on screen (ADR 0009).
+- Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies on the road but perches anywhere on screen (ADR 0009), though not past the front and back ends of the road it may fly over (ADR 0010).
+- Clicking past the limit line of a device not yet opened, or dragging past it with the button held, makes the bird land on the nearest branch on screen and shake its head (`Bird_Refuse`). If already perched it shakes its head in place. With no branch on screen it stays (ADR 0011).
 - The bird is on the `Bird` layer. Where trees or leaves hide it, the hidden part shows as a flat sky blue silhouette, done with the stencil by two Render Objects features (`BirdVisible`, `BirdSilhouette`) on both URP renderers. The setup is `AgentScripts/SetupBirdSilhouette.cs`.
 
 ### 4.2 Cry (§2.1, §9.3, §15.7)
@@ -412,6 +413,7 @@ Changes outside the plan:
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
 - The baby now uses the art's girl model and animations. Where each clip is used is in 4.3 (2026-10-28 work record 07)
 - The stages join on one road and the teleport is gone. The bird goes only as far as the next device. Done in `Sam_Test` first; it moves to the director's main map when that arrives (ADR 0010, 2026-10-28 work record 08)
+- Clicking past a closed way makes the bird land on a nearby branch and shake its head. In-place flight switched to `Bird_Hover` on trial (ADR 0011, 2026-10-28 work record 09)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 
 Remaining work and open issues:

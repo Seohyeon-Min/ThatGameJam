@@ -526,7 +526,8 @@ public static class BuildSamTestScene
     }
 
     // Rebuilds the bird's Animator Controller from the model's clips, along the art's flow (its README):
-    // Glide <-> Flap -> Landing -> a random perch idle -> Takeoff -> Flap. While gliding, one wingbeat every BirdGlideFlapInterval. Parameters: Moving and Perched (BirdController),
+    // Glide <-> Hover (in place), Flap -> Landing -> a random perch idle -> Takeoff -> Flap. While gliding, one wingbeat every BirdGlideFlapInterval.
+    // Perched, Refuse shakes the head once (it starts and ends in the perch idle pose). Parameters: Moving, Perched and Refuse (BirdController),
     // IdleVariant (RandomIdle).
     static AnimatorController BuildBirdAnimator()
     {
@@ -547,6 +548,7 @@ public static class BuildSamTestScene
         controller.AddParameter("Moving", AnimatorControllerParameterType.Bool);
         controller.AddParameter("Perched", AnimatorControllerParameterType.Bool);
         controller.AddParameter("IdleVariant", AnimatorControllerParameterType.Int);
+        controller.AddParameter("Refuse", AnimatorControllerParameterType.Trigger);
         AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
         AnimatorState State(string clip, Vector2 position)
@@ -555,6 +557,7 @@ public static class BuildSamTestScene
             state.motion = clips[clip];
             return state;
         }
+        AnimatorState hover = State("Bird_Hover", new Vector2(300f, -120f));
         AnimatorState flap = State("Bird_Flap", new Vector2(300f, 0f));
         AnimatorState glide = State("Bird_Glide", new Vector2(300f, 120f));
         AnimatorState glideFlap = State("Bird_Flap", new Vector2(300f, 240f));
@@ -566,8 +569,9 @@ public static class BuildSamTestScene
             State("Bird_PerchIdle_Preen", new Vector2(900f, 60f)),
             State("Bird_PerchIdle_LeanBack", new Vector2(900f, 180f)),
         };
+        AnimatorState refuse = State("Bird_Refuse", new Vector2(1200f, 60f));
         AnimatorState takeoff = State("Bird_Takeoff", new Vector2(600f, 300f));
-        machine.defaultState = flap;
+        machine.defaultState = hover;
 
         AnimatorStateTransition Go(AnimatorState from, AnimatorState to, float duration, float? exitTime = null)
         {
@@ -586,25 +590,33 @@ public static class BuildSamTestScene
             transition.interruptionSource = TransitionInterruptionSource.Destination;
             return transition;
         }
-        Fly(Go(glide, flap, 0.25f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        // Cross-fades of 0.3 s between gliding and hovering, as the README suggests.
+        Fly(Go(glide, hover, 0.3f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        Fly(Go(hover, glide, 0.3f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        // After taking off: gliding at once if it moves, else one Flap cycle and then hovering.
         Fly(Go(flap, glide, 0.25f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        Fly(Go(flap, hover, 0.3f, 1f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
         // One Flap cycle, then back to gliding, which starts its clip again.
         Fly(Go(glide, glideFlap, 0.25f, BirdGlideFlapInterval / clips["Bird_Glide"].length));
         Fly(Go(glideFlap, glide, 0.25f, 1f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
-        Fly(Go(glideFlap, flap, 0.1f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
+        Fly(Go(glideFlap, hover, 0.3f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
         Go(glideFlap, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
-        // Glide ends in Landing's first pose; from Flap it blends.
+        // Glide ends in Landing's first pose; from the others it blends.
         Go(glide, landing, 0.1f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
+        Go(hover, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
         Go(flap, landing, 0.2f).AddCondition(AnimatorConditionMode.If, 0f, "Perched");
         // The perched poses match exactly, so these cut.
         Go(landing, idles[0], 0f, 1f);
         foreach (AnimatorState idle in idles)
         {
             idle.AddStateMachineBehaviour<RandomIdle>();
+            Go(idle, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+            Go(idle, refuse, 0.1f).AddCondition(AnimatorConditionMode.If, 0f, "Refuse");
             for (int i = 0; i < idles.Length; i++)
                 Go(idle, idles[i], 0f, 1f).AddCondition(AnimatorConditionMode.Equals, i, "IdleVariant");
-            Go(idle, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
         }
+        Go(refuse, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
+        Go(refuse, idles[0], 0f, 1f);
         Go(landing, takeoff, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Perched");
         // Takeoff ends in Flap's first pose.
         Go(takeoff, flap, 0.15f, 1f);

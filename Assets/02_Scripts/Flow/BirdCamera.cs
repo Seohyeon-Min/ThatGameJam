@@ -52,7 +52,7 @@ public class BirdCamera : MonoBehaviour
         Vector3 perchMin = new(point.x - range.x, 0f, Mathf.Max(area.min.z, point.z - range.z));
         Vector3 perchMax = new(point.x + range.x, 0f, Mathf.Min(area.max.z, point.z + range.z));
         BirdController.Instance.SetBounds(Box(Vector3.Max(area.min, point - range), Vector3.Min(area.max, point + range), point.y),
-            Box(perchMin, perchMax, point.y));
+            Box(perchMin, perchMax, point.y), area.max.z);
     }
 
     static Bounds Box(Vector3 min, Vector3 max, float y)
