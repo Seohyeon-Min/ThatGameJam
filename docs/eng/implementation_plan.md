@@ -41,7 +41,7 @@ The code in the current `Sam_Test` scene is a test made before the design doc. I
 | `Obstacle.cs` | Disappears when the bird clears it | Every obstacle resolves on its own over time and gives 3-step signals (§3) | Replace with the natural resolution timer in 4.4 |
 | `PerchPoint.cs` | A perch point whose marker blinks when you get close | The interaction targets are logs and snow-laden branches (§2.1) | Keep using it as the perch position. Remove the marker that blinks on approach. On mouse hover, only the cursor changes (Q6) |
 | `QuarterViewCamera.cs` | Always follows the target | Follows only in the intro; fixed cameras per section in stages (§2.5) | Replace with the camera rig in 4.7 |
-| `Tree.prefab` | Roadside tree. You can perch on its branches | The design doc says nothing about perching on roadside trees | Keep it only as decoration and remove the perch point (Q7). Replaced on 2026-10-28 by 4 kinds x bare/leafy (`Trees/Tree_N_Bare`, `Tree_N_Leafy`) |
+| `Tree.prefab` | Roadside tree. You can perch on its branches | The design doc says nothing about perching on roadside trees | Keep it only as decoration and remove the perch point (Q7). Replaced on 2026-10-28 by 4 kinds x bare/leafy (`Trees/Tree_N_Bare`, `Tree_N_Leafy`). The same day the director reversed Q7: every tree has a perch branch (ADR 0009) |
 
 The `AGENTS.md` rule "use only the direction of the mouse wheel" has no use now, because the design no longer uses the wheel. `AGENTS.md` was not changed.
 
@@ -59,7 +59,7 @@ Names are suggestions. Each component does one thing.
 | `BirdCamera` | Decides the point the camera follows. It follows the bird but does not leave the road range, and stays inside a locked `CameraZone`'s range if there is one. It also sets the bird's movement range: on the road, and within the screen around this point. One Cinemachine camera follows this point (ADR 0005, ADR 0007, ADR 0008) |
 | `CameraZone` | One device's camera zone. When the bird crosses the trigger line, the camera locks to a rectangle; when the device is solved, it unlocks (ADR 0007, ADR 0008) |
 | `BirdController` | Click movement, perching, cry, altitude |
-| `Perchable` | An object the bird can perch on. Fires a `Perched` event when the bird lands. Uses the current `PerchPoint` as the perch position |
+| `Perchable` | An object the bird can perch on. Fires a `Perched` event when the bird lands. Uses the current `PerchPoint` as the perch position. Roadside tree branches are spots the bird lands on when idle (ADR 0009) |
 | `CryListener` | The shared part of things that react to the cry. Has a reaction distance. Used by the baby, fog animals, and the migratory birds in the ending |
 | `Baby` | The baby's state (4.3) and movement |
 | `BabyRoute` | The path the baby walks. A list of points |
@@ -113,6 +113,7 @@ Each stage is a prefab. That way several people can build different stages in th
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
 - The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only two values to the Animator: `Moving` and `Perched` (landing or perched). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it flaps; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
 - The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
+- Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies on the road but perches anywhere on screen (ADR 0009).
 - The bird is on the `Bird` layer. Where trees or leaves hide it, the hidden part shows as a flat sky blue silhouette, done with the stencil by two Render Objects features (`BirdVisible`, `BirdSilhouette`) on both URP renderers. The setup is `AgentScripts/SetupBirdSilhouette.cs`.
 
 ### 4.2 Cry (§2.1, §9.3, §15.7)
@@ -345,7 +346,7 @@ Most of the undecided items in Section 16 of the design doc are numbers or prese
 | Q4 | When does natural resolution time start. Can the bird solve it before the baby arrives | From when the baby stops in front of that device. Solving first is allowed, and the baby still gives the help reaction |
 | Q5 | What happens to the bird when the log it perches on falls | When the log starts to fall, the bird takes off on its own and hovers right above |
 | Q6 | Show a marker when the mouse is over something the bird can perch on | Only change the cursor. Remove the current marker that blinks on approach |
-| Q7 | Keep the current roadside trees (perchable) | Keep them only as decoration and remove perching |
+| Q7 | Keep the current roadside trees (perchable) | Keep them only as decoration and remove perching. Reversed on 2026-10-28: every tree has a perch branch (ADR 0009) |
 | Q8 | How does the bird come down from the intro's high altitude to the stage altitude | When the camera switches to the fixed position, the bird also comes down to the stage altitude |
 | Q9 | If several branches block the side path, must all be cleared to open it | All must be cleared to open it |
 | Q10 | Fog: does natural resolution time run while the bird is drawing a trail. If a partly drawn trail and natural resolution overlap, which one does the baby follow | Time runs continuously from when the baby first stops in front of the fog. When natural resolution comes, the baby drops the remaining trail and goes to the nearest correct path point ([ADR 0004](decisions/0004-fog-natural-resolution-rule.md)) |
@@ -390,6 +391,7 @@ Changes outside the plan:
 - The dev time scale is 2x (work record 09)
 - Roadside trees come in 4 kinds, each bare and leafy, told apart by colour for now. Trunks have branches forking upward. They are placed at random in two rows along both edges of the road, and neighbours differ in kind. Trees on the camera side may hide the road. Stage 1 uses the 4 bare kinds (2026-10-28 work records 01 to 03)
 - The hidden bird shows as a silhouette (2026-10-28 work record 03)
+- The bird perches on roadside tree branches and, idle for 2 s, goes to the nearest one. Q7 reversed (ADR 0009, 2026-10-28 work record 04)
 - The bird now uses the art's model and animations (2026-10-27 work record 11)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 

@@ -1,13 +1,20 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-// An object the bird lands on when it is left-clicked (the leaning log top, a snow-laden branch).
+// An object the bird lands on when it is left-clicked (the leaning log top, a snow-laden branch, a roadside tree's branch).
 // Its click collider must be on the Interactable layer, on this object or a child.
 public class Perchable : MonoBehaviour
 {
+    static readonly List<Perchable> all = new();
+
     [SerializeField] Transform perchPoint;
+    // The bird also lands here by itself when the player leaves it idle (roadside branches). Not on devices, which the player solves.
+    [SerializeField] bool idleSpot;
     [SerializeField] UnityEvent onPerched;
+
+    public static IReadOnlyList<Perchable> All => all;
 
     // The bird has finished landing.
     public event Action Perched;
@@ -16,6 +23,10 @@ public class Perchable : MonoBehaviour
 
     public bool CanPerch { get; set; } = true;
     public Transform PerchPoint => perchPoint != null ? perchPoint : transform;
+    public bool IsIdleSpot => idleSpot;
+
+    void OnEnable() => all.Add(this);
+    void OnDisable() => all.Remove(this);
 
     public void NotifyPerched()
     {

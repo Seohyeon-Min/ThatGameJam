@@ -596,7 +596,7 @@ public static class BuildSamTestScene
     }
 
     // Each tree kind comes bare and with leaves. A rough trunk with branches forking upward (Tommy's tree01 mesh); the leafy one adds
-    // clumps of leaves at the branch tips. Decoration only (plan Q7: no perching).
+    // clumps of leaves at the branch tips. The bird can perch on one branch of every tree.
     static (GameObject[] bare, GameObject[] leafy) BuildTreePrefabs()
     {
         if (!AssetDatabase.IsValidFolder(TreePrefabFolder))
@@ -627,6 +627,20 @@ public static class BuildSamTestScene
         foreach (var b in branches)
             tips.Add(Limb(root, "Branch", new Vector3(0f, b.y, 0f), Quaternion.Euler(0f, b.yaw, 0f) * Quaternion.Euler(b.lean, 0f, 0f) * Vector3.up,
                 b.length, b.thickness, wood));
+
+        // Every tree has one low, nearly level branch the bird perches on, a little above its flying height.
+        // Clicking near the perch point lands the bird there; left idle, the bird lands on the nearest one by itself.
+        Vector3 perchFrom = new(0f, 2.6f, 0f);
+        Vector3 perchDirection = Quaternion.Euler(75f, 0f, 0f) * Vector3.up;
+        const float perchThickness = 0.14f;
+        tips.Add(Limb(root, "PerchBranch", perchFrom, perchDirection, 1.8f, perchThickness, wood));
+        GameObject spot = Child(root, "PerchPoint", perchFrom + perchDirection * 1.25f + Vector3.up * (perchThickness / 2f));
+        spot.layer = interactableLayer;
+        var clickArea = spot.AddComponent<SphereCollider>();
+        clickArea.isTrigger = true;
+        clickArea.radius = 0.6f;
+        var perchable = spot.AddComponent<Perchable>();
+        Set(perchable, so => so.FindProperty("idleSpot").boolValue = true);
         if (leaves != null)
             foreach (Vector3 tip in tips)
                 for (int i = 0; i < 3; i++)
