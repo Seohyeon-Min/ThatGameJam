@@ -2,6 +2,7 @@
 
 ## 대화와 기록
 - 대화는 한국어로 한다.
+- 세션을 시작하면 `docs/kor/game_design.md`와 `docs/kor/implementation_plan.md`를 먼저 읽는다.
 - 작업 기록은 `docs/kor/`에 먼저 쓰고, `docs/eng/`에 같은 구조로 미러링한다. 지금은 `decisions/`와 `commit_history/`만 쓴다.
 - 기록 형식은 `docs/record-format-example.md`를 따른다.
 
@@ -10,7 +11,7 @@
 - 목표 플랫폼은 웹 브라우저다. 마우스 휠은 값의 크기 대신 방향만 쓴다. 휠 값의 크기가 브라우저마다 다르기 때문이다.
 
 ## 씬과 폴더
-- `Main.unity`는 건드리지 않는다. 개인 테스트 씬 `Assets/00_Scenes/<이름>_Test.unity`에서 작업한다.
+- 개인 테스트 씬 `Assets/00_Scenes/<이름>_Test.unity`에서 작업한다.
 - 폴더 용도: `00_Scenes` 씬, `01_Arts` 아트와 머티리얼, `02_Scripts` 스크립트, `03_Prefabs` 프리팹, `04_Data` 데이터, `05_Sounds` 사운드.
 - 오브젝트를 여러 개 만드는 작업은 `AgentScripts/`(Assets 밖)에 빌더 스크립트로 둔다. 실행은 `unity command script run --file ... --entry ...`로 한다.
 
