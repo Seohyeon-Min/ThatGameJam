@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import urllib.error
 import urllib.request
 
 API_KEY = os.environ["GEMINI_API_KEY"]
@@ -117,9 +118,17 @@ message = {
 discord_request = urllib.request.Request(
     WEBHOOK,
     data=json.dumps(message).encode("utf-8"),
-    headers={"Content-Type": "application/json"},
+    headers={
+        "Content-Type": "application/json",
+        # Discord's Cloudflare blocks the default Python-urllib User-Agent (403).
+        "User-Agent": "DiscordBot (https://github.com/Seohyeon-Min/ThatGameJam, 1.0)"
+    },
     method="POST"
 )
 
-with urllib.request.urlopen(discord_request, timeout=30):
-    print("AI summary sent to Discord.")
+try:
+    with urllib.request.urlopen(discord_request, timeout=30):
+        print("AI summary sent to Discord.")
+except urllib.error.HTTPError as e:
+    print("Discord error:", e.code, e.read().decode("utf-8", "replace"))
+    raise
