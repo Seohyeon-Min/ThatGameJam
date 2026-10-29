@@ -25,6 +25,7 @@ Shader "ThatGameJam/SoftPastel"
         [Header(Surface)]
         [Toggle(_ALPHATEST_ON)] _AlphaClip ("Alpha Clipping", Float) = 0
         _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
+        _SelfShadowSkip ("Ignore Own Shadow Within (m)", Range(0, 3)) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
     }
 
@@ -64,6 +65,7 @@ Shader "ThatGameJam/SoftPastel"
                 half _Floor;
                 half _HasPattern;
                 half _Cutoff;
+                half _SelfShadowSkip;
             CBUFFER_END
 
             half4 _PS_Light;   // rgb 빛 쪽 따뜻한 색(sRGB), a 세기
@@ -187,7 +189,7 @@ Shader "ThatGameJam/SoftPastel"
 
                 float3 normalWS = normalize(input.normalWS);
                 float3 viewWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
-                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS + _MainLightPosition.xyz * _SelfShadowSkip));
 
                 // 화면에 고정한 알갱이(1080p 기준 크기). 굵은 알갱이와 화소 단위의 고운 알갱이를 섞는다.
                 float2 pixel = input.positionCS.xy * (1080.0 / _ScreenParams.y);

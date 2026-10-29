@@ -38,6 +38,8 @@ Shader "ThatGameJam/WatercolorFlat"
         [Header(Surface)]
         [Toggle(_ALPHATEST_ON)] _AlphaClip ("Alpha Clipping", Float) = 0
         _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
+        [Header(Shadows)]
+        _SelfShadowSkip ("Ignore Own Shadow Within (m)", Range(0, 3)) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
     }
 
@@ -65,6 +67,7 @@ Shader "ThatGameJam/WatercolorFlat"
             half _Floor;
             half _HasPattern;
             half _Cutoff;
+            half _SelfShadowSkip;
         CBUFFER_END
 
         // WatercolorManager 가 정하는 전역 값. 모든 수채화 머티리얼이 같이 따른다.
@@ -360,7 +363,9 @@ Shader "ThatGameJam/WatercolorFlat"
                 float3 normalWS = normalize(input.normalWS);
                 float3 viewWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
 
-                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                // 자기 그림자 무시: 그림자를 빛 쪽으로 이만큼 띄운 지점에서 확인한다. 그 거리 안의 가림(자기 몸)은
+                // 그림자를 만들지 않고, 더 멀리 있는 것(나무 등)이 드리운 그림자는 그대로 받는다.
+                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS + _MainLightPosition.xyz * _SelfShadowSkip));
 
                 // 씬 뷰 평범 모드: 본색에 단순한 명암과 그림자만. 작업하는 사람 눈이 편하도록.
                 if (_WC_Plain > 0.5)
@@ -443,7 +448,13 @@ Shader "ThatGameJam/WatercolorFlat"
                 // 폭은 화면 비율: 윤곽에서 몇 화소 안쪽까지인지로 정한다.
                 half facingView = saturate(dot(normalWS, viewWS));
                 half rim = 1.0 - saturate(facingView / ScreenWidth(facingView, _WC_OutlineWidth));
-                accumulate += rim * _WC_OutlinePigment * 0.6 * unevenness * objectOnly;
+                // 화면에서 가는 조각(팔, 다리, 가지)은 몸 전체가 윤곽 띠 안에 들어가 통째로 진해지고 파래진다.
+                // 그래서 조각(렌더러 경계 상자의 가장 짧은 변)이 윤곽 폭의 몇 배보다 가늘면 윤곽 안료를 줄인다.
+                float3 pieceSize = unity_RendererBounds_Max.xyz - unity_RendererBounds_Min.xyz;
+                float pieceWidth = min(pieceSize.x, min(pieceSize.y, pieceSize.z));
+                float worldPerScreen = length(input.positionWS - GetCameraPositionWS()) * 2.0 / abs(UNITY_MATRIX_P[1][1]);
+                half thinFade = smoothstep(4.0, 10.0, pieceWidth / max(worldPerScreen * _WC_OutlineWidth, 1e-5));
+                accumulate += rim * _WC_OutlinePigment * 0.6 * unevenness * objectOnly * thinFade;
 
                 // 빛: 빛을 정면으로 받는 쪽은 칠하지 않은 종이로 남긴다. 그림자가 드리운 곳에는 남기지 않는다.
                 half paper = smoothstep(paperEdge, _WC_PaperThreshold + paperSoft, ndotl) * cast * objectOnly;
