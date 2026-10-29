@@ -20,13 +20,14 @@ public static class BuildSamTestScene
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
     const string TreePrefabFolder = "Assets/03_Prefabs/Trees";
     const string TreeModelFolder = "Assets/01_Arts/Mesh";
-    // Tommy's tree kinds: the bare model, the same tree with leaves, and where the bird perches on it, in the tree's own space (tree01's
-    // model sits 2.5 above its file's origin). Each perch is on the top of a branch, 2.7 to 3.9 up, with a little room around and
-    // above it for the bird's body; found by casting rays down onto the wood (the leafy model has the same wood).
-    static readonly (string bare, string leafy, Vector3 perch)[] TreeModels =
+    // Tommy's tree kinds: the bare model, the same tree with leaves, where the bird perches on it, in the tree's own space (tree01's
+    // model sits 2.5 above its file's origin), and which way that branch runs out from the trunk (yaw, degrees). Each perch is on the
+    // top of a branch, 2.7 to 3.9 up, with a little room around and above it for the bird's body; found by casting rays down onto the
+    // wood (the leafy model has the same wood).
+    static readonly (string bare, string leafy, Vector3 perch, float branchYaw)[] TreeModels =
     {
-        ("tree01", "tree_l_01", new(-0.011f, 2.943f, -0.310f)), ("tree02", "tree_l_02", new(-0.150f, 2.678f, 0.180f)),
-        ("tree03", "tree_l_03", new(0.260f, 3.924f, 0.120f)),
+        ("tree01", "tree_l_01", new(-0.011f, 2.943f, -0.310f), -167f), ("tree02", "tree_l_02", new(-0.150f, 2.678f, 0.180f), -40f),
+        ("tree03", "tree_l_03", new(0.260f, 3.924f, 0.120f), 65f),
     };
     const string TerrainDataPath = "Assets/04_Data/SamTestTerrain.asset";
     // The streams cross the whole terrain, in Z. Stage 1 lays its logs over them.
@@ -826,23 +827,29 @@ public static class BuildSamTestScene
         var leafy = new GameObject[TreeModels.Length];
         for (int i = 0; i < TreeModels.Length; i++)
         {
-            bare[i] = SaveTree($"Tree_{i + 1}_Bare", TreeModels[i].bare, TreeModels[i].perch);
-            leafy[i] = SaveTree($"Tree_{i + 1}_Leafy", TreeModels[i].leafy, TreeModels[i].perch);
+            bare[i] = SaveTree($"Tree_{i + 1}_Bare", TreeModels[i].bare, TreeModels[i].perch, TreeModels[i].branchYaw);
+            leafy[i] = SaveTree($"Tree_{i + 1}_Leafy", TreeModels[i].leafy, TreeModels[i].perch, TreeModels[i].branchYaw);
         }
         return (bare, leafy);
     }
 
-    static GameObject SaveTree(string name, string model, Vector3 perch)
+    static GameObject SaveTree(string name, string model, Vector3 perch, float branchYaw)
     {
         var root = new GameObject(name);
         PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>($"{TreeModelFolder}/{model}.fbx"), root.transform);
         GameObject spot = Child(root, "PerchPoint", perch);
+        // Forward runs across the branch: the bird lines up with it, its feet holding the branch.
+        spot.transform.localRotation = Quaternion.Euler(0f, branchYaw + 90f, 0f);
         spot.layer = interactableLayer;
         var clickArea = spot.AddComponent<SphereCollider>();
         clickArea.isTrigger = true;
         clickArea.radius = 0.6f;
         var perchable = spot.AddComponent<Perchable>();
-        Set(perchable, so => so.FindProperty("idleSpot").boolValue = true);
+        Set(perchable, so =>
+        {
+            so.FindProperty("idleSpot").boolValue = true;
+            so.FindProperty("alignBird").boolValue = true;
+        });
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{TreePrefabFolder}/{name}.prefab");
         Object.DestroyImmediate(root);
         return prefab;

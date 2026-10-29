@@ -12,6 +12,9 @@ public class Perchable : MonoBehaviour
     [SerializeField] Transform perchPoint;
     // The bird also lands here by itself when the player leaves it idle (roadside branches). Not on devices, which the player solves.
     [SerializeField] bool idleSpot;
+    // While landing, the bird turns to face along the perch point's forward axis, whichever way is nearer its heading (roadside
+    // branches: the axis runs across the branch, so its feet hold the branch). Off, it keeps the heading it flew in with (devices).
+    [SerializeField] bool alignBird;
     [SerializeField] UnityEvent onPerched;
 
     public static IReadOnlyList<Perchable> All => all;
@@ -24,6 +27,7 @@ public class Perchable : MonoBehaviour
     public bool CanPerch { get; set; } = true;
     public Transform PerchPoint => perchPoint != null ? perchPoint : transform;
     public bool IsIdleSpot => idleSpot;
+    public bool AlignsBird => alignBird;
 
     void OnEnable() => all.Add(this);
     void OnDisable() => all.Remove(this);
