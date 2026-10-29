@@ -10,6 +10,7 @@
 // - 덩어리: 굽기 도구가 가까운 같은 색 조각들의 노멀을 덩어리 노멀로 바꿔 둔다. 그래서 빛 영역과 윤곽이 덩어리를 따른다.
 // - 무늬: 정점마다 구워 둔 "모델 기준 좌표"(UV3)로 모델의 3D 무늬 텍스처를 읽는다.
 //   조각 경계를 넘어 이어지고, 정점에 붙어 있어 애니메이션 중에도 몸을 따라간다.
+//   같은 프리팹의 인스턴스는 굽기 결과를 같이 쓰고, 인스턴스마다 좌표를 뒤집고 밀어 다르게 보인다(BakedPatternUV.hlsl).
 //   r: 안료 얼룩, g: 백런 안쪽(옅어짐), b: 백런 테두리(진해짐), a: 경계 안료 축적용 저주파 잡음 N
 // - 경계 안료 축적: 빛(종이)과 색의 경계 바로 안쪽 색 쪽에 안료가 몰린다. 진하기 = E(d) * (0.6 + 0.4 N).
 // - 진해질 때는 회색으로 탁해지지 않고 채도가 올라가며 어두워진다(같은 물감이 더 쌓인 색).
@@ -47,12 +48,13 @@ Shader "ThatGameJam/WatercolorFlat"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Assets/01_Arts/Shaders/BakedPatternUV.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
         TEXTURE3D(_PatternTex);
         SAMPLER(sampler_PatternTex);
-        TEXTURE3D(_ChaosTex); // r: 색 물방울(0.5 = 변화 없음), g: 연필 덩어리, b: 덩어리별 연필 각도(0.5 = 기본 각도)
+        TEXTURE3D(_ChaosTex); // r: 색 물방울(0.5 = 변화 없음), g: 연필 덩어리
         TEXTURE2D(_WC_PencilStrokes); // 연필 선 텍스처(나란한 줄 위에 가로로 그은 선들, r 가장 가까운 선 중심까지 거리 g 필압). WatercolorManager 가 한 번 만든다.
         #define PENCIL_MAX_DISTANCE 8.0
 
@@ -281,7 +283,7 @@ Shader "ThatGameJam/WatercolorFlat"
                 output.positionWS = positions.positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
-                output.patternUV = input.patternUV;
+                output.patternUV = TwistPatternUV(input.patternUV);
                 output.fogFactor = ComputeFogFactor(positions.positionCS.z);
                 return output;
             }

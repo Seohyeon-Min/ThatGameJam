@@ -269,7 +269,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4b757330072e8ee42a841afbbbc1a79a, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -321,7 +321,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7730750}
-  m_Mesh: {fileID: 4300000, guid: 55b211c0ae82ff746b2d0c7bbaca3d5d, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &7730755
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -334,17 +334,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 54a960917c653c247aaee022587cccd7, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0.00000011920929, y: 0, z: 0}
-    m_Extent: {x: 0.52000004, y: 0.52, z: 0.5199998}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 90
 --- !u!1 &16623516
 GameObject:
   m_ObjectHideFlags: 0
@@ -446,15 +448,15 @@ PrefabInstance:
     - target: {fileID: 171031896468958240, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 995796300209086296, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: f55a09a273344c64a9a22bec0d2bad2e, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     - target: {fileID: 1116251614228702232, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: f55a09a273344c64a9a22bec0d2bad2e, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     - target: {fileID: 1424737170847631049, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Name
       value: Tree_1_Bare
@@ -462,35 +464,35 @@ PrefabInstance:
     - target: {fileID: 1491325304630668341, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 1970525397230411000, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: b3712dfbda617094f800dd88ede8dd05, type: 2}
+      objectReference: {fileID: 4300000, guid: 0c29858ac4b46484eb1d252b8bf102a8, type: 2}
     - target: {fileID: 1986675478381558265, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 2879614005764064105, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 3363470330651281239, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 780819fe660012846b47c1e93f092c6f, type: 2}
+      objectReference: {fileID: 4300000, guid: bccd1937d27122240abe28aebf65e20d, type: 2}
     - target: {fileID: 4577454696663626005, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 6291771380264989950, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: bacda94d05c174242a731438733722c8, type: 2}
+      objectReference: {fileID: 4300000, guid: 024f4b4dae1d07047885bf1db53827d2, type: 2}
     - target: {fileID: 6393116948688092671, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 6961330656072012996, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.0134543
@@ -546,15 +548,15 @@ PrefabInstance:
     - target: {fileID: 7464915314727717570, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: f55a09a273344c64a9a22bec0d2bad2e, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     - target: {fileID: 8082853589875200325, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 637b5b34a49132e45aa71a3766159d25, type: 2}
+      objectReference: {fileID: 2100000, guid: 3264563f3f6d0b24fb7115de8b6ab82e, type: 2}
     - target: {fileID: 9019644300848782836, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: f55a09a273344c64a9a22bec0d2bad2e, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -585,17 +587,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 6d92eba1fd61e51489d752639dbfd278, type: 2}
+  pattern: {fileID: 11700000, guid: 786a7dd7b0a186b419eccf03f3b30c04, type: 2}
   modelBounds:
-    m_Center: {x: -0.05833721, y: 4.698243, z: 0.18974769}
-    m_Extent: {x: 1.1830146, y: 4.886173, z: 1.7549657}
+    m_Center: {x: -0.05833757, y: 4.698243, z: 0.18974793}
+    m_Extent: {x: 1.1830149, y: 4.886173, z: 1.7549659}
+  variation: 197
 --- !u!1 &85252579
 GameObject:
   m_ObjectHideFlags: 0
@@ -798,7 +802,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 135130228}
-  m_Mesh: {fileID: 4300000, guid: e67c7e1af3ebfea40ad2d1ea4f940e22, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &135130233
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -811,17 +815,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 0d7e192fc9e978c4d9c56c0cb00575b2, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
-    m_Center: {x: -0.000000059604645, y: 0, z: 0}
-    m_Extent: {x: 0.5199998, y: 0.52, z: 0.52000004}
+    m_Center: {x: 0, y: 0, z: 0.000000059604645}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 212
 --- !u!1 &137911097
 GameObject:
   m_ObjectHideFlags: 0
@@ -1062,7 +1068,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 70d222d39de4362479eaedde139a96ad, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1114,7 +1120,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 154968583}
-  m_Mesh: {fileID: 4300000, guid: db2e4009fe04087449a48e23d509fc64, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &154968588
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1127,17 +1133,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 6dcdb2d3c535a7b48bfdbb907eb4c81f, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.51999956}
+    m_Center: {x: 0, y: 0, z: 0.000000059604645}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 219
 --- !u!1 &223085302
 GameObject:
   m_ObjectHideFlags: 0
@@ -1828,7 +1836,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c3068f1819b78c848bc124f1cb5eaacc, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1880,7 +1888,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 276541076}
-  m_Mesh: {fileID: 4300000, guid: 0b747bafc60474d49920dcb6c78c7584, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &276541081
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1893,17 +1901,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 2472c07acdd8e5645989e0fbe665b7f0, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
-    m_Center: {x: -0.00000014901161, y: -0.000000059604645, z: 0}
-    m_Extent: {x: 0.5199998, y: 0.52, z: 0.5199999}
+    m_Center: {x: 0, y: 0, z: 0.000000059604645}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 234
 --- !u!1 &277962644
 GameObject:
   m_ObjectHideFlags: 0
@@ -2099,11 +2109,11 @@ PrefabInstance:
     - target: {fileID: -9062574570911140023, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: fe89f8d50be460941b1c1dd16be1f874, type: 2}
+      objectReference: {fileID: 4300000, guid: 561c39c198326ad4ebda3a46934bef0b, type: 2}
     - target: {fileID: -8721881386104362439, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 59fa30088e39b0a46a093d4e6f2b59c8, type: 2}
+      objectReference: {fileID: 4300000, guid: 1c8134be5d111e14e9ff79ec6a9791d5, type: 2}
     - target: {fileID: -8679921383154817045, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.4
@@ -2159,7 +2169,7 @@ PrefabInstance:
     - target: {fileID: -8674787205353944200, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 6022852b3f23f2c46980bd9c3ac1bec6, type: 2}
+      objectReference: {fileID: 4300000, guid: a25e3b67177c49647add901a91ae24f5, type: 2}
     - target: {fileID: -8338490048419137264, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2167,23 +2177,23 @@ PrefabInstance:
     - target: {fileID: -7985029729382407552, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: a720c79155538f94ab28b0abf462e5e6, type: 2}
+      objectReference: {fileID: 4300000, guid: c19c6eb8e45d20246a2ad5cb0cfdf551, type: 2}
     - target: {fileID: -7448988337937655389, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 79712cd84e3b4844ba6ff570f8aec11e, type: 2}
+      objectReference: {fileID: 4300000, guid: 315ab7527f02f074e8624b9b6939e5d1, type: 2}
     - target: {fileID: -7336306294843517841, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: cbbeda7e76e59ee498d0436b431ca99f, type: 2}
+      objectReference: {fileID: 4300000, guid: 4bfb63a80913d6444b92cbc75ea8e0c2, type: 2}
     - target: {fileID: -7125828470738204865, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: e29fc1d5b5a2c85408c8d2110dda6a54, type: 2}
+      objectReference: {fileID: 4300000, guid: f8e7f43de7c82a545b6e1f1bda7785de, type: 2}
     - target: {fileID: -7102710220890114212, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: def81b75e9a400144967c1c8750a21fe, type: 2}
+      objectReference: {fileID: 4300000, guid: ec1a9beb5f09d1e45938a5083397309d, type: 2}
     - target: {fileID: -7102710220890114212, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2215,7 +2225,7 @@ PrefabInstance:
     - target: {fileID: -2295212707200568339, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: c85a72a038ff9b34f99aa88ac4762432, type: 2}
+      objectReference: {fileID: 4300000, guid: 282372fbbef8beb4884a7fb22ff0b1d6, type: 2}
     - target: {fileID: -1853094968961178454, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -2223,7 +2233,7 @@ PrefabInstance:
     - target: {fileID: -1411876120126296174, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: a934cccbd448dd147853275ea17e438d, type: 2}
+      objectReference: {fileID: 4300000, guid: 8422e81257953474dba5d7bd9b7abeca, type: 2}
     - target: {fileID: -1328792915883877561, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2231,7 +2241,7 @@ PrefabInstance:
     - target: {fileID: -1083070340266656307, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 7fdcd431c006ffd41bb7a2af86b2d90e, type: 2}
+      objectReference: {fileID: 4300000, guid: 9ba87593e34ea714fb71b9d7cad14e6a, type: 2}
     - target: {fileID: -1083070340266656307, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2239,7 +2249,7 @@ PrefabInstance:
     - target: {fileID: -775992371643347113, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1feab8179b958db40a5e186893cb9c5f, type: 2}
+      objectReference: {fileID: 4300000, guid: 55d1ed61dfb19ca41a9a180a016ff753, type: 2}
     - target: {fileID: -775992371643347113, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2251,11 +2261,11 @@ PrefabInstance:
     - target: {fileID: -600912555514384144, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: a94a6caf299fa524b8624a7b596970eb, type: 2}
+      objectReference: {fileID: 4300000, guid: 0fc812b1391799d408702a7eb3214bc4, type: 2}
     - target: {fileID: -358836922645868882, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: b51ef5585ac32344b9744bb79b4fb499, type: 2}
+      objectReference: {fileID: 4300000, guid: d2b3943948822864e986522c545687f0, type: 2}
     - target: {fileID: -358836922645868882, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2271,7 +2281,7 @@ PrefabInstance:
     - target: {fileID: 310053300813911615, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: c8e1ea37422f4304c87d62d8d1457acd, type: 2}
+      objectReference: {fileID: 4300000, guid: c19fdbb40d02e34468a220edad1dc1ae, type: 2}
     - target: {fileID: 310053300813911615, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2279,7 +2289,7 @@ PrefabInstance:
     - target: {fileID: 398890659674291337, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 83285fc26bd069b4b9ee1e9809625442, type: 2}
+      objectReference: {fileID: 4300000, guid: 6fad972c254a2ae47a532f735b6569d9, type: 2}
     - target: {fileID: 415459846124643425, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2295,11 +2305,11 @@ PrefabInstance:
     - target: {fileID: 1013007230737384955, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 9df155177ce0afa4cb350c70bff71a25, type: 2}
+      objectReference: {fileID: 4300000, guid: 26f7ac983c4e2df4fbf62c3f0040c549, type: 2}
     - target: {fileID: 1567107424331199580, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: d278fa6d84a0ec741a29ce828986aa5a, type: 2}
+      objectReference: {fileID: 4300000, guid: d3c4f8a07d627e94985321aed4d572ad, type: 2}
     - target: {fileID: 1567107424331199580, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2307,11 +2317,11 @@ PrefabInstance:
     - target: {fileID: 1707630888734478094, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 9095a25f188081a408f8618187672119, type: 2}
+      objectReference: {fileID: 4300000, guid: 9844fd1b74501c74880baececde690a1, type: 2}
     - target: {fileID: 2078661826758285172, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 29b4fb83853b8c44881dd72caecaeb6f, type: 2}
+      objectReference: {fileID: 4300000, guid: 87e2b59f88d9ee74f868defc434a3111, type: 2}
     - target: {fileID: 2078661826758285172, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2327,7 +2337,7 @@ PrefabInstance:
     - target: {fileID: 2900823099316452388, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 8f26497059ee42f47a560e2904b90fee, type: 2}
+      objectReference: {fileID: 4300000, guid: b49bf51c256ae1c479ea5d35121351b0, type: 2}
     - target: {fileID: 2900823099316452388, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2335,7 +2345,7 @@ PrefabInstance:
     - target: {fileID: 3192218082570340584, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: de09dad6a9a73804e89e48ff67d45707, type: 2}
+      objectReference: {fileID: 4300000, guid: 479bfe67efb0e764fb053173e462bc1b, type: 2}
     - target: {fileID: 3598124529437828750, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2347,11 +2357,11 @@ PrefabInstance:
     - target: {fileID: 3702926172509996442, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ff3ad6c79e3725343ba840e0c0c34ba2, type: 2}
+      objectReference: {fileID: 4300000, guid: b53d5eb2957ed69459761b860839900d, type: 2}
     - target: {fileID: 4329799010920354958, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 08174e64a8570fd489e7544f65b66802, type: 2}
+      objectReference: {fileID: 4300000, guid: 55fe4fe9ba1361e448c863cc8d04be8b, type: 2}
     - target: {fileID: 4354319797921427072, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2359,11 +2369,11 @@ PrefabInstance:
     - target: {fileID: 4570569925405350217, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: fcfecc66c4d92d84e9fa77641022d4f1, type: 2}
+      objectReference: {fileID: 4300000, guid: 079b24a9178787442a5d98f1923fbc50, type: 2}
     - target: {fileID: 5165224935716755598, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 891c79eaab521ab4ba8c798a86796d70, type: 2}
+      objectReference: {fileID: 4300000, guid: f4a48e34c09657b44a07582682e8adc2, type: 2}
     - target: {fileID: 5343774646105416875, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2371,7 +2381,7 @@ PrefabInstance:
     - target: {fileID: 5420733014369497689, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 5b6d58a8acc15654cad4fc469f410d69, type: 2}
+      objectReference: {fileID: 4300000, guid: 21f4b0765c1cc8d49a76dce1da6e2eb6, type: 2}
     - target: {fileID: 5433570739276548622, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2379,11 +2389,11 @@ PrefabInstance:
     - target: {fileID: 5934431680725875864, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 55d5803c7471eee4bbd9b4a95c302295, type: 2}
+      objectReference: {fileID: 4300000, guid: 77e8467302afeb84589f631138dd975e, type: 2}
     - target: {fileID: 6041709263920354324, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1a3b17cc776aa3540894bfe05718c56e, type: 2}
+      objectReference: {fileID: 4300000, guid: fa9c7702933bdd64197dd34cb4723593, type: 2}
     - target: {fileID: 6124548756834381239, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2395,11 +2405,11 @@ PrefabInstance:
     - target: {fileID: 6753851454810848980, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: e6544ce6d15877443a5bc661529c0799, type: 2}
+      objectReference: {fileID: 4300000, guid: c6fee0291dc11774cba0357cc647f9d9, type: 2}
     - target: {fileID: 7524991281305622175, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 4ed0e879b40706b4b8e1f290d83b959b, type: 2}
+      objectReference: {fileID: 4300000, guid: 5c3d99c083b0c9e4187aa283e71f6f0b, type: 2}
     - target: {fileID: 7657425131832605886, guid: f023b507f0ced564091f4452f0133c79, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2441,17 +2451,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: dad95090f0105f84ab1dc39bb615d16d, type: 2}
+  pattern: {fileID: 11700000, guid: 435614db6a4236949a3c8bacd2ba4e41, type: 2}
   modelBounds:
     m_Center: {x: 0.016831875, y: 0.6528147, z: -0.00000011920929}
     m_Extent: {x: 0.35364902, y: 0.6819863, z: 0.5403958}
+  variation: 157
 --- !u!1 &300175223
 GameObject:
   m_ObjectHideFlags: 0
@@ -2741,7 +2753,7 @@ PrefabInstance:
     - target: {fileID: 2484759865912212676, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 75a95da5543af7245bde6a357fa26012, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 2521058345350359252, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Name
       value: Tree_4_Bare
@@ -2749,15 +2761,15 @@ PrefabInstance:
     - target: {fileID: 2682506101190273069, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 75a95da5543af7245bde6a357fa26012, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 2905948422855737814, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 75a95da5543af7245bde6a357fa26012, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 3279392739744224249, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 4ec9ca62c1a6ab44c90f025bbbac62fd, type: 2}
+      objectReference: {fileID: 4300000, guid: c6db13c296232b04696c441d884a53a6, type: 2}
     - target: {fileID: 3802972771013134928, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2825,7 +2837,7 @@ PrefabInstance:
     - target: {fileID: 7112168329808874049, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 84d6437d30347a8489198977ac33bacf, type: 2}
+      objectReference: {fileID: 4300000, guid: 5add2bce086743c4ab654bb0afc3aada, type: 2}
     - target: {fileID: 7130932761631456200, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -2837,11 +2849,11 @@ PrefabInstance:
     - target: {fileID: 8562245013087794854, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 75a95da5543af7245bde6a357fa26012, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 9049323235399609751, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: a8010cf14e985124cae96d12fbac5c0f, type: 2}
+      objectReference: {fileID: 4300000, guid: ba3e08fa76d0d9642a4d90f5fa9ef2bd, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2872,17 +2884,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 2c28002b0f3d6d9469749aa6162ae783, type: 2}
+  pattern: {fileID: 11700000, guid: 865ceda97af3c0742a03a7f82726cf9d, type: 2}
   modelBounds:
-    m_Center: {x: -0.058337748, y: 4.698243, z: 0.18974769}
-    m_Extent: {x: 1.1830148, y: 4.886173, z: 1.7549657}
+    m_Center: {x: -0.05833769, y: 4.698243, z: 0.18974757}
+    m_Extent: {x: 1.1830146, y: 4.886173, z: 1.7549654}
+  variation: 55
 --- !u!1 &470644929
 GameObject:
   m_ObjectHideFlags: 0
@@ -3124,7 +3138,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 513496150}
-  m_Mesh: {fileID: 4300000, guid: aaabcc4ba59605444b5f733a14c4b54e, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &513496155
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3137,17 +3151,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: d2c922e770f25b348be0a70ccbdb496b, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.52}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 249
 --- !u!1 &520682006
 GameObject:
   m_ObjectHideFlags: 0
@@ -3298,7 +3314,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: fb69964c3a26c23438743c6562a67401, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3350,7 +3366,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 534496803}
-  m_Mesh: {fileID: 4300000, guid: f7ec870ca9bddf14b8839fbef46811ea, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &534496808
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3363,17 +3379,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: f4bc0f75f0a976c4c9643551883174a6, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
-    m_Center: {x: -0.000000059604645, y: 0, z: -0.00000011920929}
-    m_Extent: {x: 0.51999986, y: 0.52, z: 0.51999986}
+    m_Center: {x: 0, y: 0, z: 0.000000059604645}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 80
 --- !u!1 &542086906
 GameObject:
   m_ObjectHideFlags: 0
@@ -4113,7 +4131,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 81429f29f8e52bb46b00aeb04e124cd8, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4165,7 +4183,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 594719259}
-  m_Mesh: {fileID: 4300000, guid: 29c758ef8172bc94292198b077ef9a43, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &594719264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4178,17 +4196,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: be64acc8c5a85e14f85e8b00987737bc, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
     m_Center: {x: 0, y: 0, z: 0.000000059604645}
     m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 72
 --- !u!1 &596905411
 GameObject:
   m_ObjectHideFlags: 0
@@ -4609,7 +4629,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2800aa77b9f487142a5e09b9ef6f6234, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4661,7 +4681,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 709148013}
-  m_Mesh: {fileID: 4300000, guid: cce2e1cd2b66ef840950363187699b71, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &709148018
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4674,17 +4694,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: b5367e662e1a95844b8b2ed29668c17c, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
-    m_Center: {x: 0.000000029802322, y: 0, z: -0.00000017881393}
-    m_Extent: {x: 0.51999974, y: 0.52, z: 0.5200001}
+    m_Center: {x: 0, y: 0, z: 0.000000059604645}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 248
 --- !u!1 &740151972
 GameObject:
   m_ObjectHideFlags: 0
@@ -5596,11 +5618,11 @@ PrefabInstance:
     - target: {fileID: 376253666569569867, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 9b2e90821e69b234e96ce5e87e292bb8, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 510370069432698496, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 9b2e90821e69b234e96ce5e87e292bb8, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 659660914558107619, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Name
       value: Tree_2_Bare
@@ -5612,7 +5634,7 @@ PrefabInstance:
     - target: {fileID: 3170760322516779279, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 9b2e90821e69b234e96ce5e87e292bb8, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 3267910804024948429, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -5620,7 +5642,7 @@ PrefabInstance:
     - target: {fileID: 4028706091790421546, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 012b70c272894be43b6d5fd377261865, type: 2}
+      objectReference: {fileID: 4300000, guid: a7fab366efabefc4c855c10b15a50bd0, type: 2}
     - target: {fileID: 4449933118254201100, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -5636,7 +5658,7 @@ PrefabInstance:
     - target: {fileID: 7615293588716693233, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: a4af604cdbabf524c81966c4111cd022, type: 2}
+      objectReference: {fileID: 4300000, guid: 75a0fc086f6d1d4428b2a533125624b8, type: 2}
     - target: {fileID: 7974939147181161065, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.0039679
@@ -5700,11 +5722,11 @@ PrefabInstance:
     - target: {fileID: 8855122878290838344, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 9b2e90821e69b234e96ce5e87e292bb8, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 8923798351997769096, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 4850e59785777bf4fb212f66a79593fc, type: 2}
+      objectReference: {fileID: 4300000, guid: adce23b36a60c154bb7f73ed3a818eb1, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5735,17 +5757,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: a35528d7d1b639942947e79a0f8492a7, type: 2}
+  pattern: {fileID: 11700000, guid: 6c59b909c0edd6740b0eb3eacc0358d1, type: 2}
   modelBounds:
     m_Center: {x: -0.058337808, y: 4.698243, z: 0.18974745}
     m_Extent: {x: 1.183015, y: 4.886173, z: 1.7549665}
+  variation: 122
 --- !u!1 &963996340
 GameObject:
   m_ObjectHideFlags: 0
@@ -5896,7 +5920,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 60f4d1258de3cce4a8837bdf9b65e0cf, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5948,7 +5972,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1020856139}
-  m_Mesh: {fileID: 4300000, guid: 4fa2a4d2f94ac664f92f6fb938167bb6, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1020856144
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5961,17 +5985,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 14d4e7b4a30869d40a8f08e892f5b151, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: -0.000000059604645, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.52}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 45
 --- !u!1 &1046385056
 GameObject:
   m_ObjectHideFlags: 0
@@ -6032,7 +6058,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: fd69f77a60783d847a2edd0b1481b989, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -6084,7 +6110,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1046385056}
-  m_Mesh: {fileID: 4300000, guid: 4d42c40cbffdd384a843711fe2378189, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1046385061
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6097,86 +6123,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 6a808071d372818428213b9fb1a2a2c7, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.52}
---- !u!1 &1078274931
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1078274933}
-  - component: {fileID: 1078274932}
-  m_Layer: 0
-  m_Name: Pastel Style
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1078274932
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1078274931}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a469e6e411b9ff44bb3db168e4a3bd65, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PastelStyle
-  saturation: 0.6
-  mottle: 0.447
-  mottleBrightness: 0.3
-  colourPatches: 27.4
-  floorMottleSize: 4.67
-  pastelChips: 0.512
-  chipSizeMin: 5.98
-  chipSizeMax: 15.42
-  chipChance: 0.719
-  waterBleed: 1
-  bleedBloom: 0.028
-  bleedHueRange: 10
-  bleedRim: 0.336
-  lightTint: {r: 1, g: 0.95, b: 0.78, a: 1}
-  lightStrength: 0.945
-  shadeTint: {r: 0.55, g: 0.55, b: 1, a: 1}
-  shadeStrength: 0.654
-  shadeThreshold: 0.55
-  shadeSoftness: 0.612
-  grainSize: 1.72
-  graininess: 0.8
-  paperTooth: 0.12
-  rimColor: {r: 1, g: 0.92, b: 0.45, a: 1}
-  rimStrength: 0.747
-  edgeDissolve: 3.87
---- !u!4 &1078274933
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1078274931}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 150
 --- !u!1 &1128776627
 GameObject:
   m_ObjectHideFlags: 0
@@ -6282,11 +6241,11 @@ PrefabInstance:
     - target: {fileID: 995796300209086296, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 80404896d52728e44bf956273a5ef31b, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     - target: {fileID: 1116251614228702232, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 80404896d52728e44bf956273a5ef31b, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     - target: {fileID: 1424737170847631049, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Name
       value: Tree_1_Bare
@@ -6298,7 +6257,7 @@ PrefabInstance:
     - target: {fileID: 1970525397230411000, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 740b25e19f3a65443aed950cbb56cd76, type: 2}
+      objectReference: {fileID: 4300000, guid: 0c29858ac4b46484eb1d252b8bf102a8, type: 2}
     - target: {fileID: 1986675478381558265, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -6310,7 +6269,7 @@ PrefabInstance:
     - target: {fileID: 3363470330651281239, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: e452813b9ecedfd40ad6b64dec66eb73, type: 2}
+      objectReference: {fileID: 4300000, guid: bccd1937d27122240abe28aebf65e20d, type: 2}
     - target: {fileID: 4577454696663626005, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -6318,7 +6277,7 @@ PrefabInstance:
     - target: {fileID: 6291771380264989950, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ca878ca7fb46d86428dfe5ad22cdb73e, type: 2}
+      objectReference: {fileID: 4300000, guid: 024f4b4dae1d07047885bf1db53827d2, type: 2}
     - target: {fileID: 6393116948688092671, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -6378,7 +6337,7 @@ PrefabInstance:
     - target: {fileID: 7464915314727717570, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 80404896d52728e44bf956273a5ef31b, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     - target: {fileID: 8082853589875200325, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -6386,7 +6345,7 @@ PrefabInstance:
     - target: {fileID: 9019644300848782836, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 80404896d52728e44bf956273a5ef31b, type: 2}
+      objectReference: {fileID: 4300000, guid: 12bc28b9ae935404bb575fafdaf60bf4, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6417,17 +6376,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 2a94fd6c6a8124a4092d8c3a08d8dd37, type: 2}
+  pattern: {fileID: 11700000, guid: 786a7dd7b0a186b419eccf03f3b30c04, type: 2}
   modelBounds:
     m_Center: {x: -0.05833757, y: 4.698243, z: 0.18974793}
     m_Extent: {x: 1.1830149, y: 4.886173, z: 1.7549659}
+  variation: 223
 --- !u!1 &1137472465
 GameObject:
   m_ObjectHideFlags: 0
@@ -6488,7 +6449,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f8e3b2324c00d544fa6a6309ddfde614, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -6540,7 +6501,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1137472465}
-  m_Mesh: {fileID: 4300000, guid: 2ab19e60df8141d41aad6f5675102b95, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1137472470
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6553,17 +6514,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 95cc60f0e87198247ac049993cf94a29, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.51999974}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 194
 --- !u!1001 &1140250969
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6575,15 +6538,15 @@ PrefabInstance:
     - target: {fileID: 763480812757314239, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 1462703205119240938, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 2484759865912212676, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 18d073ab5ff07674db04de755c30ef77, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 2521058345350359252, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Name
       value: Tree_4_Bare
@@ -6591,27 +6554,27 @@ PrefabInstance:
     - target: {fileID: 2682506101190273069, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 18d073ab5ff07674db04de755c30ef77, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 2905948422855737814, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 18d073ab5ff07674db04de755c30ef77, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 3279392739744224249, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 339de8f71daecda49b2c7e014b6bbf21, type: 2}
+      objectReference: {fileID: 4300000, guid: c6db13c296232b04696c441d884a53a6, type: 2}
     - target: {fileID: 3802972771013134928, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 5209713606320694883, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 5913204082329714812, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 6250454228054921562, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.0839154
@@ -6667,23 +6630,23 @@ PrefabInstance:
     - target: {fileID: 7112168329808874049, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 39ac482b0d0010048aba16fc303edcf4, type: 2}
+      objectReference: {fileID: 4300000, guid: 5add2bce086743c4ab654bb0afc3aada, type: 2}
     - target: {fileID: 7130932761631456200, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 7915989940611453976, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 2b83064b7d353ef43aa49499149f11e7, type: 2}
+      objectReference: {fileID: 2100000, guid: 81929c8464635cf4b81ec9b8a39bca43, type: 2}
     - target: {fileID: 8562245013087794854, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 18d073ab5ff07674db04de755c30ef77, type: 2}
+      objectReference: {fileID: 4300000, guid: 8613758ddf2977e4895b440848dfaaa7, type: 2}
     - target: {fileID: 9049323235399609751, guid: b67fe8a94f0239d43a877abc4b3d99c9, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1913b0ec87b9aa24fa5d3b90aa559f73, type: 2}
+      objectReference: {fileID: 4300000, guid: ba3e08fa76d0d9642a4d90f5fa9ef2bd, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6714,17 +6677,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 2c835e4119f41a24898a9357bb80024b, type: 2}
+  pattern: {fileID: 11700000, guid: 865ceda97af3c0742a03a7f82726cf9d, type: 2}
   modelBounds:
     m_Center: {x: -0.05833769, y: 4.698243, z: 0.18974757}
     m_Extent: {x: 1.1830146, y: 4.886173, z: 1.7549654}
+  variation: 219
 --- !u!1 &1162868039
 GameObject:
   m_ObjectHideFlags: 0
@@ -6785,7 +6750,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d6bdd72214fd5674f81c589371d6294e, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -6837,7 +6802,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1162868039}
-  m_Mesh: {fileID: 4300000, guid: 69fdf4c5a0381be4fbb8e01b5586bb3b, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &1162868044
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6850,17 +6815,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 0015018019bdbdc4fbe1c1453d0898ce, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
     m_Center: {x: 0, y: 0, z: 0.000000059604645}
-    m_Extent: {x: 0.5199998, y: 0.52, z: 0.5200001}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 222
 --- !u!1 &1164581844
 GameObject:
   m_ObjectHideFlags: 0
@@ -7116,8 +7083,8 @@ MonoBehaviour:
     shadowEdgePigment: 0.421
     shadowRaggedness: 0.291
     shadowUnevenness: 0.617
-    floorBlotchSizePercent: 6
-    saturation: 12.3
+    floorBlotchSizePercent: 24.1
+    saturation: 26.1
     brightness: 1.5
     contrast: -11.1
     tonemappingPercent: 5.8
@@ -7288,7 +7255,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e484715ba1582a84aba9050db9dce153, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7340,7 +7307,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1235667336}
-  m_Mesh: {fileID: 4300000, guid: c29002893ce890b4e87e1a1881184e41, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1235667341
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7353,17 +7320,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 5675d3f98f0b7d24ab1d3d6c0439fe92, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0.000000029802322, y: -0.000000029802322, z: 0.000000029802322}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.52}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 95
 --- !u!1 &1278604090
 GameObject:
   m_ObjectHideFlags: 0
@@ -8011,7 +7980,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e8ac7e7c7ee91b64fbf79e1d7f73110f, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -8063,7 +8032,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1418784146}
-  m_Mesh: {fileID: 4300000, guid: a42c2bf31de1993419eb79af2df3d702, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1418784151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8076,17 +8045,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 39734c2fb0542324db391ee10228a39d, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: -0.000000059604645, y: -0.000000029802322, z: 0.000000029802322}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.52}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 61
 --- !u!1 &1431165596
 GameObject:
   m_ObjectHideFlags: 0
@@ -8751,7 +8722,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2d9ebcec1ef7577419e34dc08efc5231, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -8803,7 +8774,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1485521919}
-  m_Mesh: {fileID: 4300000, guid: 11ddaee8ffd8aa84cb9933f0d8a1bb11, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1485521924
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8816,17 +8787,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: cdcce7f986ff076419855070d08ce95b, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: -0.000000059604645, y: 0, z: -0.000000059604645}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.5200002}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 58
 --- !u!1 &1490466053
 GameObject:
   m_ObjectHideFlags: 0
@@ -8928,7 +8901,7 @@ PrefabInstance:
     - target: {fileID: 20036374466009509, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1c43f2ea37e0c1e41b65e8ef5fd3520c, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 642710021699439789, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Name
       value: Tree_3_Bare
@@ -8936,15 +8909,15 @@ PrefabInstance:
     - target: {fileID: 675998114014316334, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1c43f2ea37e0c1e41b65e8ef5fd3520c, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 979058245813306597, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1c43f2ea37e0c1e41b65e8ef5fd3520c, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 1567153098921081242, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     - target: {fileID: 2163673754284574879, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.0129968
@@ -9000,43 +8973,43 @@ PrefabInstance:
     - target: {fileID: 2387408718454626813, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     - target: {fileID: 2577788290764199308, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     - target: {fileID: 3375065166630425528, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 10e95d5163553814a97f7c72773075f4, type: 2}
+      objectReference: {fileID: 4300000, guid: 447372363d4a2cc4b8f5d25bc3789041, type: 2}
     - target: {fileID: 3864111305317626854, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 439086a161c86c1419ed17d888ac4086, type: 2}
+      objectReference: {fileID: 4300000, guid: d6120d01365d9874b9c4db4bfdadfe43, type: 2}
     - target: {fileID: 4922033386977965464, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     - target: {fileID: 5161216298830077763, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     - target: {fileID: 5471682391504506894, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1da8d096a8e5b5b438166b63a6312270, type: 2}
+      objectReference: {fileID: 4300000, guid: ed37f1aff66b91f489f98a21a41eb601, type: 2}
     - target: {fileID: 6177860367434440050, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 1c43f2ea37e0c1e41b65e8ef5fd3520c, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 6868993104004600767, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     - target: {fileID: 8606820476862197023, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e8249bc23256a77409d13a2d9a148cb8, type: 2}
+      objectReference: {fileID: 2100000, guid: ea606d9f041aa224e981dc31c199109a, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9067,17 +9040,88 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 8ccb37211316dfa449a54bb9188a5fc0, type: 2}
+  pattern: {fileID: 11700000, guid: 91f524290fd70a547a2dbfb923e27052, type: 2}
   modelBounds:
     m_Center: {x: -0.058337152, y: 4.6982427, z: 0.18974745}
     m_Extent: {x: 1.1830149, y: 4.8861723, z: 1.7549664}
+  variation: 30
+--- !u!1 &1497695492
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1497695494}
+  - component: {fileID: 1497695493}
+  m_Layer: 0
+  m_Name: Pastel Style
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1497695493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1497695492}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a469e6e411b9ff44bb3db168e4a3bd65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PastelStyle
+  saturation: 0.6
+  mottle: 0.447
+  mottleBrightness: 0.3
+  colourPatches: 27.4
+  floorMottleSize: 4.67
+  pastelChips: 0.512
+  chipSizeMin: 5.98
+  chipSizeMax: 15.42
+  chipChance: 0.719
+  waterBleed: 1
+  bleedBloom: 0.028
+  bleedHueRange: 10
+  bleedRim: 0.336
+  lightTint: {r: 1, g: 0.95, b: 0.78, a: 1}
+  lightStrength: 0.945
+  shadeTint: {r: 0.55, g: 0.55, b: 1, a: 1}
+  shadeStrength: 0.654
+  shadeThreshold: 0.55
+  shadeSoftness: 0.612
+  grainSize: 1.72
+  graininess: 0.8
+  paperTooth: 0.12
+  rimColor: {r: 1, g: 0.92, b: 0.45, a: 1}
+  rimStrength: 0.747
+  edgeDissolve: 3.87
+--- !u!4 &1497695494
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1497695492}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1519332240
 GameObject:
   m_ObjectHideFlags: 0
@@ -9138,7 +9182,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 01af6232c4d88324b93aed0f150b8cf6, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -9190,7 +9234,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1519332240}
-  m_Mesh: {fileID: 4300000, guid: 78fe257950e34624f9a9049fd15972a4, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1519332245
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9203,17 +9247,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: bc2294a621e0687408fba30cea30acbc, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
     m_Center: {x: 0, y: -0.000000029802322, z: 0}
     m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 80
 --- !u!1 &1531981337
 GameObject:
   m_ObjectHideFlags: 0
@@ -9274,7 +9320,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: aff68253dd3525f41b32107c5291eeed, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -9326,7 +9372,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1531981337}
-  m_Mesh: {fileID: 4300000, guid: 24ca144eae2bf3d4c8178c2072d5f881, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1531981342
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9339,17 +9385,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: ac11832febb923c4b9cb8247c298a37d, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0.000000029802322, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.5200001}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 46
 --- !u!1 &1574732737
 GameObject:
   m_ObjectHideFlags: 0
@@ -9680,7 +9728,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 7f1671cdb8f3bdf4cbd12097ce576730, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -9732,7 +9780,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1628379826}
-  m_Mesh: {fileID: 4300000, guid: 86ac4ac8141c82b40bcc7622ac342291, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1628379831
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9745,17 +9793,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 76e7d9320d9fba64291b8d47311ba659, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0.52000004, y: 0.52, z: 0.52}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 67
 --- !u!1 &1633602387
 GameObject:
   m_ObjectHideFlags: 0
@@ -10776,7 +10826,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0192e18af837aaa47b89fe11ed9a0e68, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -10828,7 +10878,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1836128132}
-  m_Mesh: {fileID: 4300000, guid: f68fc3729e9aa1d41a476fd233222439, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1836128137
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10841,17 +10891,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 5111da7305bbcd845a28b4825a289058, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 0.52000004, y: 0.52, z: 0.5200001}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 20
 --- !u!1 &1859964618
 GameObject:
   m_ObjectHideFlags: 0
@@ -11362,7 +11414,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1a5ecdd3df951f9439559cd2dfdcf97a, type: 2}
+  - {fileID: 2100000, guid: 7978f8c2d97d72d4b8019b1eb6f8562c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -11414,7 +11466,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1939563333}
-  m_Mesh: {fileID: 4300000, guid: a34fc5e3dc4cc294b9d87b1cabd2ad70, type: 2}
+  m_Mesh: {fileID: 4300000, guid: e903783d87eca9b469bf4c2af18d8653, type: 2}
 --- !u!114 &1939563338
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11427,17 +11479,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: ce6f16b6ad8930a4c873568e2cb461be, type: 2}
+  pattern: {fileID: 11700000, guid: 7dc5f01c1d196424a87d31351906a3d3, type: 2}
   modelBounds:
-    m_Center: {x: -0.00000011920929, y: 0, z: 0}
-    m_Extent: {x: 0.5200001, y: 0.52, z: 0.5200001}
+    m_Center: {x: 0, y: 0, z: 0.000000059604645}
+    m_Extent: {x: 0.5199991, y: 0.52, z: 0.5200001}
+  variation: 100
 --- !u!1 &1960987172
 GameObject:
   m_ObjectHideFlags: 0
@@ -11498,7 +11552,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 423d77fec68f63b4ebbee21c573441ca, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -11550,7 +11604,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1960987172}
-  m_Mesh: {fileID: 4300000, guid: 0d350ee57b052ee41830b4fa1fd2ef32, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &1960987177
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11563,17 +11617,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 35bb7825deb9cae4b86cd16f70c4e87a, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: -0.000000059604645, y: 0.000000029802322, z: 0}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.52000004}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 5
 --- !u!1 &1981498776
 GameObject:
   m_ObjectHideFlags: 0
@@ -11675,7 +11731,7 @@ PrefabInstance:
     - target: {fileID: 20036374466009509, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 144e47992768ec44d8652e961180c32d, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 642710021699439789, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Name
       value: Tree_3_Bare
@@ -11683,11 +11739,11 @@ PrefabInstance:
     - target: {fileID: 675998114014316334, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 144e47992768ec44d8652e961180c32d, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 979058245813306597, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 144e47992768ec44d8652e961180c32d, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 1567153098921081242, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -11755,11 +11811,11 @@ PrefabInstance:
     - target: {fileID: 3375065166630425528, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 4a1abda275c1d9749baa7fdd35c9a4c3, type: 2}
+      objectReference: {fileID: 4300000, guid: 447372363d4a2cc4b8f5d25bc3789041, type: 2}
     - target: {fileID: 3864111305317626854, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: b67a57b44bd0e1f409c3f51e965417bd, type: 2}
+      objectReference: {fileID: 4300000, guid: d6120d01365d9874b9c4db4bfdadfe43, type: 2}
     - target: {fileID: 4922033386977965464, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -11771,11 +11827,11 @@ PrefabInstance:
     - target: {fileID: 5471682391504506894, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 3c284db30c5807443940dc1729b88ba5, type: 2}
+      objectReference: {fileID: 4300000, guid: ed37f1aff66b91f489f98a21a41eb601, type: 2}
     - target: {fileID: 6177860367434440050, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 144e47992768ec44d8652e961180c32d, type: 2}
+      objectReference: {fileID: 4300000, guid: 2ffb35e4a4d33cf409a63b8d14c0a9f2, type: 2}
     - target: {fileID: 6868993104004600767, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -11814,17 +11870,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: f7cc442e834ee534ca1791f7b90237e1, type: 2}
+  pattern: {fileID: 11700000, guid: 91f524290fd70a547a2dbfb923e27052, type: 2}
   modelBounds:
-    m_Center: {x: -0.05833721, y: 4.698243, z: 0.18974781}
-    m_Extent: {x: 1.1830146, y: 4.886173, z: 1.7549655}
+    m_Center: {x: -0.058337152, y: 4.6982427, z: 0.18974745}
+    m_Extent: {x: 1.1830149, y: 4.8861723, z: 1.7549664}
+  variation: 198
 --- !u!1001 &1988881308
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11836,11 +11894,11 @@ PrefabInstance:
     - target: {fileID: 376253666569569867, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ba9d3ed9030fe6f4985cc9e7dc4641a3, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 510370069432698496, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ba9d3ed9030fe6f4985cc9e7dc4641a3, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 659660914558107619, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Name
       value: Tree_2_Bare
@@ -11848,35 +11906,35 @@ PrefabInstance:
     - target: {fileID: 1504418334410738200, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 3170760322516779279, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ba9d3ed9030fe6f4985cc9e7dc4641a3, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 3267910804024948429, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 4028706091790421546, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: d5fbffeed1ffb9e4bb4f01da9433ba4a, type: 2}
+      objectReference: {fileID: 4300000, guid: a7fab366efabefc4c855c10b15a50bd0, type: 2}
     - target: {fileID: 4449933118254201100, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 5472413956052038832, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 5498697443538255293, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 7615293588716693233, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ff38a71288467e04da4f163b2e5be287, type: 2}
+      objectReference: {fileID: 4300000, guid: 75a0fc086f6d1d4428b2a533125624b8, type: 2}
     - target: {fileID: 7974939147181161065, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.9693574
@@ -11932,19 +11990,19 @@ PrefabInstance:
     - target: {fileID: 8284086751024362188, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 8517787655769527117, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e0284471af35e2542b9c5c89844e4578, type: 2}
+      objectReference: {fileID: 2100000, guid: 932028330c1f2bf44a0eb1c34c7bf6da, type: 2}
     - target: {fileID: 8855122878290838344, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: ba9d3ed9030fe6f4985cc9e7dc4641a3, type: 2}
+      objectReference: {fileID: 4300000, guid: cacc769391368cd489d252b257bb2452, type: 2}
     - target: {fileID: 8923798351997769096, guid: a3d0a22bbe0c0914e86f9ed03d1a5eb3, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 67a23e3edd7bbbd40a457eee950e4677, type: 2}
+      objectReference: {fileID: 4300000, guid: adce23b36a60c154bb7f73ed3a818eb1, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -11975,17 +12033,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 96
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: 163bdd78a67d5a9489ab8023ae3398f8, type: 2}
+  pattern: {fileID: 11700000, guid: 6c59b909c0edd6740b0eb3eacc0358d1, type: 2}
   modelBounds:
-    m_Center: {x: -0.05833763, y: 4.698243, z: 0.18974769}
-    m_Extent: {x: 1.1830148, y: 4.886173, z: 1.7549657}
+    m_Center: {x: -0.058337808, y: 4.698243, z: 0.18974745}
+    m_Extent: {x: 1.183015, y: 4.886173, z: 1.7549665}
+  variation: 36
 --- !u!1 &2000753349
 GameObject:
   m_ObjectHideFlags: 0
@@ -12226,7 +12286,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 947a855327ec33f41a8ae3abcd36bcac, type: 2}
+  - {fileID: 2100000, guid: 97f9ab17189b3c74987489200fadfd65, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -12278,7 +12338,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2011209531}
-  m_Mesh: {fileID: 4300000, guid: eac9ffef4d7ed68468949a774aa43802, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 04a109086af900141bd03b13b75dd663, type: 2}
 --- !u!114 &2011209536
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12291,17 +12351,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
-  patternResolution: 48
+  shareBake: 1
+  patternResolution: 32
   groupDistance: 0.03
   massNormal: 1
   pigmentScale: 0.2
   backrunScale: 0.25
   backrunCoverage: 0.3
   seed: 0
-  pattern: {fileID: 11700000, guid: ffb387d1e5bd1a54db541079d45cde37, type: 2}
+  pattern: {fileID: 11700000, guid: 51b8d9d58918c29449db12f59fe8a3e6, type: 2}
   modelBounds:
-    m_Center: {x: 0, y: 0, z: 0.000000059604645}
-    m_Extent: {x: 0.52, y: 0.52, z: 0.5200001}
+    m_Center: {x: 0, y: -0.000000029802322, z: 0}
+    m_Extent: {x: 0.5199999, y: 0.5199999, z: 0.52000004}
+  variation: 122
 --- !u!1 &2033019598
 GameObject:
   m_ObjectHideFlags: 0
@@ -12812,4 +12874,4 @@ SceneRoots:
   - {fileID: 288571739}
   - {fileID: 566323746}
   - {fileID: 1176582043}
-  - {fileID: 1078274933}
+  - {fileID: 1497695494}

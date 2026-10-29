@@ -49,6 +49,7 @@ Shader "ThatGameJam/SoftPastel"
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/01_Arts/Shaders/BakedPatternUV.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -105,7 +106,7 @@ Shader "ThatGameJam/SoftPastel"
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.fogFactor = ComputeFogFactor(positions.positionCS.z);
-                output.patternUV = input.patternUV;
+                output.patternUV = TwistPatternUV(input.patternUV);
                 return output;
             }
 
