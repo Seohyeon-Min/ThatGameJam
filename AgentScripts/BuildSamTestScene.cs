@@ -40,8 +40,6 @@ public static class BuildSamTestScene
     const float ScreenAspect = 16f / 9f;
     const float ViewMargin = 12f;
     const string SnowfallPrefabPath = "Assets/03_Prefabs/Snowfall.prefab";
-    // The Snowfall prefab makes its flake material in the editor and does not save it, so a build would have none.
-    const string SnowflakeTexturePath = MaterialFolder + "/Snowflake.png";
     // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
     const float SnowHeight = 14f;
     // New flakes per second on each square metre of the ground the camera shows.
@@ -903,35 +901,10 @@ public static class BuildSamTestScene
             so.FindProperty("flakeSize").floatValue = 0.26f;
             so.FindProperty("maxLifetime").floatValue = 11f;
             so.FindProperty("collideWithWorld").boolValue = false;
-            so.FindProperty("snowMaterial").objectReferenceValue = SnowflakeMaterial();
         });
         snowfall.Configure();
         var seasonSnow = snow.AddComponent<SeasonSnow>();
         Set(seasonSnow, so => so.FindProperty("season").objectReferenceValue = season);
-    }
-
-    // A white round flake, solid in the middle and soft at the edge, unlit and see-through.
-    static Material SnowflakeMaterial()
-    {
-        const int size = 32;
-        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), Vector2.one * (size / 2f)) / (size / 2f);
-                texture.SetPixel(x, y, new Color(1f, 1f, 1f, 1f - Mathf.SmoothStep(0.5f, 1f, distance)));
-            }
-        System.IO.File.WriteAllBytes(SnowflakeTexturePath, texture.EncodeToPNG());
-        Object.DestroyImmediate(texture);
-        AssetDatabase.ImportAsset(SnowflakeTexturePath);
-        var importer = (TextureImporter)AssetImporter.GetAtPath(SnowflakeTexturePath);
-        importer.alphaIsTransparency = true;
-        importer.mipmapEnabled = false;
-        importer.SaveAndReimport();
-
-        Material material = Mat("Snowflake", Color.white, transparent: true, shader: "Universal Render Pipeline/Particles/Unlit");
-        material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(SnowflakeTexturePath));
-        return material;
     }
 
     // A TreeGenerator over each X range times each Z range, on the ground, with the seed fixed so rebuilding gives the same trees.
@@ -985,13 +958,13 @@ public static class BuildSamTestScene
         return go;
     }
 
-    static Material Mat(string name, Color color, bool transparent = false, string shader = "Universal Render Pipeline/Lit")
+    static Material Mat(string name, Color color, bool transparent = false)
     {
         string path = $"{MaterialFolder}/{name}.mat";
         Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (mat == null)
         {
-            mat = new Material(Shader.Find(shader));
+            mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             AssetDatabase.CreateAsset(mat, path);
         }
         mat.SetColor("_BaseColor", color);

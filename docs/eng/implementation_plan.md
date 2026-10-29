@@ -456,6 +456,7 @@ Remaining work and open issues:
 - The baby's feet slide while walking. The walk clip's stride gives a no-slide speed of about 0.1 m/s (0.08 m/s at this game's size), but the baby walks at 1.2 m/s. Either the art makes a walk with a longer stride or the walking speed is decided again
 - Each wake-up waits for `Girl_GetUp`, 12.6 s. Four times adds about 50 s to the playtime (§1.4)
 - Check the web performance of about 30,000 snow particles in the intro
+- The art team makes the snowflake material and texture. Until then the snow uses the material `Snowfall` makes in the editor. That material is not saved, so in a web build the snow may not show (2026-10-29 work record 05)
 - The wind (z −5) is strong, so flakes drift 37 to 47 m while falling. The top of the screen may have thinner snow. The user will look and decide
 - The director's "no break in the trees may show" and "five times the road's width" are not met since ADR 0020. The forest reaches x ±33, with snowfield beyond
 - The bird (2.2 m wingspan) is big next to Tommy's trees (5.5 m). The sizes need agreeing with the art
