@@ -54,7 +54,7 @@ public class GameTuning : ScriptableObject
     // wheel delta size isn't portable, per AGENTS.md).
     public float cameraZoomStep = 0.1f;
     public float cameraZoomMin = 0.5f;
-    public float cameraZoomMax = 1f;
+    public float cameraZoomMax = 1.25f;
     // How fast the camera eases to the new zoom level, in zoom-fraction per second.
     public float cameraZoomSpeed = 3f;
 
