@@ -57,6 +57,11 @@ public class Snowfall : MonoBehaviour
             Configure();
     }
 
+    // OnValidate is editor-only, so a built player never configures the particle system
+    // (and its auto-generated material) without this - the renderer is left with whatever
+    // material was last serialized, which can be null.
+    void Awake() => Configure();
+
     void LateUpdate()
     {
         if (followTarget != null)

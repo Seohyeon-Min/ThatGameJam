@@ -1,3 +1,5 @@
+using FMOD.Studio;
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -6,17 +8,28 @@ public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance { get; private set; }
 
-    [SerializeField] AudioSource windSource;
-    [SerializeField] AudioSource sfxSource;
-    [SerializeField] AudioClip birdClip;
+    [SerializeField] EventReference windEvent;
+    [SerializeField] EventReference birdEvent;
+
+    EventInstance windInstance;
 
     void Awake() => Instance = this;
 
-    void Start() => windSource.Play();
+    void Start()
+    {
+        windInstance = RuntimeManager.CreateInstance(windEvent);
+        windInstance.start();
+    }
 
     void Update()
     {
         if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
-            sfxSource.PlayOneShot(birdClip);
+            RuntimeManager.PlayOneShot(birdEvent);
+    }
+
+    void OnDestroy()
+    {
+        windInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+        windInstance.release();
     }
 }
