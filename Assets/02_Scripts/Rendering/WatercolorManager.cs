@@ -37,6 +37,9 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("Baked backrun blooms (pale inside, dark rim). Needs baked models.")]
         [Range(0f, 1f)] public float backruns = 0.6f;
 
+        [Tooltip("How much blotches and backrun rims gain saturation as they get darker, in proportion to how much darker. 0 = only the small built-in boost. Applies immediately.")]
+        [Range(0f, 2f)] public float blotchSaturation = 0.5f;
+
         [Tooltip("Size of a blotch on screen, in % of screen height. Used when baking; re-bake after changing.")]
         [Range(0.5f, 30f)] public float blotchSizePercent = 5f;
 
@@ -157,6 +160,34 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("How uneven the darkness inside cast shadows is.")]
         [Range(0f, 1f)] public float shadowUnevenness = 0.4f;
 
+        [Header("Scene Colour")]
+        [Tooltip("Colour of the light and shade drifting across the scene: a very large world-space noise moves the lit side between Light Tint A and B and the shade side between Shade Tint A and B. Tints, never darkens; paper white takes the light colour too. 0 = off.")]
+        [Range(0f, 1f)] public float sceneColour = 0.5f;
+        [Tooltip("Size of one colour zone, in world units.")]
+        [Range(1f, 200f)] public float sceneColourSize = 10f;
+        public Color lightTintA = new Color(1f, 0.95f, 0.78f);
+        public Color lightTintB = new Color(1f, 0.86f, 0.88f);
+        public Color shadeTintA = new Color(0.72f, 0.82f, 1f);
+        public Color shadeTintB = new Color(0.84f, 0.76f, 1f);
+
+        [Tooltip("Shade facing up takes the sky's colour, shade facing down or sideways the warm ground colour. 0 = off.")]
+        [Range(0f, 1f)] public float bounce = 0.4f;
+        public Color skyBounce = new Color(0.75f, 0.85f, 1f);
+        public Color groundBounce = new Color(1f, 0.86f, 0.86f);
+
+        [Tooltip("A thin warm complementary accent on the boundary band next to the paper (like orange at the edge of blue ice). 0 = off.")]
+        [Range(0f, 1f)] public float edgeAccent = 0.3f;
+        public Color edgeAccentColour = new Color(1f, 0.62f, 0.4f);
+
+        [Tooltip("Distance haze: far things fade into the air colour (Haze Low toward the horizon, Haze High looking up). Match it to the sky. 0 = off.")]
+        [Range(0f, 1f)] public float haze = 0.5f;
+        [Tooltip("Distance where the haze starts, in world units.")]
+        [Range(0f, 200f)] public float hazeStart = 12f;
+        [Tooltip("Distance over which it reaches full strength, in world units.")]
+        [Range(1f, 300f)] public float hazeRange = 40f;
+        public Color hazeLow = new Color(1f, 0.9f, 0.92f);
+        public Color hazeHigh = new Color(0.82f, 0.9f, 1f);
+
         [Header("Floor")]
         [Tooltip("Size of one blotch on floors (surfaces with Floor on), in % of screen height. Floors keep this size on screen near and far, like a flat painting, while the pattern stays attached to the floor. Applies immediately.")]
         [Range(1f, 30f)] public float floorBlotchSizePercent = 6f;
@@ -213,10 +244,23 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalFloat("_WC_OutlineWidth", s.outlineWidthPercent / 100f);
         Shader.SetGlobalFloat("_WC_Blotches", s.blotches);
         Shader.SetGlobalFloat("_WC_Backruns", s.backruns);
+        Shader.SetGlobalFloat("_WC_BlotchSaturation", s.blotchSaturation);
         // sRGB values as they are (not converted to linear), because the shader mixes colours in sRGB.
         Shader.SetGlobalVector("_WC_LightCream", new Vector4(s.lightCream.r, s.lightCream.g, s.lightCream.b, s.lightFade));
         Shader.SetGlobalVector("_WC_LightShade", new Vector4(s.lightPastelChips, s.shadowDarkening, s.shadowHueFrom / 360f, s.shadowHueTo / 360f));
         Shader.SetGlobalFloat("_WC_PastelShadows", s.pastelShadows ? 1f : 0f);
+        // Scene colours: sRGB values as they are, like the other colours the shader mixes in sRGB.
+        Shader.SetGlobalVector("_WC_SceneColour", new Vector4(s.sceneColour, s.sceneColourSize, s.bounce, s.edgeAccent));
+        Shader.SetGlobalVector("_WC_LightTintA", (Vector4)s.lightTintA);
+        Shader.SetGlobalVector("_WC_LightTintB", (Vector4)s.lightTintB);
+        Shader.SetGlobalVector("_WC_ShadeTintA", (Vector4)s.shadeTintA);
+        Shader.SetGlobalVector("_WC_ShadeTintB", (Vector4)s.shadeTintB);
+        Shader.SetGlobalVector("_WC_SkyBounce", (Vector4)s.skyBounce);
+        Shader.SetGlobalVector("_WC_GroundBounce", (Vector4)s.groundBounce);
+        Shader.SetGlobalVector("_WC_EdgeAccent", (Vector4)s.edgeAccentColour);
+        Shader.SetGlobalVector("_WC_Haze", new Vector4(s.haze, s.hazeStart, s.hazeRange, 0f));
+        Shader.SetGlobalVector("_WC_HazeLow", (Vector4)s.hazeLow);
+        Shader.SetGlobalVector("_WC_HazeHigh", (Vector4)s.hazeHigh);
         Shader.SetGlobalFloat("_WC_ShadowSaturation", s.shadowSaturation);
         Shader.SetGlobalFloat("_WC_WarmWidth", s.lightYellowWidthPercent / 100f);
         Shader.SetGlobalFloat("_WC_CoolShift", s.darkPigmentBluePercent / 100f);

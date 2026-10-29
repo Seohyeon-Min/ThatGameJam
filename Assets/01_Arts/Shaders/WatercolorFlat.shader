@@ -80,6 +80,7 @@ Shader "ThatGameJam/WatercolorFlat"
         half _WC_OutlinePigment;
         half _WC_Blotches;
         half _WC_Backruns;
+        half _WC_BlotchSaturation; // 얼룩·백런이 어두워진 만큼 채도를 올리는 정도
         half _WC_CoolShift;
         half _WC_ShadowDepth;
         half _WC_ReceiveShadows;
@@ -151,6 +152,35 @@ Shader "ThatGameJam/WatercolorFlat"
             return saturate((mixed - 0.5) * restore + 0.5);
         }
         half _WC_Plain;           // 1 = 씬 뷰를 수채화 없이 평범하게 그린다(Plain Scene View)
+
+        // 장면의 빛과 공기 색(Scene Colour). 물체 안이 아니라 장면 전체에 걸친 색의 흐름이다.
+        half4 _WC_SceneColour;    // x 빛·그늘 색 흐름 세기, y 흐름 크기(월드 단위), z 하늘·땅 반사색 세기, w 경계 보색 강조 세기
+        half4 _WC_LightTintA;     // 빛 쪽 색 두 가지(sRGB). 자리마다 둘 사이를 오간다.
+        half4 _WC_LightTintB;
+        half4 _WC_ShadeTintA;     // 그늘 쪽 색 두 가지(sRGB)
+        half4 _WC_ShadeTintB;
+        half4 _WC_SkyBounce;      // 위를 보는 그늘이 받는 하늘색
+        half4 _WC_GroundBounce;   // 아래·옆을 보는 그늘이 받는 땅색
+        half4 _WC_EdgeAccent;     // 빛 경계 띠의 보색 강조 색
+        half4 _WC_Haze;           // x 세기, y 시작 거리, z 다 바래는 데까지 거리
+        half4 _WC_HazeLow;        // 지평선 쪽 공기 색
+        half4 _WC_HazeHigh;       // 위쪽 공기 색
+
+        float SceneHash(float2 p)
+        {
+            p = frac(p * float2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return frac(p.x * p.y);
+        }
+
+        float SceneNoise(float2 p)
+        {
+            float2 i = floor(p);
+            float2 f = frac(p);
+            f = f * f * (3.0 - 2.0 * f);
+            return lerp(lerp(SceneHash(i), SceneHash(i + float2(1, 0)), f.x),
+                lerp(SceneHash(i + float2(0, 1)), SceneHash(i + float2(1, 1)), f.x), f.y);
+        }
 
         void AlphaClip(float2 uv)
         {
@@ -388,12 +418,14 @@ Shader "ThatGameJam/WatercolorFlat"
                 half unevenness = 0.6 + 0.4 * pattern.a;
 
                 half accumulate = 0.0;
+                half pigmentAccumulate = 0.0; // 그중 얼룩과 백런 테두리 몫
                 half dilute = 0.0;
                 // 얼룩과 백런: 구운 모델과 바닥에 쓴다.
                 if (_HasPattern > 0.5 || _Floor > 0.5)
                 {
                     half blotch = (pattern.r * 2.0 - 1.0) * 0.35 * _WC_Blotches;
-                    accumulate += max(blotch, 0.0) + pattern.b * 0.9 * _WC_Backruns;
+                    pigmentAccumulate = max(blotch, 0.0) + pattern.b * 0.9 * _WC_Backruns;
+                    accumulate += pigmentAccumulate;
                     dilute += max(-blotch, 0.0) + pattern.g * 0.3 * _WC_Backruns;
                 }
                 // 덩어리 바깥 윤곽에만 안료가 고인다(노멀이 덩어리 노멀이라 조각 사이에는 생기지 않는다).
@@ -413,9 +445,35 @@ Shader "ThatGameJam/WatercolorFlat"
                 accumulate += shadowEdge * _WC_ShadowEdge * unevenness;
 
                 color = Dilute(saturate(color), dilute * 0.5);
+                half luminanceBefore = Luminance(color);
                 color = Accumulate(color, accumulate * _WC_PigmentThickness);
+                // 얼룩과 백런 테두리는 어두워진 만큼 채도를 더 올린다(Blotch Saturation). 어두워진 양 중 얼룩·백런 몫만 쓴다.
+                half darkened = saturate(luminanceBefore - Luminance(color)) * saturate(pigmentAccumulate / max(accumulate, 1e-4));
+                color = saturate(lerp(Luminance(color).xxx, color, 1.0 + darkened * 4.0 * _WC_BlotchSaturation));
                 // 종이(흰색)에는 파스텔 조각을 넣지 않는다.
                 color = lerp(color, 1.0, paper);
+
+                // 장면의 빛 색 흐름: 아주 큰 월드 잡음으로 빛 쪽은 두 따뜻한 색, 그늘 쪽은 두 차가운 색 사이를 자리마다 오간다.
+                // 곱해서 물들이므로 탁해지지 않고, 흰 종이도 빛 색을 받는다(흰색이 순수한 흰색이 아니다).
+                // 빛과 그늘의 나눔은 형태 빛 방향과 드리운 그림자로 정하지만, 어둡게 하지 않고 색 온도만 바꾼다.
+                half formLit = smoothstep(0.35, 0.65, ndotlRaw) * cast;
+                if (_WC_SceneColour.x > 0)
+                {
+                    float2 sceneP = input.positionWS.xz / max(_WC_SceneColour.y, 0.1);
+                    half warm = SceneNoise(sceneP) * 0.7 + SceneNoise(sceneP * 2.1 + 7.3) * 0.3;
+                    half cool = SceneNoise(sceneP + 31.7) * 0.7 + SceneNoise(sceneP * 2.3 + 13.1) * 0.3;
+                    half3 lightTint = lerp(_WC_LightTintA.rgb, _WC_LightTintB.rgb, smoothstep(0.3, 0.7, warm));
+                    half3 shadeTint = lerp(_WC_ShadeTintA.rgb, _WC_ShadeTintB.rgb, smoothstep(0.3, 0.7, cool));
+                    color = lerp(color, color * lerp(shadeTint, lightTint, formLit), _WC_SceneColour.x);
+                }
+                // 하늘·땅 반사색: 그늘 면이 위를 보면 하늘색, 아래·옆을 보면 따뜻한 땅색을 받는다.
+                if (_WC_SceneColour.z > 0)
+                {
+                    half3 bounce = lerp(_WC_GroundBounce.rgb, _WC_SkyBounce.rgb, saturate(normalWS.y * 0.5 + 0.5));
+                    color = lerp(color, color * bounce, _WC_SceneColour.z * (1.0 - formLit));
+                }
+                // 경계 보색 강조: 빛 경계 띠에 따뜻한 보색을 얇게 얹는다.
+                color = lerp(color, _WC_EdgeAccent.rgb, band * _WC_SceneColour.w * 0.6);
 
                 // 색연필: 구운 연필 덩어리 안에서만 선이 보인다. 선 색은 그 자리 물감 색을 더 쌓은 색이라 색마다 다르다.
                 // 빛 쪽에 남긴 흰 종이에는 긋지 않는다. 선은 주로 형태 그림자 쪽(덩어리 노멀이 빛을 등진 쪽)에 모인다.
@@ -433,6 +491,14 @@ Shader "ThatGameJam/WatercolorFlat"
                     // 지금 칠해진 색 위에 쌓는다. 그림자처럼 이미 어두운 곳에서도 선이 그 색보다 진하게 보인다.
                     half3 lead = Accumulate(saturate(color), _WC_Pencil.y);
                     color = lerp(color, lead, saturate(stroke));
+                }
+
+                // 거리 안개: 멀수록 공기 색으로 바랜다. 지평선 쪽(시선이 수평)은 아래 색, 올려다보는 쪽은 위 색.
+                if (_WC_Haze.x > 0)
+                {
+                    half hazeAmount = saturate((length(input.positionWS - GetCameraPositionWS()) - _WC_Haze.y) / max(_WC_Haze.z, 0.1)) * _WC_Haze.x;
+                    half3 haze = lerp(_WC_HazeLow.rgb, _WC_HazeHigh.rgb, saturate(-viewWS.y * 2.0));
+                    color = lerp(color, haze, hazeAmount);
                 }
 
                 color = SRGBToLinear(color);
