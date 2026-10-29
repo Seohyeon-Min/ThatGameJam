@@ -113,3 +113,10 @@ InitTestScene*.unity*
 
 # The director's task list for the agent
 /order_from_director.md
+
+# FMOD Studio project (FMODProject/<name>/) — keep the .fspro, Metadata/ and
+# built Build/ banks (so a clone works without rebuilding), ignore only the
+# local/user-specific scratch FMOD Studio regenerates per machine.
+/FMODProject/*/.cache/
+/FMODProject/*/.unsaved/
+/FMODProject/*/.user/
