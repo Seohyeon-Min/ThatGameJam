@@ -193,6 +193,13 @@ public class WatercolorManager : MonoBehaviour
         [Range(1f, 30f)] public float floorBlotchSizePercent = 6f;
 
         [Header("Colour")]
+        [Tooltip("Colour difference between models sharing a bake (e.g. the trees of one kind): each one's hue turns by up to this many degrees either way. Applies immediately.")]
+        [Range(0f, 60f)] public float instanceHueRange = 12f;
+        [Tooltip("Brightness difference between models sharing a bake, in % either way.")]
+        [Range(0f, 50f)] public float instanceBrightnessRange = 10f;
+        [Tooltip("Saturation difference between models sharing a bake, in % either way.")]
+        [Range(0f, 100f)] public float instanceSaturationRange = 40f;
+
         [Tooltip("Saturation of the paint colours. Negative = calmer, positive = more vivid. Paper white is not affected.")]
         [Range(-100f, 100f)] public float saturation = 0f;
 
@@ -245,6 +252,7 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalFloat("_WC_Blotches", s.blotches);
         Shader.SetGlobalFloat("_WC_Backruns", s.backruns);
         Shader.SetGlobalFloat("_WC_BlotchSaturation", s.blotchSaturation);
+        Shader.SetGlobalVector("_WC_InstanceColour", new Vector4(s.instanceHueRange / 360f, s.instanceBrightnessRange / 100f, s.instanceSaturationRange / 100f, 0f));
         // sRGB values as they are (not converted to linear), because the shader mixes colours in sRGB.
         Shader.SetGlobalVector("_WC_LightCream", new Vector4(s.lightCream.r, s.lightCream.g, s.lightCream.b, s.lightFade));
         Shader.SetGlobalVector("_WC_LightShade", new Vector4(s.lightPastelChips, s.shadowDarkening, s.shadowHueFrom / 360f, s.shadowHueTo / 360f));

@@ -559,14 +559,18 @@ public static class WatercolorBaker
         if (material != source)
         {
             material.shader = Shader.Find(FlatShader);
+            // _BASE_COLOR(_MAP): Arnold Standard Surface materials from Maya/Arnold FBX exports.
             if (source.HasProperty("_BaseColor"))
                 material.SetColor("_BaseColor", source.GetColor("_BaseColor"));
             else if (source.HasProperty("_Color"))
                 material.SetColor("_BaseColor", source.GetColor("_Color"));
+            else if (source.HasProperty("_BASE_COLOR"))
+                material.SetColor("_BaseColor", source.GetColor("_BASE_COLOR"));
             // The model's own texture drives every colour calculation. Older materials (Standard, from some FBX
             // exports) keep it in _MainTex.
             string texProperty = source.HasProperty("_BaseMap") && source.GetTexture("_BaseMap") != null ? "_BaseMap"
-                : source.HasProperty("_MainTex") ? "_MainTex" : null;
+                : source.HasProperty("_MainTex") ? "_MainTex"
+                : source.HasProperty("_BASE_COLOR_MAP") ? "_BASE_COLOR_MAP" : null;
             if (texProperty != null)
             {
                 material.SetTexture("_BaseMap", source.GetTexture(texProperty));

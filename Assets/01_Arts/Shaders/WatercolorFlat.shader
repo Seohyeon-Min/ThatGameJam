@@ -80,7 +80,8 @@ Shader "ThatGameJam/WatercolorFlat"
         half _WC_OutlinePigment;
         half _WC_Blotches;
         half _WC_Backruns;
-        half _WC_BlotchSaturation; // 얼룩·백런이 어두워진 만큼 채도를 올리는 정도
+        half _WC_BlotchSaturation;
+        half4 _WC_InstanceColour; // 굽기를 공유하는 인스턴스마다 색 차이: x 색상(한 바퀴 = 1), y 밝기, z 채도 // 얼룩·백런이 어두워진 만큼 채도를 올리는 정도
         half _WC_CoolShift;
         half _WC_ShadowDepth;
         half _WC_ReceiveShadows;
@@ -333,6 +334,16 @@ Shader "ThatGameJam/WatercolorFlat"
                 albedo = (albedo - 0.5) * (1.0 + _WC_Contrast) + 0.5;
                 albedo *= 1.0 + _WC_Brightness;
                 albedo = saturate(lerp(Luminance(albedo).xxx, albedo, 1.0 + _WC_Saturation));
+                // 인스턴스마다 색 차이: 같은 나무라도 그루마다 색상·밝기·채도가 조금씩 다르다(무채색은 색상이 거의 안 바뀐다).
+                if (any(_WC_InstanceColour.xyz > 0))
+                {
+                    half3 instance = InstanceRandom() * 2.0 - 1.0;
+                    half3 instanceHsv = RgbToHsv(albedo);
+                    instanceHsv.x = frac(instanceHsv.x + instance.x * _WC_InstanceColour.x);
+                    instanceHsv.z = saturate(instanceHsv.z * (1.0 + instance.y * _WC_InstanceColour.y));
+                    instanceHsv.y = saturate(instanceHsv.y * (1.0 + instance.z * _WC_InstanceColour.z));
+                    albedo = HsvToRgb(instanceHsv);
+                }
 
                 // 색 카오스: 같은 색 안에 떨어뜨린 다른 색 물방울. 굽기 때 정한 덩어리와 물방울 모양대로 색상을 돌린다.
                 // 채도가 거의 없는 색(회색, 흰색)은 색상이 의미가 없어서 거의 바뀌지 않는다(빛 쪽 파스텔 조각은 따로 보인다).

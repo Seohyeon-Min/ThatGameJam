@@ -18,4 +18,13 @@ float3 TwistPatternUV(float3 uv)
     return uv;
 }
 
+// 인스턴스마다 다른 0~1 값 세 개(같은 인스턴스는 늘 같다). 0 = 굽기를 공유하지 않는 모델이라 0.5(변화 없음).
+float3 InstanceRandom()
+{
+    uint variation = unity_RendererUserValue & 255u;
+    if (variation == 0u)
+        return 0.5;
+    return frac(float3(variation * 0.618034, variation * 0.754878, variation * 0.569840) + 0.31);
+}
+
 #endif
