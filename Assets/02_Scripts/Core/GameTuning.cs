@@ -44,6 +44,10 @@ public class GameTuning : ScriptableObject
     public float birdCryCooldown = 0.8f;
     // Seconds the bird hovers without input before it lands on the nearest roadside branch.
     public float birdIdlePerchDelay = 2f;
+    // How close (world units) a branch must be for idling to auto-perch on it. The camera follows the bird,
+    // so landing on a branch far across the screen reads as the camera snapping there unasked; being sent to
+    // the nearest branch when refused (Refuse) is unrestricted, by design.
+    public float birdIdlePerchRadius = 2.5f;
     // How fast the bird's horizontal speed ramps toward birdSpeed (and toward 0 when slowing for a landing).
     public float birdAcceleration = 10f;
     // How hard it brakes approaching a perch: speed near the branch is sqrt(2 * this * remaining distance).
