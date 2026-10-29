@@ -30,6 +30,8 @@ public class TreeGenerator : MonoBehaviour
     [SerializeField] Vector2 scaleRange = new(0.85f, 1.15f);
     [SerializeField] bool randomRotation = true;
     [SerializeField] int seed = 1;
+    [Tooltip("Trees stand on this terrain's surface. Empty: at this object's height")]
+    [SerializeField] Terrain ground;
     // What Generate made, so Clear removes only these.
     [SerializeField, HideInInspector] List<GameObject> trees = new();
 
@@ -86,7 +88,7 @@ public class TreeGenerator : MonoBehaviour
                     float yaw = (float)random.NextDouble() * 360f;
                     float scale = Mathf.Lerp(scaleRange.x, scaleRange.y, (float)random.NextDouble());
                     var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[chosen], transform);
-                    tree.transform.SetLocalPositionAndRotation(position, Quaternion.Euler(0f, randomRotation ? yaw : 0f, 0f));
+                    tree.transform.SetLocalPositionAndRotation(ground != null ? OnGround(position) : position, Quaternion.Euler(0f, randomRotation ? yaw : 0f, 0f));
                     tree.transform.localScale = Vector3.one * scale;
                     Undo.RegisterCreatedObjectUndo(tree, "Generate Trees");
                     made.Add(tree);
@@ -111,6 +113,14 @@ public class TreeGenerator : MonoBehaviour
                 Undo.DestroyObjectImmediate(tree);
     }
 #endif
+
+    // The local position moved down or up onto the ground terrain's surface.
+    Vector3 OnGround(Vector3 local)
+    {
+        Vector3 world = transform.TransformPoint(local);
+        world.y = ground.transform.position.y + ground.SampleHeight(world);
+        return transform.InverseTransformPoint(world);
+    }
 
     static float Jitter(System.Random random, float amount) => ((float)random.NextDouble() * 2f - 1f) * amount;
 

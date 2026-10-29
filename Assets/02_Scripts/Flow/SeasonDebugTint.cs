@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Debug only: tints the environment redder with each season step, to see that Season.OnSeasonChanged fires before any real
-// environment change exists. Everything but the baby and the bird is tinted, through property blocks, so no material changes.
+// environment change exists. Everything but the baby and the bird is tinted, terrains included, through property blocks, so no
+// material changes.
 // Delete this component (the SeasonDebugTint object) to remove it; the tint goes with it.
 public class SeasonDebugTint : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class SeasonDebugTint : MonoBehaviour
     [SerializeField, Range(0f, 1f)] float maxStrength = 0.7f;
 
     readonly List<Renderer> tinted = new();
+    readonly List<Terrain> tintedTerrains = new();
     MaterialPropertyBlock block;
 
     void OnEnable()
@@ -50,6 +52,16 @@ public class SeasonDebugTint : MonoBehaviour
             }
             tinted.Add(renderer);
         }
+        foreach (Terrain terrain in Terrain.activeTerrains)
+        {
+            Material material = terrain.materialTemplate;
+            if (material == null || !material.HasProperty(BaseColor))
+                continue;
+            block.Clear();
+            block.SetColor(BaseColor, Color.Lerp(material.GetColor(BaseColor), Color.red, strength));
+            terrain.SetSplatMaterialPropertyBlock(block);
+            tintedTerrains.Add(terrain);
+        }
     }
 
     void Clear()
@@ -64,5 +76,9 @@ public class SeasonDebugTint : MonoBehaviour
                 renderer.SetPropertyBlock(block, i);
         }
         tinted.Clear();
+        foreach (Terrain terrain in tintedTerrains)
+            if (terrain != null)
+                terrain.SetSplatMaterialPropertyBlock(block);
+        tintedTerrains.Clear();
     }
 }

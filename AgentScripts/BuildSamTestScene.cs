@@ -6,8 +6,10 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Builds the grey-box test scenes. Sam_Test.unity: stage 1 (fallen log, leaning log, sunlit rest area) and a minimal stage 2
-// right after it on the same road, to test going on from one stage to the next (ADR 0010); also rebuilds the roadside tree prefabs in Assets/03_Prefabs/Trees (decoration only).
+// Builds the grey-box test scenes. Sam_Test.unity: the intro (a snowy walk to the first sunlit spot), stage 1 (fallen log, leaning
+// log, sunlit rest area) and a minimal stage 2 on the same road, to test going on from one stage to the next (ADR 0010), all on one
+// terrain whose edge the camera never shows (ADR 0019), with trees along the road (ADR 0020); also rebuilds the tree prefabs in
+// Assets/03_Prefabs/Trees.
 // Sam_Fog_Test.unity: the fog stage.
 // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.Build
 public static class BuildSamTestScene
@@ -17,24 +19,54 @@ public static class BuildSamTestScene
     const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string MaterialFolder = "Assets/01_Arts/Materials/Test";
     const string TreePrefabFolder = "Assets/03_Prefabs/Trees";
-    // Wood and leaf colours per tree kind. Grey box: the kinds differ only by colour until the art's models arrive.
-    static readonly (Color wood, Color leaves)[] TreeKinds =
+    const string TreeModelFolder = "Assets/01_Arts/Mesh";
+    // Tommy's tree kinds: the bare model, the same tree with leaves, where the bird perches on it, in the tree's own space (tree01's
+    // model sits 2.5 above its file's origin), and which way that branch runs out from the trunk (yaw, degrees). Each perch is on the
+    // top of a branch, 2.7 to 3.9 up, with a little room around and above it for the bird's body; found by casting rays down onto the
+    // wood (the leafy model has the same wood).
+    static readonly (string bare, string leafy, Vector3 perch, float branchYaw)[] TreeModels =
     {
-        (new(0.40f, 0.28f, 0.20f), new(0.25f, 0.42f, 0.30f)), (new(0.30f, 0.30f, 0.33f), new(0.45f, 0.55f, 0.25f)),
-        (new(0.85f, 0.82f, 0.75f), new(0.75f, 0.68f, 0.25f)), (new(0.55f, 0.24f, 0.22f), new(0.25f, 0.45f, 0.48f)),
+        ("tree01", "tree_l_01", new(-0.011f, 2.943f, -0.310f), -167f), ("tree02", "tree_l_02", new(-0.150f, 2.678f, 0.180f), -40f),
+        ("tree03", "tree_l_03", new(0.260f, 3.924f, 0.120f), 65f),
     };
-    // The ground reaches this far past the road's edges (x -5 and 5) on both sides: the terrain the bird flies over among the trees
-    // (the director's sketch, ADR 0013).
-    const float TerrainWidth = 17f;
+    const string TerrainDataPath = "Assets/04_Data/SamTestTerrain.asset";
+    // The streams cross the whole terrain, in Z. Stage 1 lays its logs over them.
+    static readonly Vector2[] Streams = { new(8f, 12f), new(20f, 22.5f) };
+    // How far the terrain dips under a stream; the water's surface is at -0.3.
+    const float StreamDepth = 0.9f;
+    // The terrain is flat where the bird flies and rolls into low hills farther out.
+    const float HillHeight = 3f;
+    // What the camera shows around the point it follows (the camera's own settings, at a 16:9 screen), and how far past that the
+    // terrain and its trees go, so no edge of them comes into view (ADR 0019). A 21:9 screen shows about 6 more; the margin covers it.
+    const float CameraFieldOfView = 40f;
+    const float ScreenAspect = 16f / 9f;
+    const float ViewMargin = 12f;
+    const string SnowfallPrefabPath = "Assets/03_Prefabs/Snowfall.prefab";
+    // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
+    const float SnowHeight = 14f;
+    // New flakes per second on each square metre of the box. With the box upwind (ADR 0024), 0.9 keeps the snow near the camera as
+    // dense as the 1.5 over the old box did, and fills in the far part of the screen that was thin.
+    const float SnowPerSquareMetre = 0.9f;
+    // How the wind pushes the snow, metres per second along X and Z (ADR 0022).
+    static readonly Vector2 SnowWind = new(0.5f, -5f);
+    const float SnowFallSpeed = 1.5f;
+    const float SnowFallSpeedVariation = 0.4f;
+    // How far along the road (Z) past the screen the snow already falls, for the camera following the bird (ADR 0024).
+    const float SnowMoveMargin = 8f;
+    // Trees stand this far past the road's edges (x -5 and 5) on both sides: out to x ±33, 1.5 times the x ±22 of ADR 0013, as the
+    // bird's area is (ADR 0022).
+    const float ForestWidth = 28f;
+    // Past the ground the camera can show, trees stand this much farther, so the forest's edge stays out of view (ADR 0024).
+    const float ForestPastView = 3f;
     // Two dense rows of trees line the road this far past its edges.
     const float RoadsideRowsWidth = 4f;
     // Average distance between neighbouring trees by the road; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
     // Farther out the trees stand sparser, with room to fly between them.
     const float OuterTreeSpacing = 3.2f;
-    // Half the width of the area the bird flies over (the green box of the sketch). Trees stand beyond it to the ground's edge,
-    // so the camera following the bird to the box's edge still shows ground.
-    const float BirdAreaHalfWidth = 13f;
+    // Half the width of the area the bird flies over: the road and the terrain beside it, among the trees; 1.5 times the 13 of
+    // ADR 0013 (ADR 0021).
+    const float BirdAreaHalfWidth = 19.5f;
     const string GirlModelPath = "Assets/01_Arts/Models/Girl/NPC-Girl-Animated.fbx";
     const string GirlAnimatorPath = "Assets/01_Arts/Models/Girl/Girl.controller";
     // 1.3 tall in the model; about 1 here, the height the baby's collider and the levels were made for.
@@ -61,8 +93,12 @@ public static class BuildSamTestScene
     public static string Build()
     {
         NewScene();
-        var (bareTrees, leafyTrees) = BuildTreePrefabs();
-        return Finish(ScenePath, BuildStage1(bareTrees), BuildStage2(leafyTrees));
+        // The leafy trees are made for the season when leaves come (step 3); every stage has the bare ones for now.
+        var (bareTrees, _) = BuildTreePrefabs();
+        Stage[] stages = { BuildIntro(), BuildStage1(), BuildStage2() };
+        var (season, birdCamera) = Populate(stages);
+        BuildWorld(stages, bareTrees, season, birdCamera);
+        return Save(ScenePath);
     }
 
     // Step 2: the fog stage alone (3-0 start, 3-1 half fog, 3-2 full fog, a rest area).
@@ -70,7 +106,8 @@ public static class BuildSamTestScene
     public static string BuildFog()
     {
         NewScene();
-        return Finish(FogScenePath, BuildFogStage());
+        Populate(BuildFogStage());
+        return Save(FogScenePath);
     }
 
     static void NewScene()
@@ -85,8 +122,8 @@ public static class BuildSamTestScene
         clickPlane.GetComponent<BoxCollider>().size = new Vector3(400f, 0.1f, 400f);
     }
 
-    // Adds the baby, the bird, the camera brain and the game flow over the given stages, and saves the scene.
-    static string Finish(string scenePath, params Stage[] stages)
+    // Adds the baby, the bird, the camera brain and the game flow over the given stages.
+    static (Season, BirdCamera) Populate(params Stage[] stages)
     {
         Baby baby = BuildBaby();
         BirdController bird = BuildBird();
@@ -112,28 +149,36 @@ public static class BuildSamTestScene
             so.FindProperty("birdCamera").objectReferenceValue = birdCamera;
             so.FindProperty("season").objectReferenceValue = season;
         });
+        return (season, birdCamera);
+    }
 
+    static string Save(string scenePath)
+    {
         EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), scenePath);
         AssetDatabase.SaveAssets();
         return scenePath;
     }
 
+    // The intro (the director's sketch): the baby sleeps at the start of the road while snow falls, wakes, and walks to the first
+    // sunlit spot, where stage 1 begins. It has no device; the design doc's intro and snow walk are this one stage (ADR 0018).
+    static Stage BuildIntro()
+    {
+        var root = new GameObject("Intro");
+        BabyRoute route = Route(root, new Vector3(0f, 0f, -21f), new Vector3(0f, 0f, 0f));
+        RestLight(root, route[route.Count - 1].position);
+        // The road and the terrain beside it, z -26 .. -2 (stage 1's area starts there).
+        return StageComponent(root, new Vector3(0f, 0f, -22f), new Vector3(1.5f, BirdAltitude, -23f), route,
+            new Bounds(new Vector3(0f, 0f, -14f), new Vector3(2f * BirdAreaHalfWidth, 1f, 24f)));
+    }
+
     // 1-1 fallen log over the first stream, 1-2 leaning log by the second stream; the stage ends in the sunlit spot right after it.
     // The road runs along +Z.
-    static Stage BuildStage1(GameObject[] bareTrees)
+    static Stage BuildStage1()
     {
         var root = new GameObject("Stage1");
-        Material snow = Mat("Snow", new Color(0.92f, 0.95f, 1f));
-        Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
         Material wood = Mat("Trunk", new Color(0.35f, 0.25f, 0.18f));
 
-        // Banks and streams run on under the roadside trees.
-        Ground(root, "Bank_A", new Vector3(0f, 0f, 3f), 10f, snow, TerrainWidth);     // z -2 .. 8
-        Ground(root, "Bank_B", new Vector3(0f, 0f, 16f), 8f, snow, TerrainWidth);     // z 12 .. 20
-        Ground(root, "Bank_C", new Vector3(0f, 0f, 24.75f), 4.5f, snow, TerrainWidth);  // z 22.5 .. 27
-        Water(root, "Stream_1", new Vector3(0f, 0f, 10f), 4f, water, TerrainWidth);
-        Water(root, "Stream_2", new Vector3(0f, 0f, 21.25f), 2.5f, water, TerrainWidth); // z 20 .. 22.5
-
+        // The two streams (Streams, z 8 .. 12 and 20 .. 22.5) are in the terrain (BuildWorld).
         // 1-1: the fallen log is already a bridge; the stump shows it once stood.
         GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
         bridge.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
@@ -141,9 +186,6 @@ public static class BuildSamTestScene
         Primitive(PrimitiveType.Cylinder, "Stump", new Vector3(0f, 0.35f, 7.2f), new Vector3(0.65f, 0.35f, 0.65f), wood, root);
 
         LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
-
-        // Stage 1 has the bare trees; the leafy ones are for other stages.
-        Forest(bareTrees, root, new Vector2(-2f, 8f), new Vector2(12f, 20f), new Vector2(22.5f, 27f));
 
         // Points carry height: 0.6 is the top of a fallen log.
         BabyRoute route = Route(root,
@@ -167,12 +209,9 @@ public static class BuildSamTestScene
     }
 
     // Goes on from stage 1's sunlit spot (z 25) on the same road: just a walk to its own sunlit spot, to test going on to the next stage.
-    // Leafy trees, so the two stages are told apart.
-    static Stage BuildStage2(GameObject[] leafyTrees)
+    static Stage BuildStage2()
     {
         var root = new GameObject("Stage2");
-        Ground(root, "Bank", new Vector3(0f, 0f, 34f), 14f, Mat("Snow", new Color(0.92f, 0.95f, 1f)), TerrainWidth); // z 27 .. 41
-        Forest(leafyTrees, root, new Vector2(27f, 41f));
         BabyRoute route = Route(root, new Vector3(0f, 0f, 30f), new Vector3(0f, 0f, 38.5f));
         RestLight(root, route[route.Count - 1].position);
         // The baby starts where stage 1 left it asleep. The bird start is only for the dev tool's skip.
@@ -639,6 +678,7 @@ public static class BuildSamTestScene
         var cameraObject = new GameObject("FollowCamera");
         cameraObject.transform.SetPositionAndRotation(CameraOffset, Quaternion.LookRotation(-CameraOffset));
         var followCamera = cameraObject.AddComponent<CinemachineCamera>();
+        followCamera.Lens.FieldOfView = CameraFieldOfView;
         followCamera.Target.TrackingTarget = point.transform;
         var follow = cameraObject.AddComponent<CinemachineFollow>();
         follow.FollowOffset = CameraOffset + Vector3.up * CameraAimHeight;
@@ -675,107 +715,240 @@ public static class BuildSamTestScene
         return routeObject.AddComponent<BabyRoute>();
     }
 
-    // A bank of snow whose top is at y = 0, `length` long along Z, 10 wide plus `sides` more on each side.
-    static void Ground(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
+    // One terrain under every stage, long and wide enough that the camera, wherever the bird takes it, never shows its edge; the streams
+    // across it; each stage's trees; and the snow of the intro (ADR 0018, ADR 0019, ADR 0020).
+    static void BuildWorld(Stage[] stages, GameObject[] trees, Season season, BirdCamera birdCamera)
     {
-        GameObject ground = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.25f, new Vector3(10f + 2f * sides, 0.5f, length), material, parent);
-        ground.layer = groundLayer;
+        // The camera follows a point inside the stages' areas (BirdCamera).
+        Bounds flown = stages[0].area;
+        foreach (Stage stage in stages)
+            flown.Encapsulate(stage.area);
+        var (reachMin, reachMax) = Extent(CameraGround());
+        Rect map = Rect.MinMaxRect(flown.min.x + reachMin.x - ViewMargin, flown.min.z + reachMin.y - ViewMargin,
+            flown.max.x + reachMax.x + ViewMargin, flown.max.z + reachMax.y + ViewMargin);
+
+        var world = new GameObject("World");
+        Terrain terrain = BuildTerrain(world, map);
+        Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
+        for (int i = 0; i < Streams.Length; i++)
+            Water(world, $"Stream_{i + 1}", map, Streams[i], water);
+        // The forest reaches x ±(5 + ForestWidth) (ADR 0022), and wherever the camera sees farther, a little past what it sees, so the
+        // forest's edge never shows (ADR 0024). The view reaches far up-left (-X) and far ahead (+Z), the top of the screen.
+        float left = Mathf.Min(-5f - ForestWidth, flown.min.x + reachMin.x - ForestPastView);
+        float right = Mathf.Max(5f + ForestWidth, flown.max.x + reachMax.x + ForestPastView);
+        float behindStart = flown.min.z + reachMin.y - ForestPastView;
+        float ahead = flown.max.z + reachMax.y + ForestPastView;
+        // Behind where the baby starts, the first stage's trees reach back as far as the camera sees, also on the road, which starts at
+        // the baby (ADR 0021).
+        Forest(stages[0].gameObject, trees, terrain, behindStart, stages[0].area.max.z, left, right);
+        Trees(trees, stages[0].gameObject, terrain, "TreesBehindTheStart", OuterTreeSpacing, 3,
+            new[] { new Vector2(behindStart, stages[0].babyStart.position.z - 3f) }, new Vector2(-4.6f, 4.6f));
+        for (int i = 1; i < stages.Length; i++)
+            Forest(stages[i].gameObject, trees, terrain, stages[i].area.min.z, stages[i].area.max.z, left, right);
+        // Past the last stage, as far ahead as the camera sees (ADR 0024).
+        Forest(Child(world, "TreesAhead", Vector3.zero), trees, terrain, stages[^1].area.max.z, ahead, left, right);
+        Snow(world, season, birdCamera);
     }
 
-    // Water is not walkable ground, but clicking it sends the bird there: its collider is on the click plane's layer.
-    static void Water(GameObject parent, string name, Vector3 center, float length, Material material, float sides = 0f)
+    // The corners of the ground the camera shows, as X and Z offsets from the point it follows (BuildBirdCamera's camera).
+    static Vector2[] CameraGround()
     {
-        GameObject water = Primitive(PrimitiveType.Cube, name, center + Vector3.down * 0.45f, new Vector3(10f + 2f * sides, 0.3f, length), material, parent);
+        Vector3 eye = CameraOffset + Vector3.up * CameraAimHeight;
+        Quaternion look = Quaternion.LookRotation(-CameraOffset);
+        float up = Mathf.Tan(CameraFieldOfView * 0.5f * Mathf.Deg2Rad);
+        float side = up * ScreenAspect;
+        var corners = new Vector2[4];
+        (float x, float y)[] screen = { (-1f, -1f), (1f, -1f), (1f, 1f), (-1f, 1f) };
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 ray = look * new Vector3(screen[i].x * side, screen[i].y * up, 1f);
+            Vector3 ground = eye + ray * (-eye.y / ray.y);
+            corners[i] = new Vector2(ground.x, ground.z);
+        }
+        return corners;
+    }
+
+    static (Vector2 min, Vector2 max) Extent(Vector2[] points)
+    {
+        Vector2 min = points[0], max = points[0];
+        foreach (Vector2 point in points)
+        {
+            min = Vector2.Min(min, point);
+            max = Vector2.Max(max, point);
+        }
+        return (min, max);
+    }
+
+    static Terrain BuildTerrain(GameObject parent, Rect map)
+    {
+        const int resolution = 513;
+        var data = new TerrainData { heightmapResolution = resolution };
+        data.size = new Vector3(map.width, StreamDepth + HillHeight, map.height);
+        var heights = new float[resolution, resolution];
+        for (int row = 0; row < resolution; row++)
+            for (int column = 0; column < resolution; column++)
+            {
+                float x = Mathf.Lerp(map.xMin, map.xMax, column / (resolution - 1f));
+                float z = Mathf.Lerp(map.yMin, map.yMax, row / (resolution - 1f));
+                heights[row, column] = (GroundHeight(x, z) + StreamDepth) / data.size.y;
+            }
+        data.SetHeights(0, 0, heights);
+        AssetDatabase.DeleteAsset(TerrainDataPath);
+        AssetDatabase.CreateAsset(data, TerrainDataPath);
+
+        GameObject terrainObject = Terrain.CreateTerrainGameObject(data);
+        terrainObject.name = "Terrain";
+        terrainObject.layer = groundLayer;
+        terrainObject.transform.SetParent(parent.transform, false);
+        terrainObject.transform.position = new Vector3(map.xMin, -StreamDepth, map.yMin);
+        var terrain = terrainObject.GetComponent<Terrain>();
+        terrain.materialTemplate = Mat("Snow", new Color(0.92f, 0.95f, 1f));
+        // The plain Lit snow material does not place the terrain's vertices itself, which instanced drawing needs.
+        terrain.drawInstanced = false;
+        return terrain;
+    }
+
+    // Flat at 0 where the bird flies (the road and the land beside it), low hills farther out, and a steep dip under each stream.
+    // Near a stream the hills flatten out, so the streams run through level ground.
+    static float GroundHeight(float x, float z)
+    {
+        const float bankWidth = 0.3f;
+        float toStream = float.MaxValue;
+        foreach (Vector2 stream in Streams)
+            toStream = Mathf.Min(toStream, Mathf.Max(0f, Mathf.Max(stream.x - z, z - stream.y)));
+        float hills = HillHeight * Mathf.PerlinNoise(x * 0.06f + 50f, z * 0.06f + 50f)
+            * Mathf.SmoothStep(0f, 1f, (Mathf.Abs(x) - BirdAreaHalfWidth - 3f) / 15f)
+            * Mathf.SmoothStep(0f, 1f, (toStream - 2f) / 8f);
+        return Mathf.Lerp(-StreamDepth, hills, toStream / bankWidth);
+    }
+
+    // Across the whole terrain, between the stream's Z edges, its surface at -0.3. Water is not walkable ground, but clicking it sends
+    // the bird there: its collider is on the click plane's layer.
+    static void Water(GameObject parent, string name, Rect map, Vector2 stream, Material material)
+    {
+        GameObject water = Primitive(PrimitiveType.Cube, name, new Vector3(map.center.x, -0.45f, (stream.x + stream.y) / 2f),
+            new Vector3(map.width, 0.3f, stream.y - stream.x), material, parent);
         water.layer = clickPlaneLayer;
     }
 
-    // Each tree kind comes bare and with leaves. A rough trunk with branches forking upward (Tommy's tree01 mesh); the leafy one adds
-    // clumps of leaves at the branch tips. The bird can perch on one branch of every tree.
+    // Each of Tommy's tree kinds comes bare and with leaves. The bird can perch on one branch of every tree: clicking near the perch
+    // point lands it there; left idle, the bird lands on the nearest one by itself (ADR 0009).
     static (GameObject[] bare, GameObject[] leafy) BuildTreePrefabs()
     {
         if (!AssetDatabase.IsValidFolder(TreePrefabFolder))
             AssetDatabase.CreateFolder("Assets/03_Prefabs", "Trees");
-        var bare = new GameObject[TreeKinds.Length];
-        var leafy = new GameObject[TreeKinds.Length];
-        for (int i = 0; i < TreeKinds.Length; i++)
+        var bare = new GameObject[TreeModels.Length];
+        var leafy = new GameObject[TreeModels.Length];
+        for (int i = 0; i < TreeModels.Length; i++)
         {
-            Material wood = Mat($"Tree_{i + 1}", TreeKinds[i].wood);
-            Material leaves = Mat($"TreeLeaves_{i + 1}", TreeKinds[i].leaves);
-            bare[i] = SaveTree($"Tree_{i + 1}_Bare", wood, null);
-            leafy[i] = SaveTree($"Tree_{i + 1}_Leafy", wood, leaves);
+            bare[i] = SaveTree($"Tree_{i + 1}_Bare", TreeModels[i].bare, TreeModels[i].perch, TreeModels[i].branchYaw);
+            leafy[i] = SaveTree($"Tree_{i + 1}_Leafy", TreeModels[i].leafy, TreeModels[i].perch, TreeModels[i].branchYaw);
         }
         return (bare, leafy);
     }
 
-    static GameObject SaveTree(string name, Material wood, Material leaves)
+    static GameObject SaveTree(string name, string model, Vector3 perch, float branchYaw)
     {
         var root = new GameObject(name);
-        Limb(root, "Trunk", Vector3.zero, Vector3.up, 5f, 0.4f, wood);
-        Vector3 top = Limb(root, "TrunkTop", new Vector3(0f, 5f, 0f), Vector3.up, 3.5f, 0.28f, wood);
-        var tips = new System.Collections.Generic.List<Vector3> { top };
-        // Start height, direction around the trunk, lean from upright, length, thickness.
-        (float y, float yaw, float lean, float length, float thickness)[] branches =
-        {
-            (4f, 30f, 35f, 3f, 0.16f), (5.5f, 160f, 30f, 2.8f, 0.14f), (6.5f, 260f, 25f, 2.4f, 0.12f), (7.5f, 90f, 20f, 2f, 0.1f),
-        };
-        foreach (var b in branches)
-            tips.Add(Limb(root, "Branch", new Vector3(0f, b.y, 0f), Quaternion.Euler(0f, b.yaw, 0f) * Quaternion.Euler(b.lean, 0f, 0f) * Vector3.up,
-                b.length, b.thickness, wood));
-
-        // Every tree has one low, nearly level branch the bird perches on, a little above its flying height.
-        // Clicking near the perch point lands the bird there; left idle, the bird lands on the nearest one by itself.
-        Vector3 perchFrom = new(0f, 2.6f, 0f);
-        Vector3 perchDirection = Quaternion.Euler(75f, 0f, 0f) * Vector3.up;
-        const float perchThickness = 0.14f;
-        tips.Add(Limb(root, "PerchBranch", perchFrom, perchDirection, 1.8f, perchThickness, wood));
-        GameObject spot = Child(root, "PerchPoint", perchFrom + perchDirection * 1.25f + Vector3.up * (perchThickness / 2f));
+        PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>($"{TreeModelFolder}/{model}.fbx"), root.transform);
+        GameObject spot = Child(root, "PerchPoint", perch);
+        // Forward runs across the branch: the bird lines up with it, its feet holding the branch.
+        spot.transform.localRotation = Quaternion.Euler(0f, branchYaw + 90f, 0f);
         spot.layer = interactableLayer;
         var clickArea = spot.AddComponent<SphereCollider>();
         clickArea.isTrigger = true;
         clickArea.radius = 0.6f;
         var perchable = spot.AddComponent<Perchable>();
-        Set(perchable, so => so.FindProperty("idleSpot").boolValue = true);
-        if (leaves != null)
-            foreach (Vector3 tip in tips)
-                for (int i = 0; i < 3; i++)
-                {
-                    // Three tilted blocks per tip, not one round ball.
-                    Quaternion turn = Quaternion.Euler(25f * i, 120f * i + tip.y * 40f, 15f * i);
-                    GameObject clump = Primitive(PrimitiveType.Cube, "Leaves", tip + turn * new Vector3(0.45f, 0f, 0f), Vector3.one * 1.2f, leaves, root);
-                    clump.transform.rotation = turn;
-                    Object.DestroyImmediate(clump.GetComponent<Collider>());
-                }
+        Set(perchable, so =>
+        {
+            so.FindProperty("idleSpot").boolValue = true;
+            so.FindProperty("alignBird").boolValue = true;
+        });
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{TreePrefabFolder}/{name}.prefab");
         Object.DestroyImmediate(root);
         return prefab;
     }
 
-    // A cylinder from `from` along `direction`; returns its far end.
-    static Vector3 Limb(GameObject parent, string name, Vector3 from, Vector3 direction, float length, float thickness, Material material)
+    // Trees over a Z span but the streams: two dense rows along both edges of the road (also on the camera side; the director accepts
+    // that they hide the road), and sparser trees on the terrain beyond, out to X left and right (ADR 0013, ADR 0020, ADR 0024).
+    static void Forest(GameObject parent, GameObject[] prefabs, Terrain ground, float zMin, float zMax, float left, float right)
     {
-        GameObject limb = Primitive(PrimitiveType.Cylinder, name, from + direction * (length / 2f), new Vector3(thickness, length / 2f, thickness), material, parent);
-        limb.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
-        Object.DestroyImmediate(limb.GetComponent<Collider>());
-        return from + direction * length;
-    }
+        var land = new System.Collections.Generic.List<Vector2>();
+        float from = zMin;
+        foreach (Vector2 stream in Streams)
+            if (stream.y > zMin && stream.x < zMax)
+            {
+                if (stream.x > from)
+                    land.Add(new Vector2(from, stream.x));
+                from = stream.y;
+            }
+        if (from < zMax)
+            land.Add(new Vector2(from, zMax));
+        Vector2[] landRanges = land.ToArray();
 
-    // Trees over the stage's ground: two dense rows along both edges of the road (also on the camera side; the director accepts that
-    // they hide the road), and sparser trees on the terrain out to the ground's edge. Not in the streams: only over the given Z ranges.
-    static void Forest(GameObject[] prefabs, GameObject parent, params Vector2[] zRanges)
-    {
         const float rowsEnd = 5f + RoadsideRowsWidth - 0.6f;
-        Trees(prefabs, parent, "RoadsideTrees", TreeSpacing, 1, zRanges,
-            new Vector2(-rowsEnd, -4.6f), new Vector2(4.6f, rowsEnd));
-        Trees(prefabs, parent, "TerrainTrees", OuterTreeSpacing, 2, zRanges,
-            new Vector2(-5f - TerrainWidth + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, 5f + TerrainWidth - 0.6f));
+        Trees(prefabs, parent, ground, "RoadsideTrees", TreeSpacing, 1, landRanges, new Vector2(-rowsEnd, -4.6f), new Vector2(4.6f, rowsEnd));
+        Trees(prefabs, parent, ground, "TerrainTrees", OuterTreeSpacing, 2, landRanges,
+            new Vector2(left + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, right - 0.6f));
     }
 
-    // A TreeGenerator over each X range times each Z range, with the seed fixed so rebuilding gives the same trees.
-    static void Trees(GameObject[] prefabs, GameObject parent, string name, float spacing, int seed, Vector2[] zRanges, params Vector2[] xRanges)
+    // Falls over what the camera shows, in the intro only (SeasonSnow): a box turned with the camera, following the camera's point.
+    // The wind carries a flake as it falls, so the box lies upwind (ADR 0024): over the ground on screen moved back by a whole fall's
+    // drift (flakes landing there) and over the camera moved back by the drift down to its height (flakes passing near it), for the
+    // slowest and the fastest flakes. It also reaches SnowMoveMargin along the road both ways, so the camera moving along it finds snow
+    // already falling. Flakes pass through the ground instead of colliding, which is cheaper; the ground hides them.
+    static void Snow(GameObject parent, Season season, BirdCamera birdCamera)
+    {
+        Quaternion turn = Quaternion.Euler(0f, Quaternion.LookRotation(-CameraOffset).eulerAngles.y, 0f);
+        Vector2[] drifts = { SnowWind * (SnowHeight / SnowFallSpeed), SnowWind * (SnowHeight / (SnowFallSpeed + SnowFallSpeedVariation)) };
+        Vector2 eye = new(CameraOffset.x, CameraOffset.z);
+        float aboveEye = (SnowHeight - (CameraOffset.y + CameraAimHeight)) / SnowHeight;
+        var local = new System.Collections.Generic.List<Vector2>();
+        foreach (Vector2 drift in drifts)
+        {
+            foreach (Vector2 corner in CameraGround())
+                foreach (float along in new[] { -SnowMoveMargin, 0f, SnowMoveMargin })
+                    local.Add(Turned(corner + new Vector2(0f, along) - drift));
+            local.Add(Turned(eye - drift * aboveEye));
+        }
+        Vector2 Turned(Vector2 flat)
+        {
+            Vector3 point = Quaternion.Inverse(turn) * new Vector3(flat.x, 0f, flat.y);
+            return new Vector2(point.x, point.z);
+        }
+        var (min, max) = Extent(local.ToArray());
+        Vector3 middle = turn * new Vector3((min.x + max.x) / 2f, 0f, (min.y + max.y) / 2f);
+        GameObject center = Child(birdCamera.gameObject, "SnowCenter", birdCamera.transform.position + middle);
+
+        var snow = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(SnowfallPrefabPath), parent.transform);
+        snow.transform.SetPositionAndRotation(new Vector3(0f, SnowHeight, 0f), turn);
+        snow.transform.localScale = Vector3.one;
+        var snowfall = snow.GetComponent<Snowfall>();
+        Set(snowfall, so =>
+        {
+            so.FindProperty("followTarget").objectReferenceValue = center.transform;
+            so.FindProperty("areaSize").vector2Value = max - min;
+            so.FindProperty("spawnRate").floatValue = SnowPerSquareMetre * (max.x - min.x) * (max.y - min.y);
+            so.FindProperty("fallSpeed").floatValue = SnowFallSpeed;
+            so.FindProperty("fallSpeedVariation").floatValue = SnowFallSpeedVariation;
+            so.FindProperty("wind").vector2Value = SnowWind;
+            so.FindProperty("flakeSize").floatValue = 0.26f;
+            so.FindProperty("maxLifetime").floatValue = 11f;
+            so.FindProperty("collideWithWorld").boolValue = false;
+        });
+        snowfall.Configure();
+        var seasonSnow = snow.AddComponent<SeasonSnow>();
+        Set(seasonSnow, so => so.FindProperty("season").objectReferenceValue = season);
+    }
+
+    // A TreeGenerator over each X range times each Z range, on the ground, with the seed fixed so rebuilding gives the same trees.
+    static void Trees(GameObject[] prefabs, GameObject parent, Terrain ground, string name, float spacing, int seed, Vector2[] zRanges,
+        params Vector2[] xRanges)
     {
         var generator = Child(parent, name, parent.transform.position).AddComponent<TreeGenerator>();
         Set(generator, so =>
         {
+            so.FindProperty("ground").objectReferenceValue = ground;
             SerializedProperty kinds = so.FindProperty("prefabs");
             kinds.arraySize = prefabs.Length;
             for (int i = 0; i < prefabs.Length; i++)
