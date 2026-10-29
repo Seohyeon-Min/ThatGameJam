@@ -12,6 +12,8 @@ public class Baby : CryListener
     static readonly int AsleepParam = Animator.StringToHash("Asleep");
     static readonly int LookAroundParam = Animator.StringToHash("LookAround");
     static readonly int SleepState = Animator.StringToHash("Sleep");
+    static readonly int WalkState = Animator.StringToHash("Walk");
+    static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -32,6 +34,14 @@ public class Baby : CryListener
     public event Action ReachedRest;
 
     BabyRoute route;
+    bool cryPending;
+    // Crossing a balance beam (a LeaningLog blocker, or a route point marked BalanceBeamStart):
+    // BalanceWalk plays instead of Walk, and the baby ignores curious pauses/cries until BalanceBeamEnd.
+    bool onBalanceBeam;
+    float curiousPauseCooldown;
+    // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
+    float noiseSeed;
+    Quaternion modelBaseRotation;
 
     protected override float CryRadius => GameTuning.Current.babyWakeCryRadius;
 
@@ -39,7 +49,28 @@ public class Baby : CryListener
     {
         Instance = this;
         wakeTimer.Resolved += byBird => StartCoroutine(WakeAndWalk(byBird));
+        noiseSeed = UnityEngine.Random.Range(0f, 100f);
+        modelBaseRotation = animator.transform.localRotation;
+        curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
     }
+
+    // Cold tremor on the model only (never on transform, which drives movement/arrival checks elsewhere).
+    // Off once asleep/resting: curled up out of the wind by then.
+    void Update()
+    {
+        if (State == BabyState.Sleeping || State == BabyState.Resting)
+        {
+            animator.transform.localRotation = modelBaseRotation;
+            return;
+        }
+        GameTuning tuning = GameTuning.Current;
+        float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
+        float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
+        animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
+    }
+
+    // Smooth noise in [-0.5, 0.5); offset decorrelates it from the other channels sharing noiseSeed.
+    float Noise(float offset, float frequency) => Mathf.PerlinNoise(noiseSeed + offset, Time.time * frequency) - 0.5f;
 
     // Moves the baby to the spot, already lying asleep there, ready to wake and walk the route.
     public void PlaceAsleep(Transform at, BabyRoute route)
@@ -81,6 +112,8 @@ public class Baby : CryListener
     {
         if (State == BabyState.Sleeping)
             wakeTimer.ResolveByBird();
+        else if (State == BabyState.Walking)
+            cryPending = true;
     }
 
     IEnumerator WakeAndWalk(bool byBird)
@@ -103,6 +136,17 @@ public class Baby : CryListener
             State = BabyState.Walking;
             yield return WalkTo(route[i].position);
 
+            if (onBalanceBeam && route[i].TryGetComponent(out BalanceBeamEnd _))
+            {
+                onBalanceBeam = false;
+                animator.CrossFade(WalkState, 0.25f);
+            }
+            else if (!onBalanceBeam && route[i].TryGetComponent(out BalanceBeamStart _))
+            {
+                onBalanceBeam = true;
+                animator.CrossFade(BalanceWalkState, 0.25f);
+            }
+
             if (!route[i].TryGetComponent(out StopPoint stop))
                 continue;
 
@@ -123,6 +167,12 @@ public class Baby : CryListener
                 State = BabyState.Reacting;
                 yield return LookUp(tuning.babyLookUpDuration);
             }
+            // A fallen log or similar: arms-out balance until the far end (BalanceBeamEnd) is reached.
+            if (blocker is LeaningLog)
+            {
+                onBalanceBeam = true;
+                animator.CrossFade(BalanceWalkState, 0.25f);
+            }
         }
 
         State = BabyState.Resting;
@@ -135,15 +185,55 @@ public class Baby : CryListener
     IEnumerator WalkTo(Vector3 target)
     {
         while (!StepToward(target))
+        {
+            // Full attention on the crossing while balancing: no glancing around or reacting to cries.
+            if (!onBalanceBeam)
+            {
+                if (cryPending)
+                {
+                    cryPending = false;
+                    yield return ReactToCry();
+                }
+                else if ((curiousPauseCooldown -= Time.deltaTime) <= 0f)
+                {
+                    yield return CuriousPause();
+                }
+            }
             yield return null;
+        }
+    }
+
+    // Pauses the walk to look at the bird when it cries nearby mid-route.
+    IEnumerator ReactToCry()
+    {
+        State = BabyState.Reacting;
+        yield return LookUp(GameTuning.Current.babyLookUpDuration);
+        State = BabyState.Walking;
+    }
+
+    // Pauses the walk to glance around, like a child noticing something nearby rather than marching straight through.
+    IEnumerator CuriousPause()
+    {
+        GameTuning tuning = GameTuning.Current;
+        curiousPauseCooldown = UnityEngine.Random.Range(tuning.babyCuriousPauseIntervalMin, tuning.babyCuriousPauseIntervalMax);
+        StandStill();
+        animator.SetBool(LookAroundParam, true);
+        yield return new WaitForSeconds(tuning.babyLookAroundDuration);
+        animator.SetBool(LookAroundParam, false);
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
+    // Heading wanders a little and pace breathes a little around babyWalkSpeed, purely cosmetic: transform.position still
+    // closes in on the exact target, so arrival (and anything retracing this path, e.g. the fog trail) is unaffected.
     public bool StepToward(Vector3 target)
     {
         animator.SetBool(WalkingParam, true);
-        TurnToward(target - transform.position);
-        transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.babyWalkSpeed * Time.deltaTime);
+        GameTuning tuning = GameTuning.Current;
+        Vector3 toTarget = target - transform.position;
+        float wanderYaw = Noise(31f, tuning.babyWanderFrequency) * 2f * tuning.babyWanderAngle;
+        TurnToward(Quaternion.Euler(0f, wanderYaw, 0f) * toTarget);
+        float speedFactor = 1f + Noise(0f, tuning.babySpeedVariationFrequency) * 2f * tuning.babySpeedVariationAmount;
+        transform.position = Vector3.MoveTowards(transform.position, target, tuning.babyWalkSpeed * speedFactor * Time.deltaTime);
         return transform.position == target;
     }
 

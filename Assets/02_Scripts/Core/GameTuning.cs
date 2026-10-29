@@ -24,6 +24,17 @@ public class GameTuning : ScriptableObject
     public float babyLookUpDuration = 1.5f;
     public float babyLookAroundDuration = 1.5f;
     public float babyWakeCryRadius = 8f;
+    // Organic walking: gentle speed/heading noise so the route doesn't look ruler-straight.
+    [Range(0f, 1f)] public float babySpeedVariationAmount = 0.15f;
+    public float babySpeedVariationFrequency = 0.6f;
+    public float babyWanderAngle = 12f;
+    public float babyWanderFrequency = 0.3f;
+    // How often (seconds, random between the two) the baby pauses mid-walk to look around.
+    public float babyCuriousPauseIntervalMin = 4f;
+    public float babyCuriousPauseIntervalMax = 9f;
+    // Cold shiver: small additive tremor on the model while awake (design doc: winter, following the bird).
+    public float babyShiverAngle = 2.5f;
+    public float babyShiverFrequency = 9f;
 
     [Header("Bird")]
     public float birdSpeed = 6f;
