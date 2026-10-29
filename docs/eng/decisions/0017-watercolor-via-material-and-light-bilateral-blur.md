@@ -1,4 +1,4 @@
-# 0003. Watercolor look comes from a material shader and a light bilateral blur
+# 0017. Watercolor look comes from a material shader and a light bilateral blur
 
 - Status: accepted
 - Date: 2026-10-27
