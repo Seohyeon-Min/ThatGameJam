@@ -44,14 +44,13 @@ public static class BuildSamTestScene
     const string SnowflakeTexturePath = MaterialFolder + "/Snowflake.png";
     // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
     const float SnowHeight = 14f;
-    // New flakes per second on each square metre of the box they start from.
-    const float SnowPerSquareMetre = 1.0f;
-    // Metres per second along X and Z (ADR 0021). Falling about 8 s, a flake drifts about 4 m along X and 41 m along -Z.
+    // New flakes per second on each square metre of the ground the camera shows.
+    const float SnowPerSquareMetre = 1.5f;
+    // How the wind pushes the snow, metres per second along X and Z (ADR 0022).
     static readonly Vector2 SnowWind = new(0.5f, -5f);
-    const float SnowFallSpeed = 1.5f;
-    const float SnowFallSpeedVariation = 0.4f;
-    // Trees stand this far past the road's edges (x -5 and 5) on both sides (ADR 0013, ADR 0020).
-    const float ForestWidth = 17f;
+    // Trees stand this far past the road's edges (x -5 and 5) on both sides: out to x ±33, 1.5 times the x ±22 of ADR 0013, as the
+    // bird's area is (ADR 0022).
+    const float ForestWidth = 28f;
     // Two dense rows of trees line the road this far past its edges.
     const float RoadsideRowsWidth = 4f;
     // Average distance between neighbouring trees by the road; dense like the director's reference pictures.
@@ -873,31 +872,19 @@ public static class BuildSamTestScene
             new Vector2(-5f - ForestWidth + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, 5f + ForestWidth - 0.6f));
     }
 
-    // Falls over the ground the camera shows, in the intro only (SeasonSnow): a box turned with the camera, following the camera's
-    // point. The wind carries a flake while it falls, so the box lies upwind: over the shown ground moved back by a whole fall's
-    // drift (flakes landing there), and over the camera moved back by the drift down to its height (flakes passing close to it).
-    // Flakes pass through the ground instead of colliding, which is cheaper; the ground hides them.
+    // Falls over the ground the camera shows, in the intro only (SeasonSnow): a box turned with the camera, around that ground,
+    // following the camera's point. Flakes pass through the ground instead of colliding, which is cheaper; the ground hides them.
     static void Snow(GameObject parent, Season season, BirdCamera birdCamera)
     {
         Quaternion turn = Quaternion.Euler(0f, Quaternion.LookRotation(-CameraOffset).eulerAngles.y, 0f);
-        // A whole fall's drift for the slowest and the fastest flakes.
-        Vector2[] drifts = { SnowWind * (SnowHeight / SnowFallSpeed), SnowWind * (SnowHeight / (SnowFallSpeed + SnowFallSpeedVariation)) };
         Vector2[] ground = CameraGround();
-        Vector2 eye = new(CameraOffset.x, CameraOffset.z);
-        float aboveEye = (SnowHeight - (CameraOffset.y + CameraAimHeight)) / SnowHeight;
-        var local = new System.Collections.Generic.List<Vector2>();
-        foreach (Vector2 drift in drifts)
+        var local = new Vector2[ground.Length];
+        for (int i = 0; i < ground.Length; i++)
         {
-            foreach (Vector2 corner in ground)
-                local.Add(Turned(corner - drift));
-            local.Add(Turned(eye - drift * aboveEye));
+            Vector3 point = Quaternion.Inverse(turn) * new Vector3(ground[i].x, 0f, ground[i].y);
+            local[i] = new Vector2(point.x, point.z);
         }
-        Vector2 Turned(Vector2 flat)
-        {
-            Vector3 point = Quaternion.Inverse(turn) * new Vector3(flat.x, 0f, flat.y);
-            return new Vector2(point.x, point.z);
-        }
-        var (min, max) = Extent(local.ToArray());
+        var (min, max) = Extent(local);
         Vector3 middle = turn * new Vector3((min.x + max.x) / 2f, 0f, (min.y + max.y) / 2f);
         GameObject center = Child(birdCamera.gameObject, "SnowCenter", birdCamera.transform.position + middle);
 
@@ -910,12 +897,11 @@ public static class BuildSamTestScene
             so.FindProperty("followTarget").objectReferenceValue = center.transform;
             so.FindProperty("areaSize").vector2Value = max - min;
             so.FindProperty("spawnRate").floatValue = SnowPerSquareMetre * (max.x - min.x) * (max.y - min.y);
-            so.FindProperty("fallSpeed").floatValue = SnowFallSpeed;
-            so.FindProperty("fallSpeedVariation").floatValue = SnowFallSpeedVariation;
+            so.FindProperty("fallSpeed").floatValue = 1.5f;
+            so.FindProperty("fallSpeedVariation").floatValue = 0.4f;
             so.FindProperty("wind").vector2Value = SnowWind;
             so.FindProperty("flakeSize").floatValue = 0.26f;
-            // Long enough for the slowest flake to reach the ground.
-            so.FindProperty("maxLifetime").floatValue = SnowHeight / SnowFallSpeed + 0.5f;
+            so.FindProperty("maxLifetime").floatValue = 11f;
             so.FindProperty("collideWithWorld").boolValue = false;
             so.FindProperty("snowMaterial").objectReferenceValue = SnowflakeMaterial();
         });
