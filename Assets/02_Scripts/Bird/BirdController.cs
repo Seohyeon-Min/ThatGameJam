@@ -1,21 +1,26 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself.
-// Flies at the current map's fixed altitude inside the area BirdCamera gives, and perches only on screen.
+// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed
+// (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
+// Flies at the current map's fixed altitude inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015).
 // The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
 {
     static readonly int PerchedParam = Animator.StringToHash("Perched");
     static readonly int MovingParam = Animator.StringToHash("Moving");
+    static readonly int RefuseParam = Animator.StringToHash("Refuse");
 
     [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
     [SerializeField] Texture2D perchCursor;
     [SerializeField] Vector2 perchCursorHotspot;
+    // The bird and the branches it perches on stay this far inside the screen's edges, as a fraction of the screen (ADR 0015).
+    [SerializeField, Range(0f, 0.3f)] float screenMargin = 0.08f;
     [SerializeField] UnityEvent onCry;
 
     enum State { Flying, ToPerch, Landing, Perched }
@@ -28,13 +33,18 @@ public class BirdController : MonoBehaviour
     InputAction cryAction;
     InputAction pointAction;
     int clickMask;
+    int groundMask;
     int interactableLayer;
     State state;
     // Horizontal target while flying. Y is unused; the bird's height follows altitude.
     Vector3 target;
     float altitude;
+    // Where it flies, in X and Z (GameFlow.FlyArea). Past its far Z end the way ahead is closed: the bird refuses there (ADR 0012, ADR 0016).
     Bounds bounds = new(Vector3.zero, Vector3.positiveInfinity);
-    Bounds view = new(Vector3.zero, Vector3.positiveInfinity);
+    // Shakes its head once it has landed.
+    bool refusePending;
+    readonly List<Vector2> screenPatch = new();
+    readonly List<Vector2> clipped = new();
     float idleTime;
     bool following;
     Perchable perch;
@@ -50,6 +60,7 @@ public class BirdController : MonoBehaviour
         altitude = transform.position.y;
         baseScale = transform.localScale;
         clickMask = LayerMask.GetMask("Ground", "Interactable", "ClickPlane");
+        groundMask = LayerMask.GetMask("Ground", "ClickPlane");
         interactableLayer = LayerMask.NameToLayer("Interactable");
 
         moveAction = new InputAction("Move", InputActionType.Button, "<Mouse>/leftButton");
@@ -96,23 +107,26 @@ public class BirdController : MonoBehaviour
             transform.position = new Vector3(transform.position.x, y, transform.position.z);
     }
 
-    // area: where it flies. onScreen: where it may perch.
-    public void SetBounds(Bounds area, Bounds onScreen)
+    // Where it flies, in X and Z. It also stays on screen, and refuses at the area's far Z end.
+    public void SetArea(Bounds area)
     {
         bounds = area;
-        view = onScreen;
         if (state != State.Flying && !OnScreen(perch.PerchPoint.position))
             LeavePerch();
     }
 
+
     void Update()
     {
-        bool hasHit = Physics.Raycast(Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>()), out RaycastHit hit,
-            Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
+        Ray ray = Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>());
+        bool hasHit = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
         Perchable hovered = hasHit ? PerchableAt(hit) : null;
+        // Something the bird cannot perch on now (a branch off screen, a fallen log) does not catch the click: it goes to what lies behind.
+        if (hasHit && hovered == null && hit.collider.gameObject.layer == interactableLayer)
+            hasHit = Physics.Raycast(ray, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
         ShowPerchCursor(hovered != null);
 
-        if (moveAction.WasPressedThisFrame() && hasHit)
+        if (moveAction.WasPressedThisFrame() && hasHit && !DevTools.Covers(pointAction.ReadValue<Vector2>()))
             Click(hit, hovered);
         else if (!moveAction.IsPressed())
             following = false;
@@ -132,7 +146,7 @@ public class BirdController : MonoBehaviour
             case State.Perched: transform.position = perch.PerchPoint.position; break;
         }
         bool moved = transform.position != before;
-        // Glides while it moves and flaps while it hovers in place.
+        // Glides while it moves and hovers in place otherwise.
         animator.SetBool(MovingParam, moved);
         animator.SetBool(PerchedParam, state == State.Landing || state == State.Perched);
 
@@ -141,7 +155,8 @@ public class BirdController : MonoBehaviour
             PerchNearby();
     }
 
-    void PerchNearby()
+    // False if no branch is on screen.
+    bool PerchNearby()
     {
         idleTime = 0f;
         Perchable nearest = null;
@@ -152,8 +167,20 @@ public class BirdController : MonoBehaviour
             if (perchable.IsIdleSpot && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
                 (nearest, nearestDistance) = (perchable, distance);
         }
-        if (nearest != null)
-            StartPerch(nearest);
+        if (nearest == null)
+            return false;
+        StartPerch(nearest);
+        return true;
+    }
+
+    // Reached the closed way: lands on the nearest branch on screen and shakes its head there. With no branch on screen it stays.
+    void Refuse()
+    {
+        following = false;
+        if (PerchNearby())
+            refusePending = true;
+        else
+            target = transform.position;
     }
 
     void Click(RaycastHit hit, Perchable hovered)
@@ -196,6 +223,8 @@ public class BirdController : MonoBehaviour
         if (perch != null)
             perch.Released -= LeavePerch;
         perch = null;
+        refusePending = false;
+        animator.ResetTrigger(RefuseParam);
         if (state != State.Flying)
             target = transform.position;
         state = State.Flying;
@@ -205,11 +234,14 @@ public class BirdController : MonoBehaviour
     {
         // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
-        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Clamp(new Vector3(target.x, 0f, target.z)),
+        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Limit(new Vector3(target.x, 0f, target.z)),
             GameTuning.Current.birdSpeed * Time.deltaTime);
         float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
         Face(flat - position);
         transform.position = new Vector3(flat.x, y, flat.z);
+        // Heading past the far end of its area, it has reached the line where the way is closed (ADR 0016).
+        if (target.z > bounds.max.z && flat.z >= bounds.max.z - 0.01f)
+            Refuse();
     }
 
     void FlyToPerch()
@@ -232,6 +264,11 @@ public class BirdController : MonoBehaviour
             return;
         state = State.Perched;
         perch.NotifyPerched();
+        if (refusePending)
+        {
+            refusePending = false;
+            animator.SetTrigger(RefuseParam);
+        }
     }
 
     void Face(Vector3 direction)
@@ -269,9 +306,100 @@ public class BirdController : MonoBehaviour
         Cursor.SetCursor(show ? perchCursor : null, show ? perchCursorHotspot : Vector2.zero, CursorMode.Auto);
     }
 
-    bool OnScreen(Vector3 point) =>
-        point.x >= view.min.x && point.x <= view.max.x && point.z >= view.min.z && point.z <= view.max.z;
+    // On screen, inside the margin, and not past the area's Z ends: no branch takes the bird beyond the current stage's sunlit spot
+    // (ADR 0012). Across the area it may perch anywhere on screen (trees stand beyond it).
+    bool OnScreen(Vector3 point)
+    {
+        Vector3 viewport = Camera.main.WorldToViewportPoint(point);
+        return viewport.z > 0f && InMargin(viewport.x) && InMargin(viewport.y) && point.z >= bounds.min.z && point.z <= bounds.max.z;
+    }
 
-    Vector3 Clamp(Vector3 point) => new(
+    bool InMargin(float viewport) => viewport >= screenMargin && viewport <= 1f - screenMargin;
+
+    // A flat point (Y unused) moved into where the area and what the camera shows at the flying height overlap (ADR 0015).
+    // The screen shows a slanted four-sided patch of that height (quarter view), wider far from the camera. Clipped by the area it stays
+    // convex. Done in the world: in screen coordinates a point behind the camera's near side would come out mirrored.
+    Vector3 Limit(Vector3 point)
+    {
+        Camera view = Camera.main;
+        var height = new Plane(Vector3.up, new Vector3(0f, altitude, 0f));
+        float near = screenMargin, far = 1f - screenMargin;
+        Vector2[] corners = { new(near, near), new(far, near), new(far, far), new(near, far) };
+        screenPatch.Clear();
+        foreach (Vector2 corner in corners)
+        {
+            Ray ray = view.ViewportPointToRay(corner);
+            height.Raycast(ray, out float distance);
+            Vector3 onHeight = ray.GetPoint(distance);
+            screenPatch.Add(new Vector2(onHeight.x, onHeight.z));
+        }
+        ClipToArea(screenPatch);
+        var flat = new Vector2(point.x, point.z);
+        // The camera's point is inside the area, so the two always overlap; this guards a degenerate frame only.
+        if (screenPatch.Count < 3)
+            return ClampToArea(point);
+        if (InsideConvex(screenPatch, flat))
+            return point;
+        Vector2 nearest = flat;
+        float nearestDistance = float.MaxValue;
+        for (int i = 0; i < screenPatch.Count; i++)
+        {
+            Vector2 onEdge = ClosestOnSegment(screenPatch[i], screenPatch[(i + 1) % screenPatch.Count], flat);
+            float distance = (onEdge - flat).sqrMagnitude;
+            if (distance < nearestDistance)
+                (nearest, nearestDistance) = (onEdge, distance);
+        }
+        return new Vector3(nearest.x, point.y, nearest.y);
+    }
+
+    Vector3 ClampToArea(Vector3 point) => new(
         Mathf.Clamp(point.x, bounds.min.x, bounds.max.x), point.y, Mathf.Clamp(point.z, bounds.min.z, bounds.max.z));
+
+    // Cuts the polygon down to the area, one side of the area at a time (Sutherland-Hodgman).
+    void ClipToArea(List<Vector2> polygon)
+    {
+        ClipSide(polygon, Vector2.right, bounds.min.x);
+        ClipSide(polygon, Vector2.left, -bounds.max.x);
+        ClipSide(polygon, Vector2.up, bounds.min.z);
+        ClipSide(polygon, Vector2.down, -bounds.max.z);
+    }
+
+    // Keeps the part where Dot(p, inward) >= offset.
+    void ClipSide(List<Vector2> polygon, Vector2 inward, float offset)
+    {
+        clipped.Clear();
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            Vector2 a = polygon[i], b = polygon[(i + 1) % polygon.Count];
+            float da = Vector2.Dot(a, inward) - offset, db = Vector2.Dot(b, inward) - offset;
+            if (da >= 0f)
+                clipped.Add(a);
+            if (da >= 0f != db >= 0f)
+                clipped.Add(Vector2.Lerp(a, b, da / (da - db)));
+        }
+        polygon.Clear();
+        polygon.AddRange(clipped);
+    }
+
+    static bool InsideConvex(List<Vector2> polygon, Vector2 point)
+    {
+        float sign = 0f;
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            Vector2 a = polygon[i], b = polygon[(i + 1) % polygon.Count];
+            float cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
+            if (cross * sign < 0f)
+                return false;
+            if (cross != 0f)
+                sign = cross;
+        }
+        return true;
+    }
+
+    static Vector2 ClosestOnSegment(Vector2 a, Vector2 b, Vector2 point)
+    {
+        Vector2 ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / ab.sqrMagnitude);
+        return a + ab * t;
+    }
 }

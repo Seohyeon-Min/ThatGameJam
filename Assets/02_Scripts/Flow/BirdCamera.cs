@@ -1,28 +1,30 @@
 using Unity.Cinemachine;
 using UnityEngine;
 
-// The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007). The bird also locks the zones (ADR 0008).
-// The bird flies on the stage's road, and so does the point the camera follows; it perches anywhere on screen. While a device's camera zone is locked,
-// the point stays inside that zone's area, and the bird is also kept within view of the point so it never leaves the screen
-// (ADR 0003 Q3).
+// The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007). The bird also locks the zones (ADR 0014).
+// The bird flies over the area GameFlow opens to it, the road and the terrain beside it (ADR 0010, ADR 0013), and so does the point
+// the camera follows. While a device's camera zone is locked, the point stays inside that zone's area. The bird itself never leaves
+// the screen (ADR 0003 Q3); BirdController keeps it there (ADR 0015).
 public class BirdCamera : MonoBehaviour
 {
     [SerializeField] CinemachineCamera followCamera;
-    // How far the bird may be from the followed point, in X and Z, so the bird stays on screen.
-    [SerializeField] Vector2 birdRange = new(6f, 5f);
     // Seconds the camera takes to ease into or out of a zone's area.
     [SerializeField, Min(0.01f)] float zoneEaseTime = 1f;
 
-    Stage stage;
     CameraZone[] zones;
     // Per zone, 0 free to 1 locked, eased so locking and unlocking glide, also when one zone hands over to the next.
     float[] zoneWeights;
 
-    public void SetStage(Stage newStage)
+    // Only the current stage's zones lock.
+    public void SetStage(Stage stage)
     {
-        stage = newStage;
         zones = stage.GetComponentsInChildren<CameraZone>();
         zoneWeights = new float[zones.Length];
+    }
+
+    // Puts the camera on the bird at once instead of sweeping there.
+    public void Cut()
+    {
         LateUpdate();
         followCamera.PreviousStateIsValid = false;
     }
@@ -30,7 +32,8 @@ public class BirdCamera : MonoBehaviour
     void LateUpdate()
     {
         Vector3 bird = BirdController.Instance.transform.position;
-        Vector3 point = ClampXZ(bird, stage.area.min, stage.area.max);
+        Bounds area = GameFlow.Instance.FlyArea;
+        Vector3 point = ClampXZ(bird, area.min, area.max);
         for (int i = 0; i < zones.Length; i++)
         {
             CameraZone zone = zones[i];
@@ -38,20 +41,9 @@ public class BirdCamera : MonoBehaviour
             zoneWeights[i] = Mathf.MoveTowards(zoneWeights[i], zone.IsLocked ? 1f : 0f, Time.deltaTime / zoneEaseTime);
             point = Vector3.Lerp(point, ClampXZ(point, zone.AreaMin, zone.AreaMax), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
         }
-        point.y = stage.area.center.y;
+        point.y = area.center.y;
         transform.position = point;
-
-        // The bird flies on the road and on screen; it may perch anywhere on screen (roadside trees stand beyond the road).
-        Vector3 range = new(birdRange.x, 0f, birdRange.y);
-        BirdController.Instance.SetBounds(Box(Vector3.Max(stage.area.min, point - range), Vector3.Min(stage.area.max, point + range), point.y),
-            Box(point - range, point + range, point.y));
-    }
-
-    static Bounds Box(Vector3 min, Vector3 max, float y)
-    {
-        var bounds = new Bounds();
-        bounds.SetMinMax(new Vector3(min.x, y - 50f, min.z), new Vector3(max.x, y + 50f, max.z));
-        return bounds;
+        BirdController.Instance.SetArea(area);
     }
 
     static Vector3 ClampXZ(Vector3 point, Vector3 min, Vector3 max) =>
