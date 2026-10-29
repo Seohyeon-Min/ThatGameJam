@@ -79,7 +79,7 @@ body = {
 
 request = urllib.request.Request(
     "https://generativelanguage.googleapis.com/v1beta/"
-    "models/gemini-2.5-flash:generateContent",
+    "models/gemini-3.5-flash-lite:generateContent",
     data=json.dumps(body).encode("utf-8"),
     headers={
         "Content-Type": "application/json",
