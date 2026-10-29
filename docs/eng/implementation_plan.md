@@ -95,7 +95,7 @@ Between a device and the baby there is only one event: `Resolved(bool byBird)`. 
 
 ### 3.3 Scene Setup
 
-All stages join in one game scene as one long road along +Z. Each stage has one root object. The next stage starts at the sunlit spot where the baby fell asleep. There is no teleport and no screen cover (ADR 0010). The first stage is the intro (ADR 0018). The ground is one large terrain under every stage, so no end shows wherever the camera looks (ADR 0019). Trees stand along both sides of the road in each stage out to x ±33, and behind the intro's start (ADR 0020, ADR 0021, ADR 0022). The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
+All stages join in one game scene as one long road along +Z. Each stage has one root object. The next stage starts at the sunlit spot where the baby fell asleep. There is no teleport and no screen cover (ADR 0010). The first stage is the intro (ADR 0018). The ground is one large terrain under every stage, so no end shows wherever the camera looks (ADR 0019). Trees stand along both sides of the road in each stage out to x ±33, and where the camera sees farther (top left, past the last stage, behind the start) they reach 3 m past what it sees (ADR 0020, ADR 0021, ADR 0022, ADR 0024). The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
 
 Each stage is a prefab. That way several people can build different stages in their own test scenes, and the shared scene only needs the prefabs placed. Scene file conflicts go down. The shared game scene is `Main.unity` (Q1).
 
@@ -223,7 +223,7 @@ For now it is one stage without a device (ADR 0018, the director's sketch). The 
 - When covering starts, the baby looks up. A cooldown keeps this from happening too often.
 - The umbrella has no effect on movement or progress (§6.2). Whether the baby looks up while walking or pauses briefly is decided after seeing the animation.
 - The wing umbrella is not there yet.
-- Snow: Seohyeon's `Snowfall` particle system. It falls from a box covering the ground the camera shows and follows the point the camera follows. It falls only in season 0 (the intro); at 1 only new snowfall stops (`SeasonSnow`, ADR 0018). The wind is (0.5, −5) m/s (ADR 0022). It does not collide with the ground; the ground hides it. Keeping snow from falling below the bird (removing snow that touches the bird with the particle Collision module) is not done yet. Decide after checking web performance.
+- Snow: Seohyeon's `Snowfall` particle system. It falls from a box covering the ground the camera shows and follows the point the camera follows. It falls only in season 0 (the intro); at 1 only new snowfall stops (`SeasonSnow`, ADR 0018). The wind is (0.5, −5) m/s (ADR 0022). The box sits upwind by as far as the flakes drift, and covers 8 m more along the road both ways (ADR 0024). It does not collide with the ground; the ground hides it. Keeping snow from falling below the bird (removing snow that touches the bird with the particle Collision module) is not done yet. Decide after checking web performance.
 
 ### 4.10 Stage 1 — Log (§7)
 
@@ -445,6 +445,7 @@ Changes outside the plan:
 - Too many trees, so the tree placement and the bird's area (x ±13) went back to ADR 0013. The terrain, Tommy's trees, the intro and the snow stay (ADR 0020, 2026-10-29 work record 02)
 - The bird's area widened 1.5 times (x ±19.5), trees behind the intro's start, and wind (0.5, −5) for the snow (ADR 0021, 2026-10-29 work record 03)
 - The snow keeps only the wind value; its box, amount and lifetime went back. The forest widened to x ±33 (ADR 0022, 2026-10-29 work record 04)
+- The forest fills as far as the camera can see, and the snow box moved upwind (ADR 0024, 2026-10-29 work record 08)
 
 Remaining work and open issues:
 
@@ -455,10 +456,9 @@ Remaining work and open issues:
 - Only the user's own test was done by hand with a real mouse. All other checks used a virtual mouse
 - The baby's feet slide while walking. The walk clip's stride gives a no-slide speed of about 0.1 m/s (0.08 m/s at this game's size), but the baby walks at 1.2 m/s. Either the art makes a walk with a longer stride or the walking speed is decided again
 - Each wake-up waits for `Girl_GetUp`, 12.6 s. Four times adds about 50 s to the playtime (§1.4)
-- Check the web performance of about 30,000 snow particles in the intro
+- Check the web performance of about 55,000 snow particles in the intro and 1089 trees
 - The art team makes the snowflake material and texture. Until then the snow uses the material `Snowfall` makes in the editor. That material is not saved, so in a web build the snow may not show (2026-10-29 work record 05)
-- The wind (z −5) is strong, so flakes drift 37 to 47 m while falling. The top of the screen may have thinner snow. The user will look and decide
-- The director's "no break in the trees may show" and "five times the road's width" are not met since ADR 0020. The forest reaches x ±33, with snowfield beyond
+- The director's "no break in the trees may show" and "five times the road's width" are not met since ADR 0020. The forest reaches as far as the camera can see
 - The bird (2.2 m wingspan) is big next to Tommy's trees (5.5 m). The sizes need agreeing with the art
 - The tree material (`ArnoldStandardSurface`) has no `_BaseColor`, so the debug red tint does not reach the trees
 - Importing Tommy's leafy tree FBX warns that `LeafCard_00N` names repeat. It does not affect behaviour

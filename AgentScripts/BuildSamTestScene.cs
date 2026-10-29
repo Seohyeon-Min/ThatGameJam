@@ -44,13 +44,20 @@ public static class BuildSamTestScene
     const string SnowfallPrefabPath = "Assets/03_Prefabs/Snowfall.prefab";
     // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
     const float SnowHeight = 14f;
-    // New flakes per second on each square metre of the ground the camera shows.
-    const float SnowPerSquareMetre = 1.5f;
+    // New flakes per second on each square metre of the box. With the box upwind (ADR 0024), 0.9 keeps the snow near the camera as
+    // dense as the 1.5 over the old box did, and fills in the far part of the screen that was thin.
+    const float SnowPerSquareMetre = 0.9f;
     // How the wind pushes the snow, metres per second along X and Z (ADR 0022).
     static readonly Vector2 SnowWind = new(0.5f, -5f);
+    const float SnowFallSpeed = 1.5f;
+    const float SnowFallSpeedVariation = 0.4f;
+    // How far along the road (Z) past the screen the snow already falls, for the camera following the bird (ADR 0024).
+    const float SnowMoveMargin = 8f;
     // Trees stand this far past the road's edges (x -5 and 5) on both sides: out to x ±33, 1.5 times the x ±22 of ADR 0013, as the
     // bird's area is (ADR 0022).
     const float ForestWidth = 28f;
+    // Past the ground the camera can show, trees stand this much farther, so the forest's edge stays out of view (ADR 0024).
+    const float ForestPastView = 3f;
     // Two dense rows of trees line the road this far past its edges.
     const float RoadsideRowsWidth = 4f;
     // Average distance between neighbouring trees by the road; dense like the director's reference pictures.
@@ -725,14 +732,21 @@ public static class BuildSamTestScene
         Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
         for (int i = 0; i < Streams.Length; i++)
             Water(world, $"Stream_{i + 1}", map, Streams[i], water);
+        // The forest reaches x ±(5 + ForestWidth) (ADR 0022), and wherever the camera sees farther, a little past what it sees, so the
+        // forest's edge never shows (ADR 0024). The view reaches far up-left (-X) and far ahead (+Z), the top of the screen.
+        float left = Mathf.Min(-5f - ForestWidth, flown.min.x + reachMin.x - ForestPastView);
+        float right = Mathf.Max(5f + ForestWidth, flown.max.x + reachMax.x + ForestPastView);
+        float behindStart = flown.min.z + reachMin.y - ForestPastView;
+        float ahead = flown.max.z + reachMax.y + ForestPastView;
         // Behind where the baby starts, the first stage's trees reach back as far as the camera sees, also on the road, which starts at
         // the baby (ADR 0021).
-        float behindStart = flown.min.z + reachMin.y;
-        Forest(stages[0].gameObject, trees, terrain, behindStart, stages[0].area.max.z);
+        Forest(stages[0].gameObject, trees, terrain, behindStart, stages[0].area.max.z, left, right);
         Trees(trees, stages[0].gameObject, terrain, "TreesBehindTheStart", OuterTreeSpacing, 3,
             new[] { new Vector2(behindStart, stages[0].babyStart.position.z - 3f) }, new Vector2(-4.6f, 4.6f));
         for (int i = 1; i < stages.Length; i++)
-            Forest(stages[i].gameObject, trees, terrain, stages[i].area.min.z, stages[i].area.max.z);
+            Forest(stages[i].gameObject, trees, terrain, stages[i].area.min.z, stages[i].area.max.z, left, right);
+        // Past the last stage, as far ahead as the camera sees (ADR 0024).
+        Forest(Child(world, "TreesAhead", Vector3.zero), trees, terrain, stages[^1].area.max.z, ahead, left, right);
         Snow(world, season, birdCamera);
     }
 
@@ -855,9 +869,9 @@ public static class BuildSamTestScene
         return prefab;
     }
 
-    // A stage's trees, over its Z span but the streams: two dense rows along both edges of the road (also on the camera side; the
-    // director accepts that they hide the road), and sparser trees on the terrain beyond, out to ForestWidth (ADR 0013, ADR 0020).
-    static void Forest(GameObject parent, GameObject[] prefabs, Terrain ground, float zMin, float zMax)
+    // Trees over a Z span but the streams: two dense rows along both edges of the road (also on the camera side; the director accepts
+    // that they hide the road), and sparser trees on the terrain beyond, out to X left and right (ADR 0013, ADR 0020, ADR 0024).
+    static void Forest(GameObject parent, GameObject[] prefabs, Terrain ground, float zMin, float zMax, float left, float right)
     {
         var land = new System.Collections.Generic.List<Vector2>();
         float from = zMin;
@@ -875,22 +889,34 @@ public static class BuildSamTestScene
         const float rowsEnd = 5f + RoadsideRowsWidth - 0.6f;
         Trees(prefabs, parent, ground, "RoadsideTrees", TreeSpacing, 1, landRanges, new Vector2(-rowsEnd, -4.6f), new Vector2(4.6f, rowsEnd));
         Trees(prefabs, parent, ground, "TerrainTrees", OuterTreeSpacing, 2, landRanges,
-            new Vector2(-5f - ForestWidth + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, 5f + ForestWidth - 0.6f));
+            new Vector2(left + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, right - 0.6f));
     }
 
-    // Falls over the ground the camera shows, in the intro only (SeasonSnow): a box turned with the camera, around that ground,
-    // following the camera's point. Flakes pass through the ground instead of colliding, which is cheaper; the ground hides them.
+    // Falls over what the camera shows, in the intro only (SeasonSnow): a box turned with the camera, following the camera's point.
+    // The wind carries a flake as it falls, so the box lies upwind (ADR 0024): over the ground on screen moved back by a whole fall's
+    // drift (flakes landing there) and over the camera moved back by the drift down to its height (flakes passing near it), for the
+    // slowest and the fastest flakes. It also reaches SnowMoveMargin along the road both ways, so the camera moving along it finds snow
+    // already falling. Flakes pass through the ground instead of colliding, which is cheaper; the ground hides them.
     static void Snow(GameObject parent, Season season, BirdCamera birdCamera)
     {
         Quaternion turn = Quaternion.Euler(0f, Quaternion.LookRotation(-CameraOffset).eulerAngles.y, 0f);
-        Vector2[] ground = CameraGround();
-        var local = new Vector2[ground.Length];
-        for (int i = 0; i < ground.Length; i++)
+        Vector2[] drifts = { SnowWind * (SnowHeight / SnowFallSpeed), SnowWind * (SnowHeight / (SnowFallSpeed + SnowFallSpeedVariation)) };
+        Vector2 eye = new(CameraOffset.x, CameraOffset.z);
+        float aboveEye = (SnowHeight - (CameraOffset.y + CameraAimHeight)) / SnowHeight;
+        var local = new System.Collections.Generic.List<Vector2>();
+        foreach (Vector2 drift in drifts)
         {
-            Vector3 point = Quaternion.Inverse(turn) * new Vector3(ground[i].x, 0f, ground[i].y);
-            local[i] = new Vector2(point.x, point.z);
+            foreach (Vector2 corner in CameraGround())
+                foreach (float along in new[] { -SnowMoveMargin, 0f, SnowMoveMargin })
+                    local.Add(Turned(corner + new Vector2(0f, along) - drift));
+            local.Add(Turned(eye - drift * aboveEye));
         }
-        var (min, max) = Extent(local);
+        Vector2 Turned(Vector2 flat)
+        {
+            Vector3 point = Quaternion.Inverse(turn) * new Vector3(flat.x, 0f, flat.y);
+            return new Vector2(point.x, point.z);
+        }
+        var (min, max) = Extent(local.ToArray());
         Vector3 middle = turn * new Vector3((min.x + max.x) / 2f, 0f, (min.y + max.y) / 2f);
         GameObject center = Child(birdCamera.gameObject, "SnowCenter", birdCamera.transform.position + middle);
 
@@ -903,8 +929,8 @@ public static class BuildSamTestScene
             so.FindProperty("followTarget").objectReferenceValue = center.transform;
             so.FindProperty("areaSize").vector2Value = max - min;
             so.FindProperty("spawnRate").floatValue = SnowPerSquareMetre * (max.x - min.x) * (max.y - min.y);
-            so.FindProperty("fallSpeed").floatValue = 1.5f;
-            so.FindProperty("fallSpeedVariation").floatValue = 0.4f;
+            so.FindProperty("fallSpeed").floatValue = SnowFallSpeed;
+            so.FindProperty("fallSpeedVariation").floatValue = SnowFallSpeedVariation;
             so.FindProperty("wind").vector2Value = SnowWind;
             so.FindProperty("flakeSize").floatValue = 0.26f;
             so.FindProperty("maxLifetime").floatValue = 11f;
