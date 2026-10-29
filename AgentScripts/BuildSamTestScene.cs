@@ -8,7 +8,8 @@ using UnityEngine.UI;
 
 // Builds the grey-box test scenes. Sam_Test.unity: the intro (a snowy walk to the first sunlit spot), stage 1 (fallen log, leaning
 // log, sunlit rest area) and a minimal stage 2 on the same road, to test going on from one stage to the next (ADR 0010), all on one
-// terrain filled with trees as far as the camera sees (ADR 0019); also rebuilds the tree prefabs in Assets/03_Prefabs/Trees.
+// terrain whose edge the camera never shows (ADR 0019), with trees along the road (ADR 0020); also rebuilds the tree prefabs in
+// Assets/03_Prefabs/Trees.
 // Sam_Fog_Test.unity: the fog stage.
 // Run: unity command script run --file AgentScripts/BuildSamTestScene.cs --entry BuildSamTestScene.Build
 public static class BuildSamTestScene
@@ -45,14 +46,16 @@ public static class BuildSamTestScene
     const float SnowHeight = 14f;
     // New flakes per second on each square metre of the ground the camera shows.
     const float SnowPerSquareMetre = 1.5f;
+    // Trees stand this far past the road's edges (x -5 and 5) on both sides (ADR 0013, ADR 0020).
+    const float ForestWidth = 17f;
     // Two dense rows of trees line the road this far past its edges.
     const float RoadsideRowsWidth = 4f;
     // Average distance between neighbouring trees by the road; dense like the director's reference pictures.
     const float TreeSpacing = 1.7f;
     // Farther out the trees stand sparser, with room to fly between them.
     const float OuterTreeSpacing = 3.2f;
-    // Half the width of the area the bird flies over: five times the road's width (10) in all, as the director asked (ADR 0019).
-    const float BirdAreaHalfWidth = 25f;
+    // Half the width of the area the bird flies over: the road and the terrain beside it, among the trees (ADR 0013, ADR 0020).
+    const float BirdAreaHalfWidth = 13f;
     const string GirlModelPath = "Assets/01_Arts/Models/Girl/NPC-Girl-Animated.fbx";
     const string GirlAnimatorPath = "Assets/01_Arts/Models/Girl/Girl.controller";
     // 1.3 tall in the model; about 1 here, the height the baby's collider and the levels were made for.
@@ -702,7 +705,7 @@ public static class BuildSamTestScene
     }
 
     // One terrain under every stage, long and wide enough that the camera, wherever the bird takes it, never shows its edge; the streams
-    // across it; trees over all of it; and the snow of the intro (ADR 0018, ADR 0019).
+    // across it; each stage's trees; and the snow of the intro (ADR 0018, ADR 0019, ADR 0020).
     static void BuildWorld(Stage[] stages, GameObject[] trees, Season season, BirdCamera birdCamera)
     {
         // The camera follows a point inside the stages' areas (BirdCamera).
@@ -718,7 +721,8 @@ public static class BuildSamTestScene
         Material water = Mat("Water", new Color(0.35f, 0.55f, 0.8f));
         for (int i = 0; i < Streams.Length; i++)
             Water(world, $"Stream_{i + 1}", map, Streams[i], water);
-        Forest(world, trees, terrain, map, stages[0].babyStart.position.z);
+        foreach (Stage stage in stages)
+            Forest(stage.gameObject, trees, terrain, stage.area.min.z, stage.area.max.z);
         Snow(world, season, birdCamera);
     }
 
@@ -835,28 +839,27 @@ public static class BuildSamTestScene
         return prefab;
     }
 
-    // Trees over the whole terrain but the streams: two dense rows along both edges of the road (also on the camera side; the director
-    // accepts that they hide the road) and sparser trees out to the terrain's edge. The road is open from where the baby starts on;
-    // behind that, trees stand on it too.
-    static void Forest(GameObject parent, GameObject[] prefabs, Terrain ground, Rect map, float roadStart)
+    // A stage's trees, over its Z span but the streams: two dense rows along both edges of the road (also on the camera side; the
+    // director accepts that they hide the road), and sparser trees on the terrain beyond, out to ForestWidth (ADR 0013, ADR 0020).
+    static void Forest(GameObject parent, GameObject[] prefabs, Terrain ground, float zMin, float zMax)
     {
         var land = new System.Collections.Generic.List<Vector2>();
-        float from = map.yMin + 0.6f;
+        float from = zMin;
         foreach (Vector2 stream in Streams)
-        {
-            land.Add(new Vector2(from, stream.x - 0.6f));
-            from = stream.y + 0.6f;
-        }
-        land.Add(new Vector2(from, map.yMax - 0.6f));
+            if (stream.y > zMin && stream.x < zMax)
+            {
+                if (stream.x > from)
+                    land.Add(new Vector2(from, stream.x));
+                from = stream.y;
+            }
+        if (from < zMax)
+            land.Add(new Vector2(from, zMax));
         Vector2[] landRanges = land.ToArray();
 
-        GameObject forest = Child(parent, "Forest", Vector3.zero);
         const float rowsEnd = 5f + RoadsideRowsWidth - 0.6f;
-        Trees(prefabs, forest, ground, "RoadsideTrees", TreeSpacing, 1, landRanges, new Vector2(-rowsEnd, -4.6f), new Vector2(4.6f, rowsEnd));
-        Trees(prefabs, forest, ground, "TerrainTrees", OuterTreeSpacing, 2, landRanges,
-            new Vector2(map.xMin + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, map.xMax - 0.6f));
-        Trees(prefabs, forest, ground, "TreesBehindTheStart", OuterTreeSpacing, 3, new[] { new Vector2(map.yMin + 0.6f, roadStart - 3f) },
-            new Vector2(-4.6f, 4.6f));
+        Trees(prefabs, parent, ground, "RoadsideTrees", TreeSpacing, 1, landRanges, new Vector2(-rowsEnd, -4.6f), new Vector2(4.6f, rowsEnd));
+        Trees(prefabs, parent, ground, "TerrainTrees", OuterTreeSpacing, 2, landRanges,
+            new Vector2(-5f - ForestWidth + 0.6f, -rowsEnd - 0.6f), new Vector2(rowsEnd + 0.6f, 5f + ForestWidth - 0.6f));
     }
 
     // Falls over the ground the camera shows, in the intro only (SeasonSnow): a box turned with the camera, around that ground,

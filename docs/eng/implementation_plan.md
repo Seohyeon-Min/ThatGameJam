@@ -95,7 +95,7 @@ Between a device and the baby there is only one event: `Resolved(bool byBird)`. 
 
 ### 3.3 Scene Setup
 
-All stages join in one game scene as one long road along +Z. Each stage has one root object. The next stage starts at the sunlit spot where the baby fell asleep. There is no teleport and no screen cover (ADR 0010). The first stage is the intro (ADR 0018). The ground is one large terrain under every stage, covered with trees so that no end shows wherever the camera looks (ADR 0019). The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
+All stages join in one game scene as one long road along +Z. Each stage has one root object. The next stage starts at the sunlit spot where the baby fell asleep. There is no teleport and no screen cover (ADR 0010). The first stage is the intro (ADR 0018). The ground is one large terrain under every stage, so no end shows wherever the camera looks (ADR 0019). Trees stand along both sides of the road in each stage (ADR 0020). The web build only loads once, and there is no need to save state passed between stages (ending branch, etc.).
 
 Each stage is a prefab. That way several people can build different stages in their own test scenes, and the shared scene only needs the prefabs placed. Scene file conflicts go down. The shared game scene is `Main.unity` (Q1).
 
@@ -117,7 +117,7 @@ Each stage is a prefab. That way several people can build different stages in th
 - When the mouse is over something the bird can perch on, only the cursor changes. Nothing else is shown (Q6). This follows the goal of fewer control guides (§1.3) and the rule that signals are the hints (§3.1).
 - The bird model and animations are the art's `Bird-Animated`. `BirdController` passes only three values to the Animator: `Moving`, `Perched` (landing or perched), and `Refuse` (head shake). While moving it glides, with one wingbeat every 2 seconds. Hovering in place it plays `Bird_Hover` (on trial, ADR 0011), and one wingbeat right after taking off; arriving at a perch it lands; perched it plays the three idles at random; leaving, it takes off. The flow is in `Bird.controller`, made by the builder.
 - The bird's position is its feet. Its feet stand on the perch point (`Perchable`).
-- Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies over the road and the terrain beside it (x ±25, five times the road's width) and perches anywhere on screen (ADR 0009, ADR 0013, ADR 0019), though not past the front and back ends of the area it may fly over (ADR 0010).
+- Every roadside tree has one perch branch; clicking it perches the bird. A flying bird left still without input for 2 s (`birdIdlePerchDelay`) goes to the nearest branch on screen and perches. It never perches on a device (the log and such) by itself. The bird flies over the road and the terrain beside it (x ±13) and perches anywhere on screen (ADR 0009, ADR 0013, ADR 0020), though not past the front and back ends of the area it may fly over (ADR 0010).
 - Clicking or dragging past the current stage's sunlit spot makes the bird fly up to that line. Reaching it while its target is still past it, the bird lands on the nearest branch on screen and shakes its head (`Bird_Refuse`). With no branch on screen it stays (ADR 0011, ADR 0012, ADR 0016).
 - The bird is on the `Bird` layer. Where trees or leaves hide it, the hidden part shows as a flat sky blue silhouette, done with the stencil by two Render Objects features (`BirdVisible`, `BirdSilhouette`) on both URP renderers. The setup is `AgentScripts/SetupBirdSilhouette.cs`.
 
@@ -192,7 +192,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 - The Sunlit Rest Area is not a special section (ADR 0006). Put one portal-like light at the end of the baby's path, right after the stage's last device. Do not build more path or ground past it.
 - When the baby reaches the end of the path: the baby lies down and falls asleep → the season goes up one level (4.15) → `GameFlow` starts the next stage right there (ADR 0010).
 - Next stage: the baby stays asleep where it is (`Sleeping`) and its wake timer runs again. The bird's altitude eases to the new stage's value. The new stage is added to the road the bird may fly over.
-- Where the bird may fly: the road and the terrain beside it of every stage up to the current one (`Stage.area`, ADR 0013, ADR 0019). In the current stage it goes forward only up to the Z of that stage's sunlit spot (the last point of the baby's route). Devices do not hold it back. Backwards is always open (ADR 0010, ADR 0012).
+- Where the bird may fly: the road and the terrain beside it of every stage up to the current one (`Stage.area`, ADR 0013, ADR 0020). In the current stage it goes forward only up to the Z of that stage's sunlit spot (the last point of the baby's route). Devices do not hold it back. Backwards is always open (ADR 0010, ADR 0012).
 - Only the dev tool's "next stage" teleports. It leaves the baby asleep at the current stage's sunlit spot and starts the next stage. The bird moves to the next stage's start.
 - The light of the Sunlit Rest Area (a gap in the clouds and sunlight) is art work (§16). The code only turns it on and off.
 - The Sunlit Rest Area in the last stage starts off. It turns on when the clouds are broken through or part (§10.3, 4.13).
@@ -435,13 +435,14 @@ Changes outside the plan:
 - Clicking past a closed way makes the bird land on a nearby branch and shake its head. In-place flight switched to `Bird_Hover` on trial (ADR 0011, 2026-10-28 work record 09)
 - The season level system (`Season`) and the debug red tint (`SeasonDebugTint`). No real environment change yet (4.15, 2026-10-28 work record 10)
 - The bird is limited per stage, not per device. It goes only as far as the current stage's sunlit spot (ADR 0012, 2026-10-28 work record 11)
-- The bird's area widened to the terrain beside the road (x ±13), with wider ground (x ±22) and more trees beyond (ADR 0013, 2026-10-28 work record 12). Widened to x ±25 on 2026-10-29 (ADR 0019)
+- The bird's area widened to the terrain beside the road (x ±13), with wider ground (x ±22) and more trees beyond (ADR 0013, 2026-10-28 work record 12). Widened to x ±25 on 2026-10-29 and rolled back the same day (ADR 0019, ADR 0020)
 - A camera zone locks when the bird enters its trigger band and unlocks when it leaves the wider lock area. Clicking water moves the bird (ADR 0014, 2026-10-28 work record 13)
 - The bird is kept inside the actual screen, not a fixed box. The log's camera zone unlocks near the map's edge (ADR 0015, 2026-10-28 work record 14)
 - Refusal happens when the bird reaches the closed line, not where the click landed (ADR 0016, 2026-10-28 work record 15)
 - The comparison branch `sam-fixed-camera` holds the fixed per-section camera version. Only the camera differs (work record 10). It was pushed to the remote together with `sam`
 - The intro became one stage without a device, and the season got five steps. Snow falls only in the intro (ADR 0018, 2026-10-29 work record 01)
 - The ground became one large terrain and the trees Tommy's 3 kinds. The forest reaches as far as the camera sees. The bird's area is five times the road's width (x ±25) (ADR 0019, 2026-10-29 work record 01)
+- Too many trees, so the tree placement and the bird's area (x ±13) went back to ADR 0013. The terrain, Tommy's trees, the intro and the snow stay (ADR 0020, 2026-10-29 work record 02)
 
 Remaining work and open issues:
 
@@ -452,7 +453,8 @@ Remaining work and open issues:
 - Only the user's own test was done by hand with a real mouse. All other checks used a virtual mouse
 - The baby's feet slide while walking. The walk clip's stride gives a no-slide speed of about 0.1 m/s (0.08 m/s at this game's size), but the baby walks at 1.2 m/s. Either the art makes a walk with a longer stride or the walking speed is decided again
 - Each wake-up waits for `Girl_GetUp`, 12.6 s. Four times adds about 50 s to the playtime (§1.4)
-- Check the web performance of 1645 trees (about 8900 renderers) and about 26,000 snow particles in the intro. In the editor it ran at about 105 FPS
+- Check the web performance of about 26,000 snow particles in the intro
+- The director's "no break in the trees may show" and "five times the road's width" are not met since ADR 0020. At the area's edge the forest ends and snowfield shows
 - The bird (2.2 m wingspan) is big next to Tommy's trees (5.5 m). The sizes need agreeing with the art
 - The tree material (`ArnoldStandardSurface`) has no `_BaseColor`, so the debug red tint does not reach the trees
 - Importing Tommy's leafy tree FBX warns that `LeafCard_00N` names repeat. It does not affect behaviour
