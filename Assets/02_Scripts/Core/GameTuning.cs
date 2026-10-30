@@ -42,8 +42,9 @@ public class GameTuning : ScriptableObject
     // Seconds for the head's turn-toward-target blend to ramp fully in (and, separately, fully out).
     public float babyGazeBlendTime = 0.35f;
     // Cold shiver: small additive tremor on the model while awake (design doc: winter, following the bird).
-    public float babyShiverAngle = 2.5f;
-    public float babyShiverFrequency = 9f;
+    // 2.5deg/9Hz on both axes at once read as the whole body buzzing, not a cold shiver; toned down.
+    public float babyShiverAngle = 0.8f;
+    public float babyShiverFrequency = 3.5f;
 
     [Header("Bird")]
     public float birdSpeed = 6f;

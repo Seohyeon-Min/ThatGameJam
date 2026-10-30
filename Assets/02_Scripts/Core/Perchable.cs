@@ -13,6 +13,9 @@ public class Perchable : MonoBehaviour
     [SerializeField] Transform perchPoint;
     // The bird also lands here by itself when the player leaves it idle (roadside branches). Not on devices, which the player solves.
     [SerializeField] bool idleSpot;
+    // Devices (the leaning log, a blocker) must stay visible and clickable even when nothing is perched on
+    // them, unlike decorative perches (roadside branches) that may fade like any other background tree.
+    [SerializeField] bool alwaysExempt;
     [SerializeField] UnityEvent onPerched;
 
     public static IReadOnlyList<Perchable> All => all;
@@ -31,7 +34,12 @@ public class Perchable : MonoBehaviour
     Renderer[] wholeObjectRenderers;
     MaterialPropertyBlock cameraFadeBlock;
 
-    void OnEnable() => all.Add(this);
+    void OnEnable()
+    {
+        all.Add(this);
+        if (alwaysExempt)
+            SetCameraFadeExempt(true);
+    }
     void OnDisable() => all.Remove(this);
 
     public void NotifyPerched()
@@ -43,7 +51,8 @@ public class Perchable : MonoBehaviour
 
     public void Release()
     {
-        SetCameraFadeExempt(false);
+        if (!alwaysExempt)
+            SetCameraFadeExempt(false);
         Released?.Invoke();
     }
 
