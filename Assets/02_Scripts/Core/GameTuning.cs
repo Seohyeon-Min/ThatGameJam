@@ -32,6 +32,15 @@ public class GameTuning : ScriptableObject
     // How often (seconds, random between the two) the baby pauses mid-walk to look around.
     public float babyCuriousPauseIntervalMin = 4f;
     public float babyCuriousPauseIntervalMax = 9f;
+    // Glancing at a nearby PointOfInterest (a tree, a landmark) instead of stopping to look around at
+    // nothing: shares the curious-pause cooldown above, but keeps walking and only turns the head.
+    public float babyGazeRadius = 6f;
+    public float babyGazeDuration = 1.5f;
+    // Max degrees the head may turn off the animated pose. Clamps so a POI behind the baby never
+    // snaps the head to an impossible angle; beyond this it just doesn't notice that one.
+    public float babyGazeMaxAngle = 60f;
+    // Degrees/second the head's turn-toward-target blend ramps in and out.
+    public float babyGazeBlendSpeed = 240f;
     // Cold shiver: small additive tremor on the model while awake (design doc: winter, following the bird).
     public float babyShiverAngle = 2.5f;
     public float babyShiverFrequency = 9f;

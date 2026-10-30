@@ -43,6 +43,13 @@ public class Baby : CryListener
     float noiseSeed;
     Quaternion modelBaseRotation;
 
+    // The head bone, turned toward a PointOfInterest while walking (LateUpdate, after the animator has posed it).
+    // Null is handled gracefully: the rig just never gained this bone and the baby simply never glances.
+    Transform headBone;
+    PointOfInterest gazeTarget;
+    float gazeTimeRemaining;
+    float gazeBlend;
+
     protected override float CryRadius => GameTuning.Current.babyWakeCryRadius;
 
     void Awake()
@@ -52,6 +59,7 @@ public class Baby : CryListener
         noiseSeed = UnityEngine.Random.Range(0f, 100f);
         modelBaseRotation = animator.transform.localRotation;
         curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
+        headBone = animator.transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
     }
 
     // Cold tremor on the model only (never on transform, which drives movement/arrival checks elsewhere).
@@ -67,6 +75,53 @@ public class Baby : CryListener
         float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
         float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
         animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
+    }
+
+    // Turns the head toward gazeTarget, after the animator has already posed it this frame (standard
+    // look-override timing). Blends in/out by angle instead of a fixed ramp time, so a target that
+    // appears or disappears mid-gaze (balance beam start, a reaction interrupting it) still eases smoothly.
+    void LateUpdate()
+    {
+        if (headBone == null)
+            return;
+        if (gazeTimeRemaining > 0f)
+            gazeTimeRemaining -= Time.deltaTime;
+        bool active = gazeTarget != null && gazeTimeRemaining > 0f && State == BabyState.Walking && !onBalanceBeam;
+        GameTuning tuning = GameTuning.Current;
+        gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, tuning.babyGazeBlendSpeed * Time.deltaTime);
+        if (gazeBlend <= 0.001f)
+            return;
+
+        Vector3 animatedForward = headBone.forward;
+        Vector3 toTarget = (gazeTarget.LookPoint - headBone.position).normalized;
+        Vector3 desiredDir = Vector3.RotateTowards(animatedForward, toTarget, Mathf.Deg2Rad * tuning.babyGazeMaxAngle, 0f);
+        Quaternion desiredRot = Quaternion.LookRotation(desiredDir, headBone.up);
+        headBone.rotation = Quaternion.Slerp(headBone.rotation, desiredRot, gazeBlend);
+    }
+
+    // Picks a PointOfInterest to glance at: inside notice radius, roughly ahead (not behind), weighted
+    // by closeness and the POI's own weight, with a random factor so it isn't always the single closest one.
+    PointOfInterest PickNearbyPointOfInterest()
+    {
+        GameTuning tuning = GameTuning.Current;
+        PointOfInterest best = null;
+        float bestScore = 0f;
+        foreach (PointOfInterest poi in PointOfInterest.All)
+        {
+            Vector3 toPoi = poi.LookPoint - transform.position;
+            float distance = toPoi.magnitude;
+            if (distance < 0.01f || distance > tuning.babyGazeRadius)
+                continue;
+            if (Vector3.Dot(transform.forward, toPoi / distance) < -0.2f)
+                continue;
+            float score = poi.Weight * (1f - distance / tuning.babyGazeRadius) * UnityEngine.Random.value;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = poi;
+            }
+        }
+        return best;
     }
 
     // Smooth noise in [-0.5, 0.5); offset decorrelates it from the other channels sharing noiseSeed.
@@ -196,7 +251,19 @@ public class Baby : CryListener
                 }
                 else if ((curiousPauseCooldown -= Time.deltaTime) <= 0f)
                 {
-                    yield return CuriousPause();
+                    curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
+                    PointOfInterest poi = PickNearbyPointOfInterest();
+                    // A specific thing nearby: glance at it without breaking stride (LateUpdate turns only the head).
+                    // Nothing nearby: fall back to the old full stop-and-look-around.
+                    if (poi != null)
+                    {
+                        gazeTarget = poi;
+                        gazeTimeRemaining = GameTuning.Current.babyGazeDuration;
+                    }
+                    else
+                    {
+                        yield return CuriousPause();
+                    }
                 }
             }
             yield return null;
@@ -215,7 +282,6 @@ public class Baby : CryListener
     IEnumerator CuriousPause()
     {
         GameTuning tuning = GameTuning.Current;
-        curiousPauseCooldown = UnityEngine.Random.Range(tuning.babyCuriousPauseIntervalMin, tuning.babyCuriousPauseIntervalMax);
         StandStill();
         animator.SetBool(LookAroundParam, true);
         yield return new WaitForSeconds(tuning.babyLookAroundDuration);
