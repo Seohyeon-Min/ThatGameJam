@@ -39,8 +39,8 @@ public class GameTuning : ScriptableObject
     // Max degrees the head may turn off the animated pose. Clamps so a POI behind the baby never
     // snaps the head to an impossible angle; beyond this it just doesn't notice that one.
     public float babyGazeMaxAngle = 60f;
-    // Degrees/second the head's turn-toward-target blend ramps in and out.
-    public float babyGazeBlendSpeed = 240f;
+    // Seconds for the head's turn-toward-target blend to ramp fully in (and, separately, fully out).
+    public float babyGazeBlendTime = 0.35f;
     // Cold shiver: small additive tremor on the model while awake (design doc: winter, following the bird).
     public float babyShiverAngle = 2.5f;
     public float babyShiverFrequency = 9f;

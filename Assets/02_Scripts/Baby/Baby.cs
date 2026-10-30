@@ -88,7 +88,7 @@ public class Baby : CryListener
             gazeTimeRemaining -= Time.deltaTime;
         bool active = gazeTarget != null && gazeTimeRemaining > 0f && State == BabyState.Walking && !onBalanceBeam;
         GameTuning tuning = GameTuning.Current;
-        gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, tuning.babyGazeBlendSpeed * Time.deltaTime);
+        gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, tuning.babyGazeBlendTime));
         if (gazeBlend <= 0.001f)
             return;
 
