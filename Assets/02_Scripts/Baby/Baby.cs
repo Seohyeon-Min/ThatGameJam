@@ -23,8 +23,8 @@ public class Baby : CryListener
     [SerializeField] AnimationClip getUpClip;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
-    // Stepping up onto a balance beam (a log) or down off the far end plays this once, in place, before
-    // Walk/BalanceWalk resumes.
+    // Stepping up onto a balance beam (a log) or down off the far end plays this once, covering that segment's
+    // own movement, before Walk/BalanceWalk resumes.
     [SerializeField] AnimationClip jumpClip;
 
     public static Baby Instance { get; private set; }
@@ -193,22 +193,35 @@ public class Baby : CryListener
             animator.SetBool(LookAroundParam, false);
         }
 
+        // Set whenever a BalanceBeamStart/End marker or a freshly-opened LeaningLog is reached: the step up onto
+        // (or down off) the beam is the *next* route segment, not the point just arrived at, so it's the next
+        // segment that plays as a jump instead of an ordinary walk (design doc request: the climb itself should
+        // be the jump, not a jump played in place after already having walked up to height).
+        bool jumpNextSegment = false;
+
         for (int i = 0; i < route.Count; i++)
         {
             State = BabyState.Walking;
-            yield return WalkTo(route[i].position);
+            if (jumpNextSegment)
+            {
+                jumpNextSegment = false;
+                yield return JumpTo(route[i].position);
+                animator.CrossFade(onBalanceBeam ? BalanceWalkState : WalkState, 0.25f);
+            }
+            else
+            {
+                yield return WalkTo(route[i].position);
+            }
 
             if (onBalanceBeam && route[i].TryGetComponent(out BalanceBeamEnd _))
             {
                 onBalanceBeam = false;
-                yield return PlayJump();
-                animator.CrossFade(WalkState, 0.25f);
+                jumpNextSegment = true;
             }
             else if (!onBalanceBeam && route[i].TryGetComponent(out BalanceBeamStart _))
             {
                 onBalanceBeam = true;
-                yield return PlayJump();
-                animator.CrossFade(BalanceWalkState, 0.25f);
+                jumpNextSegment = true;
             }
 
             if (!route[i].TryGetComponent(out StopPoint stop))
@@ -232,11 +245,11 @@ public class Baby : CryListener
                 yield return LookUp(tuning.babyLookUpDuration);
             }
             // A fallen log or similar: arms-out balance until the far end (BalanceBeamEnd) is reached.
+            // The climb onto it is the next segment (see jumpNextSegment above).
             if (blocker is LeaningLog)
             {
                 onBalanceBeam = true;
-                yield return PlayJump();
-                animator.CrossFade(BalanceWalkState, 0.25f);
+                jumpNextSegment = true;
             }
         }
 
@@ -299,11 +312,21 @@ public class Baby : CryListener
     }
 
     // Stepping up onto a balance beam or down off the far end: one in-place hop before Walk/BalanceWalk resumes.
-    IEnumerator PlayJump()
+    // Stepping up onto a balance beam or down off the far end: covers the segment itself (height included) over
+    // the clip's own timing, instead of ordinary walk-speed interpolation finishing the climb before the jump
+    // animation plays. StandStill(): the walk-cycle animator bool should read false while this plays.
+    IEnumerator JumpTo(Vector3 target)
     {
         StandStill();
+        TurnToward(target - transform.position);
         animator.CrossFade(JumpState, 0.1f);
-        yield return new WaitForSeconds(jumpClip.length);
+        Vector3 start = transform.position;
+        for (float time = 0f; time < jumpClip.length; time += Time.deltaTime)
+        {
+            transform.position = Vector3.Lerp(start, target, time / jumpClip.length);
+            yield return null;
+        }
+        transform.position = target;
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
