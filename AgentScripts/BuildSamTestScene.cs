@@ -43,6 +43,7 @@ public static class BuildSamTestScene
     const float ViewMargin = 12f;
     const string SnowfallPrefabPath = "Assets/03_Prefabs/Snowfall.prefab";
     const string SunlitSpotPrefabPath = "Assets/03_Prefabs/SunlitSpot.prefab";
+    const string SnowWispsMaterialPath = "Assets/01_Arts/Materials/vfx/SnowWisps.mat";
     // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
     const float SnowHeight = 14f;
     // New flakes per second on each square metre of the box. With the box upwind (ADR 0024), 0.9 keeps the snow near the camera as
@@ -937,8 +938,14 @@ public static class BuildSamTestScene
             so.FindProperty("collideWithWorld").boolValue = false;
         });
         snowfall.Configure();
-        var seasonSnow = snow.AddComponent<SeasonSnow>();
-        Set(seasonSnow, so => so.FindProperty("season").objectReferenceValue = season);
+        // The prefab may already carry it; a second one would blow a second gust.
+        if (!snow.TryGetComponent(out SeasonSnow seasonSnow))
+            seasonSnow = snow.AddComponent<SeasonSnow>();
+        Set(seasonSnow, so =>
+        {
+            so.FindProperty("season").objectReferenceValue = season;
+            so.FindProperty("wispMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(SnowWispsMaterialPath);
+        });
     }
 
     // A TreeGenerator over each X range times each Z range, on the ground, with the seed fixed so rebuilding gives the same trees.

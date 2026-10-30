@@ -63,6 +63,7 @@ Shader "ThatGameJam/WatercolorFlat"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Assets/01_Arts/Shaders/BakedPatternUV.hlsl"
+        #include "Assets/01_Arts/Shaders/SunPool.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
@@ -119,6 +120,11 @@ Shader "ThatGameJam/WatercolorFlat"
         half4 _WC_GouacheTransition; // rgb 전환색(곱해서 물들인다, sRGB), a 세기
         half4 _WC_CharacterGouache; // 캐릭터 머티리얼의 구아슈 값: x 그늘 채도 배율, y 경계 붓결 세기, z 마른 붓 정도, w 그늘 깊이
         half4 _WC_CharacterShade;   // 캐릭터 그늘 색: rgb 그늘이 돌아갈 색(sRGB), a 색상을 그쪽으로 돌리는 정도
+        float4 _WC_SunPool;       // 가장 가까운 빛칸(LightBeam): xyz 발 위치, w 반지름. 0 이면 빛칸 없음
+        float4 _WC_SunPoolSlant;  // xy 높이 1 당 빛줄기가 기우는 거리(x, z), z 흐르는 속도
+        float4 _WC_SunPoolShape;  // x 덩어리 크기, y 울퉁불퉁함, z 경계 위치, w 경계 부드러움
+        half4 _WC_SunPoolColor;   // 빛칸 색(sRGB)
+        half _WC_SunPoolGlow;     // 캐릭터가 빛칸에서 밝아지는 정도
         half4 _WC_GouacheEdge;    // x 윤곽 오돌토돌함(화면 효과 WatercolorBlur 에서 쓴다), y 경계 붓결 세기, z 붓 무늬 한 칸(m), w 빛 쪽 테두리 빛남
         half4 _WC_WashReserve;    // x 흰색으로 남길 만큼 빛을 정면으로 받아야 하는 정도(0~1), y 바닥 번짐 자리를 남기는 정도
         half _WC_Saturation;      // -1~1
@@ -761,6 +767,17 @@ Shader "ThatGameJam/WatercolorFlat"
                     // 지금 칠해진 색 위에 쌓는다. 그림자처럼 이미 어두운 곳에서도 선이 그 색보다 진하게 보인다.
                     half3 lead = Accumulate(saturate(color), _WC_Pencil.y);
                     color = lerp(color, lead, saturate(stroke));
+                }
+
+                // 빛칸: 아기(캐릭터 머티리얼)만 받는다. 이 화소에서 빛줄기를 거슬러 땅으로 내려가 바닥 빛과 같은 모양 안인지 본다.
+                // 스크린으로 섞어서 어두운 곳일수록 더 밝아지고, 하얗게 날아가지 않는다.
+                if (_Character > 0.5 && _WC_SunPool.w > 0 && _WC_SunPoolGlow > 0)
+                {
+                    float2 sunGround = input.positionWS.xz - _WC_SunPoolSlant.xy * (input.positionWS.y - _WC_SunPool.y);
+                    float sunR = length(sunGround - _WC_SunPool.xz) / _WC_SunPool.w;
+                    float sunField = SunPoolField(sunGround, sunR, _WC_SunPoolShape.x, _WC_SunPoolShape.y, _WC_SunPoolSlant.z);
+                    half sunLit = smoothstep(_WC_SunPoolShape.z - _WC_SunPoolShape.w, _WC_SunPoolShape.z + _WC_SunPoolShape.w, sunField) * SunPoolRimFade(sunR);
+                    color = 1.0 - (1.0 - saturate(color)) * (1.0 - _WC_SunPoolColor.rgb * _WC_SunPoolGlow * sunLit);
                 }
 
                 // 거리 안개: 멀수록 공기 색으로 바랜다. 지평선 쪽(시선이 수평)은 아래 색, 올려다보는 쪽은 위 색.

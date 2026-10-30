@@ -3,12 +3,13 @@ using UnityEngine;
 
 // Debug only: tints the environment redder with each season step, to see that Season.OnSeasonChanged fires before any real
 // environment change exists. Everything but the baby and the bird is tinted, terrains included, through property blocks, so no
-// material changes.
+// material changes. Off unless Tint Enabled is ticked.
 // Delete this component (the SeasonDebugTint object) to remove it; the tint goes with it.
 public class SeasonDebugTint : MonoBehaviour
 {
     static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
+    [SerializeField] bool tintEnabled;
     [SerializeField] Season season;
     // The level at which the tint is strongest.
     [SerializeField, Min(1)] int fullTintAt = 4;
@@ -33,7 +34,7 @@ public class SeasonDebugTint : MonoBehaviour
     void Tint(int level)
     {
         Clear();
-        if (level <= 0)
+        if (!tintEnabled || level <= 0)
             return;
         block ??= new MaterialPropertyBlock();
         float strength = maxStrength * Mathf.Clamp01((float)level / fullTintAt);

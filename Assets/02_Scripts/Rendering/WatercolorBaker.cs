@@ -726,13 +726,50 @@ public class WatercolorPaintedModelEditor : Editor
 [CustomEditor(typeof(WatercolorManager))]
 public class WatercolorManagerEditor : Editor
 {
+    // Kept while the Editor runs, so the choice survives selecting something else.
+    static WatercolorLook s_Look;
+
     public override void OnInspectorGUI()
     {
+        DrawLookRow();
+        EditorGUILayout.Space();
         DrawDefaultInspector();
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox("Blotch / backrun sizes and the colour chaos chunk, chance and drop sizes are used when baking. Re-bake after changing them.", MessageType.Info);
         if (GUILayout.Button("Bake All Models In Scene"))
             WatercolorBaker.BakeAll();
+    }
+
+    // Use a saved look like a preset: load it into these settings, or save these settings over it.
+    void DrawLookRow()
+    {
+        var manager = (WatercolorManager)target;
+        s_Look = (WatercolorLook)EditorGUILayout.ObjectField("Look", s_Look, typeof(WatercolorLook), false);
+        using (new EditorGUI.DisabledScope(s_Look == null))
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Load Look"))
+            {
+                Undo.RecordObject(manager, "Load Watercolor Look");
+                manager.Apply(s_Look.settings, 1f);
+                EditorUtility.SetDirty(manager);
+                var volume = FindAnyObjectByType<UnityEngine.Rendering.Volume>();
+                if (volume != null && s_Look.volumeProfile != null)
+                {
+                    Undo.RecordObject(volume, "Load Watercolor Look");
+                    volume.sharedProfile = s_Look.volumeProfile;
+                    EditorUtility.SetDirty(volume);
+                }
+            }
+            if (GUILayout.Button("Save To Look") && EditorUtility.DisplayDialog("Save To Look", $"Overwrite {s_Look.name} with these settings?", "Overwrite", "Cancel"))
+            {
+                Undo.RecordObject(s_Look, "Save Watercolor Look");
+                s_Look.settings = JsonUtility.FromJson<WatercolorManager.Settings>(JsonUtility.ToJson(manager.settings));
+                s_Look.settings.formLight = null;
+                EditorUtility.SetDirty(s_Look);
+                AssetDatabase.SaveAssetIfDirty(s_Look);
+            }
+        }
     }
 }
 #endif

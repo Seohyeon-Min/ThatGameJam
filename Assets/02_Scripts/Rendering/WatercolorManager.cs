@@ -155,6 +155,8 @@ public class WatercolorManager : MonoBehaviour
         public Color characterShadeColour = new Color(0.72f, 0.66f, 0.92f);
         [Tooltip("How far the characters' shade hue turns toward Character Shade Colour. 0 = own hue.")]
         [Range(0f, 1f)] public float characterShadeHueTurn = 0.5f;
+        [Tooltip("How much the baby brightens inside a LightBeam's pool of light, in the same lumpy shape. 0 = not at all.")]
+        [Range(0f, 1f)] public float characterSunPoolGlow = 0.6f;
 
         [Header("Base Wash")]
         [Tooltip("A first wash laid over the whole paper (sky, ground, water and every object), like the slate blue of an overcast snowy day. Everything is painted on top of it, so the scene gets darker without getting murky. 0 = off.")]
@@ -301,7 +303,7 @@ public class WatercolorManager : MonoBehaviour
     void OnDisable() => Push(new Settings());
 
     // Sets this manager's values to a blend of two looks (t 0 = a, 1 = b): numbers and colours blend, everything else
-    // (switches) flips halfway. The Form Light stays this manager's own. Used by WatercolorStageLooks.
+    // (switches) flips halfway. The Form Light stays this manager's own. Used by WatercolorSeasonLooks.
     public void Blend(Settings a, Settings b, float t)
     {
         Transform keepFormLight = settings.formLight;
@@ -357,6 +359,7 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalVector("_WC_GroundBounce", (Vector4)s.groundBounce);
         Shader.SetGlobalVector("_WC_EdgeAccent", (Vector4)s.edgeAccentColour);
         Shader.SetGlobalVector("_WC_Haze", new Vector4(s.haze, s.hazeStart, s.hazeRange, 0f));
+        Shader.SetGlobalFloat("_WC_SunPoolGlow", s.characterSunPoolGlow);
         Shader.SetGlobalVector("_WC_HazeLow", (Vector4)s.hazeLow);
         Shader.SetGlobalVector("_WC_HazeHigh", (Vector4)s.hazeHigh);
         Shader.SetGlobalFloat("_WC_ShadowSaturation", s.shadowSaturation);

@@ -10,8 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c087c8013d88d214c8f8bc1fbf104a16, type: 3}
-  m_Name: Look_Current
+  m_Name: Look_1
   m_EditorClassIdentifier: Assembly-CSharp::WatercolorLook
+  volumeProfile: {fileID: 11400000, guid: 54945ffde07d8d9429f48958483bc921, type: 2}
   settings:
     pigmentThickness: 1.22
     boundaryPigment: 0.53
@@ -45,7 +46,7 @@ MonoBehaviour:
     fullSunIntensity: 1
     lightColourInfluence: 0
     ambientColourInfluence: 0
-    gouache: 1
+    gouache: 0.429
     gouacheShadeDepth: 0.937
     gouacheShadeSaturation: 1.1
     gouacheTerminator: 0.5
@@ -62,8 +63,12 @@ MonoBehaviour:
     characterShadeSaturation: 1.6
     characterBrushGrain: 0
     characterDryBrush: 0.04
-    washStrength: 0.532
-    washColour: {r: 0.57796365, g: 0.620788, b: 0.6415094, a: 1}
+    characterShadeDepth: 0.7
+    characterShadeColour: {r: 0.72, g: 0.66, b: 0.92, a: 1}
+    characterShadeHueTurn: 0.5
+    characterSunPoolGlow: 0.6
+    washStrength: 0.468
+    washColour: {r: 0.5588287, g: 0.6749983, b: 0.735849, a: 1}
     washReserve: 0.751
     washFloorReserve: 0.078
     formLight: {fileID: 0}

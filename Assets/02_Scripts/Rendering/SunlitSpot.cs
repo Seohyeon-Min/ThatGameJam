@@ -1,54 +1,107 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// The sunlit spot at the end of a route: one or more shafts of light. Each child with a LightBeam is one shaft; place and
-// tilt them in the prefab. Level is how many are on, counted from the top of the hierarchy. Raising it in Play Mode brings
-// the new shafts down from the sky, lowering it draws them back up. In Edit Mode the change shows at once.
+// The sunlit spot at the end of a route: one or more shafts of light, always shining. Each child with a LightBeam is one
+// shaft; place and tilt them in the prefab. Level is how many are on, counted from the top of the hierarchy.
+// When the season advances (the baby fell asleep), the spot nearest the baby plays the child SpringRing outward from this
+// spot. The ring stays disabled otherwise: it rebuilds its mesh with raycasts every frame while enabled, and draws nothing
+// while disabled. What changes with each season listens to Season on its own, and can follow the ring by its _SpringRing global.
 [ExecuteAlways]
 public class SunlitSpot : MonoBehaviour
 {
+    static readonly List<SunlitSpot> Spots = new();
+
     [Tooltip("How many shafts are on, counted from the first child.")]
     [SerializeField, Min(0)] int level = 1;
-    [Tooltip("Seconds for a shaft to come down from its top to the ground. Its top is far off screen, so the first part isn't seen.")]
-    [SerializeField, Min(0.01f)] float revealSeconds = 3f;
 
-    LightBeam[] beams;
-    float[] reveals;
+    SpringRing ring;
+    Season season;
+    int lastSeason;
 
-    public void SetLevel(int newLevel) => level = Mathf.Max(0, newLevel);
-
-    void OnEnable() => ShowLevelAtOnce();
-
-    void OnValidate()
+    public void SetLevel(int newLevel)
     {
-        if (!Application.isPlaying)
-            ShowLevelAtOnce();
+        level = Mathf.Max(0, newLevel);
+        Apply();
     }
 
-    void OnTransformChildrenChanged() => ShowLevelAtOnce();
+    void OnEnable()
+    {
+        Spots.Add(this);
+        Apply();
+    }
 
-    void Update()
+    void OnDisable() => Spots.Remove(this);
+
+    void OnValidate() => Apply();
+
+    void OnTransformChildrenChanged() => Apply();
+
+    void Start()
     {
         if (!Application.isPlaying)
             return;
-
-        for (int i = 0; i < beams.Length; i++)
-        {
-            float target = i < level ? 1f : 0f;
-            if (reveals[i] == target)
-                continue;
-            reveals[i] = Mathf.MoveTowards(reveals[i], target, Time.deltaTime / revealSeconds);
-            beams[i].SetReveal(reveals[i]);
-        }
+        ring = GetComponentInChildren<SpringRing>(true);
+        season = FindAnyObjectByType<Season>();
+        if (season == null)
+            return;
+        lastSeason = season.Level;
+        season.OnSeasonChanged.AddListener(OnSeasonChanged);
     }
 
-    void ShowLevelAtOnce()
+    void OnDestroy()
     {
-        beams = GetComponentsInChildren<LightBeam>(true);
-        reveals = new float[beams.Length];
-        for (int i = 0; i < beams.Length; i++)
+        if (season != null)
+            season.OnSeasonChanged.RemoveListener(OnSeasonChanged);
+    }
+
+    void Update()
+    {
+        if (Application.isPlaying && ring != null && ring.enabled && !ring.IsPlaying)
+            ring.enabled = false;
+    }
+
+    // Season also raises its event at the start and on Apply Level, so only a rise counts.
+    void OnSeasonChanged(int level)
+    {
+        bool rose = level > lastSeason;
+        lastSeason = level;
+        if (rose && NearestTo(Baby.Instance.transform.position) == this)
+            PlayRing();
+    }
+
+    public static void PlayRingNearestBaby() => NearestTo(Baby.Instance.transform.position)?.PlayRing();
+
+    void PlayRing()
+    {
+        if (ring == null)
         {
-            reveals[i] = i < level ? 1f : 0f;
-            beams[i].SetReveal(reveals[i]);
+            Debug.LogWarning("SunlitSpot: no SpringRing child to play.", this);
+            return;
         }
+        ring.enabled = true;
+        ring.Play();
+    }
+
+    static SunlitSpot NearestTo(Vector3 position)
+    {
+        SunlitSpot nearest = null;
+        float best = float.MaxValue;
+        foreach (SunlitSpot spot in Spots)
+        {
+            float distance = (spot.transform.position - position).sqrMagnitude;
+            if (distance < best)
+            {
+                best = distance;
+                nearest = spot;
+            }
+        }
+        return nearest;
+    }
+
+    void Apply()
+    {
+        LightBeam[] beams = GetComponentsInChildren<LightBeam>(true);
+        for (int i = 0; i < beams.Length; i++)
+            beams[i].GetComponent<MeshRenderer>().enabled = i < level;
     }
 }

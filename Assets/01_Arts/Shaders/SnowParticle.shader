@@ -17,6 +17,10 @@ Shader "ThatGameJam/SnowParticle"
         [Header(Camera Near Fade)]
         _NearFadeStart ("Near Fade Start", Float) = 1
         _NearFadeEnd ("Near Fade End", Float) = 4
+
+        [Header(Clearing Behind The Ring)]
+        _RingClearSoftness ("Clearing Edge Softness", Float) = 2
+        _RingClearLag ("Clearing Behind The Front", Float) = 8
     }
 
     SubShader
@@ -41,6 +45,8 @@ Shader "ThatGameJam/SnowParticle"
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
 
+            float4 _SpringRing; // SpringRing 재생 중의 중심(xyz)과 반지름(w). 0 이면 재생 중이 아니다
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
@@ -50,6 +56,8 @@ Shader "ThatGameJam/SnowParticle"
                 half _FarAlpha;
                 float _NearFadeStart;
                 float _NearFadeEnd;
+                float _RingClearSoftness;
+                float _RingClearLag;
             CBUFFER_END
 
             struct Attributes
@@ -75,6 +83,12 @@ Shader "ThatGameJam/SnowParticle"
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.color = input.color;
+                // 눈이 갠다: 앞줄의 바람(SeasonSnow)에 밀려나지 않고 남은 눈송이는 앞줄이 지나간 뒤에 사라진다.
+                if (_SpringRing.w > 0.0)
+                {
+                    float fromRing = length(positionWS.xz - _SpringRing.xz) - (_SpringRing.w - _RingClearLag);
+                    output.color.a *= smoothstep(-_RingClearSoftness, _RingClearSoftness, fromRing);
+                }
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.distance = length(positionWS - GetCameraPositionWS());
                 return output;

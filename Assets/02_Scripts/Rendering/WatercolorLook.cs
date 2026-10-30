@@ -1,11 +1,14 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
-// A saved look for the watercolor / gouache shaders: every WatercolorManager value. Make one per stage
-// (Create > ThatGameJam > Watercolor Look, or "Copy From Scene Manager" in its menu) and list them in WatercolorStageLooks.
+// A saved look for the watercolor / gouache shaders: every WatercolorManager value. Make one per season
+// (Create > ThatGameJam > Watercolor Look, or "Copy From Scene Manager" in its menu) and list them in WatercolorSeasonLooks.
 // Scene references (Form Light) are not stored; the manager keeps its own.
 [CreateAssetMenu(menuName = "ThatGameJam/Watercolor Look", fileName = "WatercolorLook")]
 public class WatercolorLook : ScriptableObject
 {
+    [Tooltip("The scene's Volume takes this profile with the look. Empty keeps the profile from before.")]
+    public VolumeProfile volumeProfile;
     public WatercolorManager.Settings settings = new();
 
     [ContextMenu("Copy From Scene Manager")]

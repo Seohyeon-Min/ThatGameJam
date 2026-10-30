@@ -25,7 +25,11 @@ public class SpringRing : MonoBehaviour
     [SerializeField, Min(0.05f)] float segmentLength = 0.3f;
     [Tooltip("Points across the ring's width that are dropped onto the ground.")]
     [SerializeField, Range(2, 8)] int rowsAcross = 4;
+    [Tooltip("Progress over the play time (both 0 to 1). The default bursts out, then settles into a slow, calm spread.")]
+    [SerializeField] AnimationCurve playCurve = new(new Keyframe(0f, 0f, 0f, 7f), new Keyframe(0.18f, 0.68f, 1.1f, 1.1f), new Keyframe(1f, 1f, 0.1f, 0f));
 
+    // While a ring plays, its centre (xyz) and radius (w), for what follows it, like the snow clearing. All zero otherwise.
+    static readonly int SpringRingId = Shader.PropertyToID("_SpringRing");
     static readonly int ProgressId = Shader.PropertyToID("_Progress");
     static readonly int DurationId = Shader.PropertyToID("_Duration");
     static readonly int MaxRadiusId = Shader.PropertyToID("_MaxRadius");
@@ -55,6 +59,8 @@ public class SpringRing : MonoBehaviour
             DestroyImmediate(mesh);
     }
 
+    public bool IsPlaying => playing;
+
     public void Play()
     {
         elapsed = 0f;
@@ -63,6 +69,8 @@ public class SpringRing : MonoBehaviour
 
     void Stop()
     {
+        if (playing)
+            Shader.SetGlobalVector(SpringRingId, Vector4.zero);
         playing = false;
         if (meshRenderer != null)
             meshRenderer.SetPropertyBlock(null);
@@ -86,12 +94,18 @@ public class SpringRing : MonoBehaviour
             if (playing)
             {
                 elapsed += Time.deltaTime;
-                progress = Mathf.Min(elapsed / Mathf.Max(material.GetFloat(DurationId), 0.01f), 1f);
+                float played = Mathf.Min(elapsed / Mathf.Max(material.GetFloat(DurationId), 0.01f), 1f);
+                progress = playCurve.Evaluate(played);
                 block ??= new MaterialPropertyBlock();
                 block.SetFloat(ProgressId, progress);
                 meshRenderer.SetPropertyBlock(block);
-                if (progress >= 1f)
+                Vector3 centre = transform.position;
+                Shader.SetGlobalVector(SpringRingId, new Vector4(centre.x, centre.y, centre.z, progress * material.GetFloat(MaxRadiusId)));
+                if (played >= 1f)
+                {
                     playing = false;
+                    Shader.SetGlobalVector(SpringRingId, Vector4.zero);
+                }
             }
         }
 

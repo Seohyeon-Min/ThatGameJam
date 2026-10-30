@@ -1,5 +1,24 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8869442305284128853
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2a97206f08ada144a8192e104a4a5cb, type: 3}
+  m_Name: SeasonWipe
+  m_EditorClassIdentifier: Assembly-CSharp::SeasonWipeFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 5d9d7f1225e573c4495932e6e97217d1, type: 3}
+  edgeSoftness: 0.6
+  lumpHeight: 3
+  lumpSize: 2.5
+  fadeStart: 26
+  fadeEnd: 38
 --- !u!114 &-3881289934963426081
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -147,7 +166,8 @@ MonoBehaviour:
   - {fileID: -2731492945435815767}
   - {fileID: -3881289934963426081}
   - {fileID: -3422908632515747798}
-  m_RendererFeatureMap: 05838fea6e4001dda910d060a3c917dadfbc343c5ee322ca2ae047ecbb627fd0
+  - {fileID: -8869442305284128853}
+  m_RendererFeatureMap: 05838fea6e4001dda910d060a3c917dadfbc343c5ee322ca2ae047ecbb627fd0abbfb7353769e984
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
