@@ -7,51 +7,25 @@ public class LeaningLog : PathBlocker
 {
     [SerializeField] NaturalTimer timer;
     [SerializeField] Perchable top;
-    // At the base; this is what rotates.
-    [SerializeField] Transform pivot;
-    // Local euler angles of the pivot once fallen.
-    [SerializeField] Vector3 fallenEuler;
-    [SerializeField] float fallDuration = 1.2f;
-    // Sway at the end of the timer, in degrees along the fall direction.
-    [SerializeField] float maxSwayAngle = 4f;
-    [SerializeField] float swaySpeed = 1.5f;
-
-    Quaternion standing;
-    Quaternion fallen;
+    [SerializeField] Animator animator;
+    [SerializeField] AnimationClip fallClip;
 
     public override NaturalTimer Timer => timer;
 
     void Awake()
     {
-        standing = pivot.localRotation;
-        fallen = Quaternion.Euler(fallenEuler);
         top.Perched += timer.ResolveByBird;
         timer.Resolved += byBird => StartCoroutine(Fall(byBird));
     }
 
     public override void BeginWaiting() => timer.Begin();
 
-    // Sways along the fall direction, more as the wind grows.
-    void Update()
-    {
-        if (!timer.IsRunning)
-            return;
-        float angle = Mathf.Sin(Time.time * swaySpeed * 2f * Mathf.PI) * maxSwayAngle * timer.Progress;
-        pivot.localRotation = Quaternion.SlerpUnclamped(standing, fallen, angle / Quaternion.Angle(standing, fallen));
-    }
-
     IEnumerator Fall(bool byBird)
     {
         top.Release();
         top.CanPerch = false;
-        Quaternion from = pivot.localRotation;
-        for (float time = 0f; time < fallDuration; time += Time.deltaTime)
-        {
-            float t = time / fallDuration;
-            pivot.localRotation = Quaternion.Slerp(from, fallen, t * t);
-            yield return null;
-        }
-        pivot.localRotation = fallen;
+        animator.Play("Break", 0, 0f);
+        yield return new WaitForSeconds(fallClip.length);
         Open(byBird);
     }
 }

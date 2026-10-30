@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Collections.Generic;
 using Unity.Cinemachine;
 using Unity.Cinemachine.TargetTracking;
 using UnityEditor;
@@ -85,8 +87,6 @@ public static class BuildSamTestScene
     static readonly Vector3 CameraOffset = new(10f, 10f, -10f);
     // The camera aims this far above the followed point, so the leaning log's top stays in frame.
     const float CameraAimHeight = 1.5f;
-    // Short enough that its top (the perch) stays low in the fixed camera's frame, long enough to span stream 2 when fallen.
-    const float LeaningLogLength = 3.4f;
 
     static int groundLayer, interactableLayer, clickPlaneLayer;
 
@@ -176,25 +176,13 @@ public static class BuildSamTestScene
     static Stage BuildStage1()
     {
         var root = new GameObject("Stage1");
-        Material wood = Mat("Trunk", new Color(0.35f, 0.25f, 0.18f));
-
-        // The two streams (Streams, z 8 .. 12 and 20 .. 22.5) are in the terrain (BuildWorld).
-        // 1-1: the fallen log is already a bridge; the stump shows it once stood.
-        GameObject bridge = Primitive(PrimitiveType.Cylinder, "FallenLog", new Vector3(0f, 0.3f, 10f), new Vector3(0.6f, 2.5f, 0.6f), wood, root);
-        bridge.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-        bridge.layer = groundLayer;
-        Primitive(PrimitiveType.Cylinder, "Stump", new Vector3(0f, 0.35f, 7.2f), new Vector3(0.65f, 0.35f, 0.65f), wood, root);
-
-        LeaningLog leaningLog = BuildLeaningLog(root, new Vector3(0f, 0.3f, 19.6f), wood);
-
-        // Points carry height: 0.6 is the top of a fallen log.
-        BabyRoute route = Route(root,
-            new Vector3(0f, 0f, 6.8f), new Vector3(0f, 0.6f, 8f), new Vector3(0f, 0.6f, 12f), new Vector3(0f, 0f, 13f),
-            new Vector3(0f, 0f, 19f), new Vector3(0f, 0.6f, 20.2f), new Vector3(0f, 0.6f, 22.7f), new Vector3(0f, 0f, 23.5f),
-            new Vector3(0f, 0f, 25f));
+        LeaningLog leaningLog = SetupStage1Logs.Build(root, out Vector3[] points);
+        leaningLog.name = "LeaningLog";
+        BabyRoute route = Route(root, points);
         // The sunlit spot is not a section of its own: the stage ends in it right after the last device (ADR 0006).
         RestLight(root, route[route.Count - 1].position);
-        StopPoint stop = route[4].gameObject.AddComponent<StopPoint>();
+        StopPoint stop = Enumerable.Range(0, route.Count).Select(i => route[i])
+            .First(p => Mathf.Approximately(p.position.z, 18f)).gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
 
         // When the bird enters the band at z 15 .. 17, the camera eases onto the log and stream until the log has fallen or the bird
@@ -387,40 +375,6 @@ public static class BuildSamTestScene
         return stage;
     }
 
-    // The pivot sits at the base and leans toward the water (+Z); fallen, the log lies across the stream as a bridge.
-    static LeaningLog BuildLeaningLog(GameObject parent, Vector3 basePosition, Material wood)
-    {
-        GameObject root = Child(parent, "LeaningLog", basePosition);
-        GameObject pivot = Child(root, "Pivot", basePosition);
-        pivot.transform.localRotation = Quaternion.Euler(20f, 0f, 0f);
-
-        GameObject trunk = Primitive(PrimitiveType.Cylinder, "Trunk", Vector3.zero, new Vector3(0.6f, LeaningLogLength / 2f, 0.6f), wood, pivot);
-        trunk.transform.localPosition = new Vector3(0f, LeaningLogLength / 2f, 0f);
-        trunk.layer = interactableLayer;
-        GameObject snowCap = Primitive(PrimitiveType.Sphere, "SnowOnTop", Vector3.zero, new Vector3(0.7f, 0.35f, 0.7f), Mat("Snow", new Color(0.92f, 0.95f, 1f)), pivot);
-        snowCap.transform.localPosition = new Vector3(0f, LeaningLogLength, -0.1f);
-        Object.DestroyImmediate(snowCap.GetComponent<Collider>());
-
-        GameObject perchPoint = Child(pivot, "PerchPoint", Vector3.zero);
-        // On the snow cap: the bird's feet stand here.
-        perchPoint.transform.localPosition = new Vector3(0f, LeaningLogLength + 0.15f, 0f);
-        var top = trunk.AddComponent<Perchable>();
-        Set(top, so => so.FindProperty("perchPoint").objectReferenceValue = perchPoint.transform);
-
-        var timer = root.AddComponent<NaturalTimer>();
-        Set(timer, so => so.FindProperty("kind").enumValueIndex = (int)NaturalTimerKind.LeaningLog);
-
-        var log = root.AddComponent<LeaningLog>();
-        Set(log, so =>
-        {
-            so.FindProperty("timer").objectReferenceValue = timer;
-            so.FindProperty("top").objectReferenceValue = top;
-            so.FindProperty("pivot").objectReferenceValue = pivot.transform;
-            so.FindProperty("fallenEuler").vector3Value = new Vector3(90f, 0f, 0f);
-        });
-        return log;
-    }
-
     // The girl model from the art (Assets/01_Arts/Models/Girl, import settings by AgentScripts/SetupGirlModel.cs) under the Baby.
     // The model faces -X, so it is turned to face +Z. Its feet are at its origin.
     static Baby BuildBaby()
@@ -532,6 +486,7 @@ public static class BuildSamTestScene
         Go(walk, lieDown, 0.3f).AddCondition(AnimatorConditionMode.If, 0f, "Asleep");
         Go(walk, idles[0], 0.2f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
 
+        SetupBabyQuietWait.Configure(controller);
         AssetDatabase.SaveAssets();
         return controller;
     }
@@ -1022,5 +977,217 @@ public static class BuildSamTestScene
         var so = new SerializedObject(component);
         edit(so);
         so.ApplyModifiedPropertiesWithoutUndo();
+    }
+}
+
+// Tommy's animated dead tree, shared by the full scene builder and the in-place stage 1 upgrade.
+public static class SetupStage1Logs
+{
+    const string ModelPath = "Assets/01_Arts/Mesh/broken tree.fbx";
+    const string ControllerPath = "Assets/01_Arts/Mesh/BrokenTree_Animator.controller";
+    const float BridgeScale = 2.2f;
+    const float LeaningScale = 1.4f;
+
+    public static string Run()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.path != "Assets/00_Scenes/Sam_Test.unity" || Application.isPlaying)
+            throw new System.InvalidOperationException("Open Sam_Test in Edit Mode first.");
+        var stage = GameObject.Find("Stage1").GetComponent<Stage>();
+        var previous = stage.GetComponentInChildren<LeaningLog>();
+        var oldRoots = stage.transform.Cast<Transform>().Where(t =>
+            t.name == "FallenLog" || t.name == "FallenLog_Art" || t.name == "Stump" || t.name == "LeaningLog").ToArray();
+        var log = Build(stage.gameObject, out Vector3[] points);
+        foreach (var zone in stage.GetComponentsInChildren<CameraZone>())
+        {
+            var so = new SerializedObject(zone);
+            if (so.FindProperty("blocker").objectReferenceValue != previous) continue;
+            so.FindProperty("blocker").objectReferenceValue = log;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        foreach (var old in oldRoots) UnityEngine.Object.DestroyImmediate(old.gameObject);
+        log.name = "LeaningLog";
+        var oldRoute = stage.route;
+        var routeRoot = new GameObject("BabyRoute");
+        routeRoot.transform.SetParent(stage.transform, false);
+        for (int i = 0; i < points.Length; i++)
+        {
+            var point = new GameObject("Point_" + i);
+            point.transform.SetParent(routeRoot.transform, false);
+            point.transform.position = points[i];
+            if (Mathf.Approximately(points[i].z, 18f))
+            {
+                var stop = point.AddComponent<StopPoint>();
+                Set(stop, "blocker", log);
+            }
+        }
+        stage.route = routeRoot.AddComponent<BabyRoute>();
+        UnityEngine.Object.DestroyImmediate(oldRoute.gameObject);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        return "Stage1 upgraded: idle loop, break one-shot, authored fallen bridge, mesh-fitted route.";
+    }
+
+    public static LeaningLog Build(GameObject parent, out Vector3[] route)
+    {
+        var clips = AssetDatabase.LoadAllAssetsAtPath(ModelPath).OfType<AnimationClip>().ToDictionary(c => c.name);
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath)
+            ?? AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+        var machine = controller.layers[0].stateMachine;
+        foreach (var state in machine.states) machine.RemoveState(state.state);
+        var idle = machine.AddState("Idle");
+        idle.motion = clips["idle"];
+        machine.defaultState = idle;
+        var fall = machine.AddState("Break");
+        fall.motion = clips["break"];
+        EditorUtility.SetDirty(controller);
+
+        var bridge = Model(parent, "FallenLog_Art", new Vector3(0f, 0f, 7f), BridgeScale, out GameObject bridgeModel);
+        clips["break"].SampleAnimation(bridgeModel, clips["break"].length);
+        // The first crossing is a static copy of the final pose, including its broken stump.
+        UnityEngine.Object.DestroyImmediate(bridgeModel.GetComponent<Animator>());
+        AddColliders(bridgeModel, LayerMask.NameToLayer("Ground"));
+
+        var root = Model(parent, "LeaningLog_Art", new Vector3(0f, 0f, 19.1f), LeaningScale, out GameObject model);
+        var animator = model.GetComponent<Animator>();
+        if (animator == null) animator = model.AddComponent<Animator>();
+        animator.runtimeAnimatorController = controller;
+        animator.applyRootMotion = false;
+        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        var colliders = AddColliders(model, LayerMask.NameToLayer("Interactable"));
+        var top = model.AddComponent<Perchable>();
+        var trunk = model.transform.Find("Tube");
+        var perch = new GameObject("PerchPoint");
+        perch.transform.SetParent(trunk, false);
+        Bounds trunkBounds = trunk.GetComponent<MeshFilter>().sharedMesh.bounds;
+        perch.transform.localPosition = new Vector3(trunkBounds.center.x, trunkBounds.max.y, trunkBounds.center.z);
+        Set(top, "perchPoint", perch.transform);
+        var timer = root.AddComponent<NaturalTimer>();
+        var timerSO = new SerializedObject(timer);
+        timerSO.FindProperty("kind").enumValueIndex = (int)NaturalTimerKind.LeaningLog;
+        timerSO.ApplyModifiedPropertiesWithoutUndo();
+        var log = root.AddComponent<LeaningLog>();
+        Set(log, "timer", timer);
+        Set(log, "top", top);
+        Set(log, "animator", animator);
+        Set(log, "fallClip", clips["break"]);
+
+        // Measure the final wood surface before restoring the standing idle pose.
+        clips["break"].SampleAnimation(model, clips["break"].length);
+        Physics.SyncTransforms();
+        var points = new List<Vector3>();
+        var samples = new List<float> { 5.5f };
+        for (int i = 58; i <= 131; i++) samples.Add(i * 0.1f);
+        samples.Add(18f); // The baby stops on land, before the second stump.
+        for (int i = 184; i <= 232; i++) samples.Add(i * 0.1f);
+        samples.Add(23.5f);
+        samples.Add(25f);
+        foreach (float z in samples)
+        {
+            float y = 0f;
+            // Cover the interval around each point too: the stump has sharp, uneven roots.
+            for (int offset = -2; offset <= 2; offset++)
+            {
+                var ray = new Ray(new Vector3(0f, 10f, z + offset * 0.05f), Vector3.down);
+                foreach (var collider in bridge.GetComponentsInChildren<Collider>().Concat(colliders))
+                    if (collider.Raycast(ray, out RaycastHit hit, 20f)) y = Mathf.Max(y, hit.point.y);
+            }
+            points.Add(new Vector3(0f, y, z));
+        }
+        // Approach the broken roots on a slope, rather than walking vertically into their sides.
+        const float maxRisePerMetre = 1.5f;
+        for (int i = 1; i < points.Count; i++) RaiseApproach(points, i - 1, i, maxRisePerMetre);
+        for (int i = points.Count - 2; i >= 0; i--) RaiseApproach(points, i + 1, i, maxRisePerMetre);
+        route = points.ToArray();
+        clips["idle"].SampleAnimation(model, 0f);
+        return log;
+    }
+
+    static void RaiseApproach(List<Vector3> points, int from, int to, float slope)
+    {
+        Vector3 point = points[to];
+        point.y = Mathf.Max(point.y, points[from].y - Mathf.Abs(point.z - points[from].z) * slope);
+        points[to] = point;
+    }
+
+    static GameObject Model(GameObject parent, string name, Vector3 position, float scale, out GameObject model)
+    {
+        var root = new GameObject(name);
+        root.transform.SetParent(parent.transform, false);
+        root.transform.position = position;
+        // The FBX falls along -Z; the road and water crossing run along +Z.
+        root.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+        root.transform.localScale = Vector3.one * scale;
+        model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath), root.transform);
+        // Sampling modifies child transforms: unpack so the static final pose is serialized as-is.
+        PrefabUtility.UnpackPrefabInstance(model, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        return root;
+    }
+
+    static MeshCollider[] AddColliders(GameObject model, int layer)
+    {
+        return model.GetComponentsInChildren<MeshFilter>().Select(mf =>
+        {
+            mf.gameObject.layer = layer;
+            var collider = mf.gameObject.AddComponent<MeshCollider>();
+            collider.sharedMesh = mf.sharedMesh;
+            return collider;
+        }).ToArray();
+    }
+
+    static void Set(UnityEngine.Object target, string field, UnityEngine.Object value)
+    {
+        var so = new SerializedObject(target);
+        so.FindProperty(field).objectReferenceValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+}
+
+// Patch the shared girl controller without rebuilding the scene or changing unrelated idle states.
+public static class SetupBabyQuietWait
+{
+    public static string Run()
+    {
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/01_Arts/Models/Girl/Girl.controller");
+        Configure(controller);
+        AssetDatabase.SaveAssets();
+        return "QuietWait: breathing only for crouch-placeholder stops.";
+    }
+
+    public static void Configure(AnimatorController controller)
+    {
+        if (!controller.parameters.Any(p => p.name == "QuietWait"))
+            controller.AddParameter("QuietWait", AnimatorControllerParameterType.Bool);
+        var machine = controller.layers[0].stateMachine;
+        // Idempotent when applied to the existing controller as well as the full builder.
+        var old = machine.states.FirstOrDefault(s => s.state.name == "QuietWait").state;
+        if (old != null)
+        {
+            foreach (var transition in machine.anyStateTransitions.Where(t => t.destinationState == old).ToArray())
+                machine.RemoveAnyStateTransition(transition);
+            machine.RemoveState(old);
+        }
+        AnimatorState Find(string name) => machine.states.First(s => s.state.name == name).state;
+        var quiet = machine.AddState("QuietWait", new Vector2(550f, 300f));
+        quiet.motion = Find("Idle").motion;
+        var enter = machine.AddAnyStateTransition(quiet);
+        enter.hasExitTime = false;
+        enter.duration = 0.15f;
+        enter.canTransitionToSelf = false;
+        enter.AddCondition(AnimatorConditionMode.If, 0f, "QuietWait");
+        enter.AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
+        enter.AddCondition(AnimatorConditionMode.IfNot, 0f, "Asleep");
+        void Exit(string to, string parameter, bool on)
+        {
+            var t = quiet.AddTransition(Find(to));
+            t.hasExitTime = false;
+            t.duration = 0.2f;
+            t.AddCondition(on ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, 0f, parameter);
+        }
+        Exit("LieDown", "Asleep", true);
+        Exit("Walk", "Walking", true);
+        Exit("Idle", "QuietWait", false);
+        EditorUtility.SetDirty(controller);
     }
 }

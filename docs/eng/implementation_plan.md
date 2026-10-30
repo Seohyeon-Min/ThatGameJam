@@ -249,6 +249,18 @@ For now it is one stage without a device (ADR 0018, the director's sketch). The 
   - The number of branches is not yet decided in the design (§16). The code takes N branches, and the side path opens only when all are cleared (Q9).
 - The bird does not touch the rabbits (§8.3). The rabbits are not `Perchable`, so clicking them just makes the bird fly to the ground at that spot.
 
+
+Current first version (`Sam_Test`, 2026-10-30): one mother, three kits, and two bypass branches. Uses the actual models and `Sleep*`, `WakeUp*`, `Hop`, `SitIdle` clips in `Assets/01_Arts/Models/Rabbits/`. Mother speed 0.61 m/s; kit speed 0.34 m/s. The source ZIP was removed after CRC and model import verification.
+
+- Demo starts after baby Z 27.2 when the branch is on screen. The separate small bird lands and leaves; the player cannot perch on the demo branch.
+- Stop Z 31, family center Z 33.3. The 30s timer starts on baby arrival. The baby faces the rabbits while waiting.
+- Help: open only after both branches finish rising. Rabbits remain asleep; the baby faces the family, looks at the bird, and walks the X −2.75 bypass. Early resolution uses the same route.
+- Natural: each rabbit plays the wake matching its sleep pose, then all move off the lane before opening. Partial branch progress cannot override a natural result once decided.
+- Signals are branch snow dust, small kit turns, and a small mother turn. Source clips have no yawning/stretching or baby crouch/peek. Baby uses `QuietWait` (breathing only) for waiting/reactions at the rabbit stop; normal hum/stretch idles are excluded. Prototype snow rustle plays only when a branch actually sheds its snow. Waiting signals are visual only until distinct signal audio exists.
+- At season 3, five local snowbanks shrink away over 3s. No global ground-snow shader change yet.
+- In-place builder: `AgentScripts/BuildStage2.cs`, `BuildStage2.Run`. Run this pass again after a full `BuildSamTestScene.Build` reset.
+- No fog stage was connected; the earlier decision not to rebuild the fog map until requested remains in force.
+
 ### 4.12 Stage 3 — Fog (§9.2 ~ §9.5)
 
 This is the hardest and riskiest part. A prototype built separately from the other work, first, is suggested (Section 6).
@@ -414,7 +426,7 @@ Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3
 |---|---|---|
 | 1. Shared framework | Done | `Assets/00_Scenes/Sam_Test.unity`. Work records 04, 05 |
 | 2. Fog prototype | Done | `Assets/00_Scenes/Sam_Fog_Test.unity`. Work record 06 |
-| 3. Stage 2 | Next. Not started | "Stage2" in `Sam_Test` is a temporary stage for checking the transition (only ground and a sunlit spot). Step 3 replaces it with the real stage 2 |
+| 3. Stage 2 | First playable version; awaiting feedback | `Sam_Test/Stage2`: demo, sleeping family, two branches/bypass, natural resolution, local snow melt. The 1-3 rabbit procession is not yet implemented |
 | 4 to 6 | Not started | |
 
 Changes outside the plan:

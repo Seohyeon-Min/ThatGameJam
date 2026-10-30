@@ -7,7 +7,11 @@ public class StopPoint : MonoBehaviour
 {
     [SerializeField] PathBlocker blocker;
     [SerializeField] WaitPose pose;
+    [SerializeField] BabyRoute byBirdRoute;
+    [SerializeField] Transform observeTarget;
 
     public PathBlocker Blocker => blocker;
     public WaitPose Pose => pose;
+    public BabyRoute ByBirdRoute => byBirdRoute;
+    public Transform ObserveTarget => observeTarget;
 }

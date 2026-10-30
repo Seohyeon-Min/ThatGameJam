@@ -12,6 +12,7 @@ public class Baby : CryListener
     static readonly int AsleepParam = Animator.StringToHash("Asleep");
     static readonly int LookAroundParam = Animator.StringToHash("LookAround");
     static readonly int SleepState = Animator.StringToHash("Sleep");
+    static readonly int QuietWaitParam = Animator.StringToHash("QuietWait");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -59,6 +60,7 @@ public class Baby : CryListener
         State = BabyState.Resting;
         animator.SetBool(WalkingParam, false);
         animator.SetBool(LookAroundParam, false);
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         wakeTimer.ResetTimer();
     }
@@ -72,6 +74,7 @@ public class Baby : CryListener
         State = BabyState.Sleeping;
         animator.SetBool(WalkingParam, false);
         animator.SetBool(LookAroundParam, false);
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         wakeTimer.ResetTimer();
         wakeTimer.Begin();
@@ -108,6 +111,8 @@ public class Baby : CryListener
 
             // The bird may have opened it before the baby arrived (ADR 0003 Q4); the baby then only reacts.
             PathBlocker blocker = stop.Blocker;
+            // No crouch clip yet: use only calm breathing for this pose, including its reaction.
+            animator.SetBool(QuietWaitParam, stop.Pose == WaitPose.Crouch);
             if (!blocker.IsOpen)
             {
                 // Waits standing whatever the stop's pose: the model has no crouch or sit yet.
@@ -115,18 +120,40 @@ public class Baby : CryListener
                 StandStill();
                 CurrentBlocker = blocker;
                 blocker.BeginWaiting();
-                yield return new WaitUntil(() => blocker.IsOpen);
+                while (!blocker.IsOpen)
+                {
+                    if (stop.ObserveTarget != null)
+                        TurnToward(stop.ObserveTarget.position - transform.position);
+                    yield return null;
+                }
                 CurrentBlocker = null;
+            }
+            if (stop.ObserveTarget != null)
+            {
+                State = BabyState.Reacting;
+                StandStill();
+                for (float time = 0f; time < 0.8f; time += Time.deltaTime)
+                {
+                    TurnToward(stop.ObserveTarget.position - transform.position);
+                    yield return null;
+                }
             }
             if (blocker.OpenedByBird && blocker.LookUpWhenOpenedByBird)
             {
                 State = BabyState.Reacting;
                 yield return LookUp(tuning.babyLookUpDuration);
             }
+            if (blocker.OpenedByBird && stop.ByBirdRoute != null)
+            {
+                State = BabyState.Walking;
+                for (int detour = 0; detour < stop.ByBirdRoute.Count; detour++)
+                    yield return WalkTo(stop.ByBirdRoute[detour].position);
+            }
         }
 
         State = BabyState.Resting;
         animator.SetBool(WalkingParam, false);
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         yield return new WaitForSeconds(lieDownClip.length);
         ReachedRest?.Invoke();
@@ -141,6 +168,7 @@ public class Baby : CryListener
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
     public bool StepToward(Vector3 target)
     {
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(WalkingParam, true);
         TurnToward(target - transform.position);
         transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.babyWalkSpeed * Time.deltaTime);
