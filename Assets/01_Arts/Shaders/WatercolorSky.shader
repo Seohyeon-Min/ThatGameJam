@@ -60,6 +60,7 @@ Shader "ThatGameJam/WatercolorSky"
             half4 _WC_Haze;          // x 세기
             half4 _WC_HazeLow;
             half4 _WC_HazeHigh;
+            half4 _WC_Wash;          // 바탕칠(WatercolorFlat 과 같다): rgb 색, a 세기
             // 파스텔 씬(Pastel Style 이 켜져 있으면 w = 1)에서는 파스텔의 안개 값을 따른다.
             half4 _PS_Haze;
             half4 _PS_HazeLow;
@@ -158,6 +159,8 @@ Shader "ThatGameJam/WatercolorSky"
                     color = lerp(color, pastel ? _PS_HazeLow.rgb : _WC_HazeLow.rgb, hazeStrength * low);
                 }
 
+                // 바탕칠: 하늘도 같은 한 겹을 받는다(구름 흰색도 바탕칠 위라 조금 어둡다).
+                color *= lerp(1.0, _WC_Wash.rgb, _WC_Wash.a);
                 return half4(SRGBToLinear(saturate(color)), 1);
             }
             ENDHLSL

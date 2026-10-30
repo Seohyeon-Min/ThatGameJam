@@ -97,6 +97,7 @@ Shader "ThatGameJam/WatercolorWater"
             half4 _WC_HazeLow;
             half4 _WC_HazeHigh;
             half _WC_Plain;
+            half4 _WC_Wash;     // 바탕칠: rgb 색, a 세기
 
             struct Attributes
             {
@@ -233,6 +234,8 @@ Shader "ThatGameJam/WatercolorWater"
                     color = lerp(color, lerp(_WC_HazeLow.rgb, _WC_HazeHigh.rgb, saturate(-viewWS.y * 2.0)), hazeAmount);
                 }
 
+                // 바탕칠(WatercolorFlat 과 같다). 흰 붓 자국(물빛)은 남긴 종이라 바탕칠을 덜 받는다.
+                color *= lerp(1.0, _WC_Wash.rgb, _WC_Wash.a * (1.0 - streakMask * 0.7));
                 half3 linearColor = SRGBToLinear(saturate(color));
                 // 씬 뷰 평범 모드에서는 물 색만.
                 if (_WC_Plain > 0.5)

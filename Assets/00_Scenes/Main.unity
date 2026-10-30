@@ -57464,123 +57464,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 940907418}
   m_SourcePrefab: {fileID: 100100000, guid: e8df5abc69ca1be49aa2a801e17b3992, type: 3}
---- !u!1 &689419158
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 689419160}
-  - component: {fileID: 689419159}
-  m_Layer: 0
-  m_Name: Watercolor Manager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &689419159
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 689419158}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f0531ba4de729324987f431f3a8ae583, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WatercolorManager
-  settings:
-    pigmentThickness: 1.22
-    boundaryPigment: 0.53
-    boundaryWidthPercent: 0.25
-    outlinePigment: 0.742
-    outlineWidthPercent: 0.4
-    blotches: 0.367
-    backruns: 0.223
-    blotchSaturation: 1.11
-    blotchSizePercent: 5
-    backrunSizePercent: 3.7
-    chaosHueRange: 24.4
-    chaosChunkSizePercent: 39.1
-    chaosSplitChance: 0.828
-    chaosDropSizeMinPercent: 15.4
-    chaosDropSizeMaxPercent: 28.8
-    pencilStrength: 0.391
-    pencilDarkness: 1.372
-    strokeLengthPercent: 4.03
-    strokeSizeInfluence: 0.557
-    strokeWidth: 1.82
-    strokeWidthVariation: 0.184
-    strokeDensity: 1.87
-    strokeAlignment: 0.87
-    strokeAngle: -5.9
-    strokeAngleJitter: 20.7
-    pencilShadowFocus: 0.862
-    pencilShadowFadePercent: 4
-    pencilPatchSizePercent: 19.2
-    pencilPatchChance: 0.739
-    formLight: {fileID: 129843631}
-    lightYellowPercent: 13.1
-    lightYellowWidthPercent: 7.8
-    lightCream: {r: 1, g: 0.96, b: 0.86, a: 1}
-    lightFade: 0.523
-    lightPastelChips: 0.232
-    pastelShadows: 1
-    shadowSaturation: 0.13
-    shadowDarkening: 0.057
-    shadowHueFrom: 201
-    shadowHueTo: 225
-    darkPigmentBluePercent: 57.5
-    shadowDepth: 1.196
-    receiveShadows: 1
-    shadowEdgePigment: 0.421
-    shadowRaggedness: 0.291
-    shadowUnevenness: 0.617
-    sceneColour: 0.185
-    sceneColourSize: 22
-    lightTintA: {r: 1, g: 0.95, b: 0.78, a: 1}
-    lightTintB: {r: 1, g: 0.86, b: 0.88, a: 1}
-    shadeTintA: {r: 0.72, g: 0.82, b: 1, a: 1}
-    shadeTintB: {r: 0.84, g: 0.76, b: 1, a: 1}
-    bounce: 0
-    skyBounce: {r: 0.52855104, g: 0.7984106, b: 0.9245283, a: 1}
-    groundBounce: {r: 1, g: 1, b: 1, a: 1}
-    edgeAccent: 0.548
-    edgeAccentColour: {r: 1, g: 0.47965217, b: 0.17924517, a: 1}
-    haze: 0.926
-    hazeStart: 14.6
-    hazeRange: 53
-    hazeLow: {r: 0.9146174, g: 0.9019608, b: 1, a: 1}
-    hazeHigh: {r: 0.7830188, g: 0.983543, b: 1, a: 1}
-    floorBlotchSizePercent: 12
-    instanceHueRange: 12
-    instanceBrightnessRange: 10
-    instanceSaturationRange: 40
-    saturation: 26.1
-    brightness: 1.5
-    contrast: -11.1
-    tonemappingPercent: 5.8
-    paperThreshold: 0.631
-    paperSoftnessPercent: 0.11
---- !u!4 &689419160
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 689419158}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &690851944
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -83314,6 +83197,138 @@ MonoBehaviour:
     m_Center: {x: 0.001903683, y: 2.7692854, z: 0.042390227}
     m_Extent: {x: 0.47216448, y: 2.8796918, z: 0.51794195}
   variation: 80
+--- !u!1 &961961018
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 961961020}
+  - component: {fileID: 961961019}
+  m_Layer: 0
+  m_Name: Watercolor Manager (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &961961019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 961961018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0531ba4de729324987f431f3a8ae583, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorManager
+  settings:
+    pigmentThickness: 1.22
+    boundaryPigment: 0.53
+    boundaryWidthPercent: 0.25
+    outlinePigment: 0.742
+    outlineWidthPercent: 0.4
+    blotches: 0.367
+    backruns: 0.223
+    blotchSaturation: 1.11
+    blotchSizePercent: 5
+    backrunSizePercent: 3.7
+    chaosHueRange: 24.4
+    chaosChunkSizePercent: 39.1
+    chaosSplitChance: 0.828
+    chaosDropSizeMinPercent: 15.4
+    chaosDropSizeMaxPercent: 28.8
+    pencilStrength: 0.391
+    pencilDarkness: 1.372
+    strokeLengthPercent: 4.03
+    strokeSizeInfluence: 0.557
+    strokeWidth: 1.82
+    strokeWidthVariation: 0.184
+    strokeDensity: 1.87
+    strokeAlignment: 0.87
+    strokeAngle: -5.9
+    strokeAngleJitter: 20.7
+    pencilShadowFocus: 0.862
+    pencilShadowFadePercent: 4
+    pencilPatchSizePercent: 19.2
+    pencilPatchChance: 0.739
+    fullSunIntensity: 1
+    lightColourInfluence: 0
+    ambientColourInfluence: 0
+    gouache: 1
+    gouacheShadeDepth: 0.937
+    gouacheHighlight: 0.093
+    gouacheHighlightColour: {r: 0.94, g: 0.97, b: 1, a: 1}
+    gouacheDryBrush: 0.251
+    gouacheRoughEdge: 0.51
+    gouacheBrushGrain: 0.054
+    gouacheBrushSize: 0.002
+    washStrength: 0.532
+    washColour: {r: 0.57796365, g: 0.620788, b: 0.6415094, a: 1}
+    washReserve: 0.751
+    washFloorReserve: 0.078
+    formLight: {fileID: 129843631}
+    lightYellowPercent: 13.1
+    lightYellowWidthPercent: 7.8
+    lightCream: {r: 1, g: 0.96, b: 0.86, a: 1}
+    lightFade: 0.02
+    lightPastelChips: 0.232
+    pastelShadows: 1
+    shadowSaturation: 0.13
+    shadowDarkening: 0.057
+    shadowHueFrom: 201
+    shadowHueTo: 225
+    darkPigmentBluePercent: 61
+    shadowDepth: 1.412
+    receiveShadows: 1
+    shadowEdgePigment: 0.421
+    shadowRaggedness: 0.291
+    shadowUnevenness: 0.702
+    sceneColour: 0.185
+    sceneColourSize: 22
+    lightTintA: {r: 1, g: 0.95, b: 0.78, a: 1}
+    lightTintB: {r: 1, g: 0.86, b: 0.88, a: 1}
+    shadeTintA: {r: 0.72, g: 0.82, b: 1, a: 1}
+    shadeTintB: {r: 0.84, g: 0.76, b: 1, a: 1}
+    bounce: 0.234
+    skyBounce: {r: 0.4339623, g: 0.4339623, b: 0.4339623, a: 1}
+    groundBounce: {r: 1, g: 1, b: 1, a: 1}
+    edgeAccent: 0
+    edgeAccentColour: {r: 1, g: 0.47965217, b: 0.17924517, a: 1}
+    haze: 0.849
+    hazeStart: 8.8
+    hazeRange: 43
+    hazeLow: {r: 0.9146174, g: 0.9019608, b: 1, a: 1}
+    hazeHigh: {r: 0.7830188, g: 0.983543, b: 1, a: 1}
+    floorBlotchSizePercent: 19.6
+    instanceHueRange: 4
+    instanceBrightnessRange: 6
+    instanceSaturationRange: 15
+    saturation: 26.1
+    brightness: 1.5
+    contrast: -11.1
+    tonemappingPercent: 5.8
+    paperThreshold: 0.631
+    paperSoftnessPercent: 0.11
+--- !u!4 &961961020
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 961961018}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &962538658 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1424737170847631049, guid: cc5dfd5402a903b4da3eaa3b6debaf40, type: 3}
@@ -116006,34 +116021,6 @@ PrefabInstance:
     m_TransformParent: {fileID: 790954994}
     m_Modifications:
     - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: wind.x
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: fallSpeed
-      value: 1.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: flakeSize
-      value: 0.26
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: spawnRate
-      value: 5024.277
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: areaSize.x
-      value: 70.685
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: areaSize.y
-      value: 78.97758
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: maxLifetime
-      value: 11
-      objectReference: {fileID: 0}
-    - target: {fileID: 3062638231370418476, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
       propertyPath: followTarget
       value: 
       objectReference: {fileID: 253838773}
@@ -116041,21 +116028,13 @@ PrefabInstance:
       propertyPath: m_Name
       value: Snowfall
       objectReference: {fileID: 0}
+    - target: {fileID: 5216960230678855593, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
+      propertyPath: season
+      value: 
+      objectReference: {fileID: 1979531056}
     - target: {fileID: 5980066499111424303, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 8787282516153091754, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8787282516153091754, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8787282516153091754, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8787282516153091754, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
       propertyPath: m_LocalPosition.x
@@ -116097,90 +116076,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: prewarm
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: ShapeModule.m_Scale.x
-      value: 70.685
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: ShapeModule.m_Scale.z
-      value: 78.97758
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: VelocityModule.x.scalar
-      value: 0.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: VelocityModule.y.scalar
-      value: -1.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: VelocityModule.x.minScalar
-      value: 0.4
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: VelocityModule.y.minScalar
-      value: -1.9
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: InitialModule.maxNumParticles
-      value: 71848
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: InitialModule.startSize.scalar
-      value: 0.29
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: InitialModule.startSize.minScalar
-      value: 0.22999999
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: EmissionModule.rateOverTime.scalar
-      value: 5024.277
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: InitialModule.startLifetime.scalar
-      value: 11
-      objectReference: {fileID: 0}
-    - target: {fileID: 9131057907070441076, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      propertyPath: InitialModule.startLifetime.minMaxState
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3070333576498324983, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1290299446}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
 --- !u!4 &1290299444 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8787282516153091754, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
   m_PrefabInstance: {fileID: 1290299443}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1290299445 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3070333576498324983, guid: 3615c7771e7bebb48a86ac5f278b2642, type: 3}
-  m_PrefabInstance: {fileID: 1290299443}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1290299446
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1290299445}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 42335428b7809fe49bc8cf6a2c76010b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SeasonSnow
-  season: {fileID: 1979531056}
-  stopsAt: 1
 --- !u!1001 &1290955903
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -196863,5 +196768,5 @@ SceneRoots:
   - {fileID: 1979531059}
   - {fileID: 1352903904}
   - {fileID: 790954994}
-  - {fileID: 689419160}
+  - {fileID: 961961020}
   - {fileID: 880556594}

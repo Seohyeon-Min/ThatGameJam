@@ -26,6 +26,8 @@ Shader "ThatGameJam/SoftPastel"
         [Toggle(_ALPHATEST_ON)] _AlphaClip ("Alpha Clipping", Float) = 0
         _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
         _SelfShadowSkip ("Ignore Own Shadow Within (m)", Range(0, 3)) = 0
+        [Toggle] _ReceiveCastShadows ("Receive Cast Shadows", Float) = 1
+        [Toggle] _LeavePaper ("Leave Paper White On The Lit Side", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
     }
 
@@ -66,6 +68,14 @@ Shader "ThatGameJam/SoftPastel"
                 half _HasPattern;
                 half _Cutoff;
                 half _SelfShadowSkip;
+                half _ReceiveCastShadows;
+                half _LeavePaper;
+                half _Birch;
+                half _BirchMarks;
+                half _BirchDarkness;
+                half4 _BirchColour;
+                half _BirchLength;
+                half _BirchThickness;
             CBUFFER_END
 
             half4 _PS_Light;   // rgb 빛 쪽 따뜻한 색(sRGB), a 세기
@@ -260,7 +270,7 @@ Shader "ThatGameJam/SoftPastel"
 
                 // 빛 받는 정도(부드러운 그라데이션)와 드리운 그림자. 바닥은 면 방향을 쓰지 않고 그림자만 쓴다.
                 half wrap = lerp(1.0, dot(normalWS, mainLight.direction) * 0.5 + 0.5, objectOnly);
-                half tone = wrap * lerp(1.0, mainLight.shadowAttenuation, smoothstep(0.1, 0.3, wrap));
+                half tone = wrap * lerp(1.0, mainLight.shadowAttenuation, smoothstep(0.1, 0.3, wrap) * _ReceiveCastShadows);
                 // 경계는 알갱이로: 알갱이만큼 위치를 흔든 뒤 부드럽게 나눈다.
                 half toneGrain = tone + (grain - 0.5) * _PS_Grain.y * 0.6;
                 half lit = smoothstep(_PS_Tone.x - _PS_Tone.y * 0.5, _PS_Tone.x + _PS_Tone.y * 0.5, toneGrain);
