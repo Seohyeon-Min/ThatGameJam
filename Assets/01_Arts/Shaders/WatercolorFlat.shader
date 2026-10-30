@@ -53,6 +53,14 @@ Shader "ThatGameJam/WatercolorFlat"
         _BirchLength ("Birch Mark Length (share of the trunk's girth)", Range(0.05, 0.6)) = 0.28
         _BirchThickness ("Birch Mark Thickness (share of a row)", Range(0.02, 0.5)) = 0.16
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
+
+        [Header(Camera Fade)]
+        [Toggle] _CameraFade ("Fade When Blocking Bird/Baby", Float) = 0
+        _CameraFadeDistance ("Fade Radius (around the camera-to-subject line)", Float) = 2.0
+        _CameraFadeRange ("Fade Softness (beyond the radius, back to visible)", Float) = 1.5
+        // Set at runtime by Perchable on whichever object the bird is currently standing on (not hand-tuned,
+        // not a radius): never fade while this is on, so the bird never reads as floating on nothing.
+        [HideInInspector] _CameraFadeExempt ("Camera Fade Exempt (runtime only)", Float) = 0
     }
 
     SubShader
@@ -90,6 +98,10 @@ Shader "ThatGameJam/WatercolorFlat"
             half4 _BirchColour;
             half _BirchLength;
             half _BirchThickness;
+            half _CameraFade;
+            half _CameraFadeDistance;
+            half _CameraFadeRange;
+            half _CameraFadeExempt;
         CBUFFER_END
 
         // WatercolorManager 가 정하는 전역 값. 모든 수채화 머티리얼이 같이 따른다.
@@ -138,6 +150,9 @@ Shader "ThatGameJam/WatercolorFlat"
         float4 _WC_PencilScale;   // 연필 선 텍스처 한 장의 월드 크기 = x * 거리 + y
         float4 _WC_FormLight;     // 형태용 빛 방향(빛 쪽을 향함), w = 1 이면 사용. 0 이면 주 광원 방향을 쓴다.
         float4 _WC_PencilZone;    // 형태 그림자 쪽 경계가 흐려지는 폭(화면 높이 비율), 그림자 쪽에 모이는 정도, 크기별 영향력
+        // 새/아기의 월드 위치(xyz), w = 1 이면 그 대상이 있음(CameraOcclusionFade 가 매 프레임 갱신).
+        float4 _WC_OcclusionTarget0;
+        float4 _WC_OcclusionTarget1;
         #define PENCIL_TILE_SHARE (512.0 / 1080.0) // 선 텍스처 한 장이 화면 높이에서 차지하는 비율
         #define PENCIL_FULL_SIZE 0.25              // 화면 높이의 이 비율 이상인 조각은 선 길이를 줄이지 않는다
 
@@ -253,6 +268,41 @@ Shader "ThatGameJam/WatercolorFlat"
             #if defined(_ALPHATEST_ON)
             clip(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).a * _BaseColor.a - _Cutoff);
             #endif
+        }
+
+        // Closest distance from positionWS to the segment between the camera and targetWS: the part of a tree
+        // that actually stands in the view between the camera and the bird/baby, not off to the side or past it.
+        half DistanceToViewAxis(float3 positionWS, float3 targetWS)
+        {
+            float3 cameraWS = GetCameraPositionWS();
+            float3 axis = targetWS - cameraWS;
+            float t = saturate(dot(positionWS - cameraWS, axis) / max(dot(axis, axis), 1e-6));
+            return distance(positionWS, cameraWS + axis * t);
+        }
+
+        // Thins out to speckles, instead of turning glassy, wherever it sits within _CameraFadeDistance of the
+        // line from the camera to the bird or the baby (eased back to fully visible over _CameraFadeRange
+        // beyond that) — a tree blocking the view of either, not just one that is close to the camera itself.
+        // Stays in the opaque queue (Blend/ZWrite untouched), so depth, shadows and SSAO from other passes are
+        // unaffected. Off by default; only materials with _CameraFade on (the trees) pay for it.
+        void CameraFadeClip(float3 positionWS, float2 screenPos)
+        {
+            if (_CameraFade < 0.5)
+                return;
+            // Perchable sets this (MaterialPropertyBlock) on the whole object the bird currently stands on,
+            // so that specific tree/branch never fades, whatever else around it does.
+            if (_CameraFadeExempt > 0.5)
+                return;
+            half d = 1e8;
+            if (_WC_OcclusionTarget0.w > 0.5)
+                d = min(d, DistanceToViewAxis(positionWS, _WC_OcclusionTarget0.xyz));
+            if (_WC_OcclusionTarget1.w > 0.5)
+                d = min(d, DistanceToViewAxis(positionWS, _WC_OcclusionTarget1.xyz));
+            half visible = saturate((d - _CameraFadeDistance) / max(_CameraFadeRange, 1e-4));
+            if (visible >= 1.0)
+                return;
+            half noise = frac(sin(dot(screenPos, float2(12.9898, 78.233))) * 43758.5453);
+            clip(visible - noise);
         }
         ENDHLSL
 
@@ -397,6 +447,8 @@ Shader "ThatGameJam/WatercolorFlat"
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+
+                CameraFadeClip(input.positionWS, input.positionCS.xy);
 
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
                 #if defined(_ALPHATEST_ON)

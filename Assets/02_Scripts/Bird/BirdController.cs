@@ -5,7 +5,8 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed
+// right-click cries. Left idle in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
+// hopping the camera to any branch on screen. Sent past where the way is still closed
 // (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
 // Flies at the current map's fixed altitude inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015).
 // The transform is where the bird's feet are, so it stands on a perch point.
@@ -178,11 +179,11 @@ public class BirdController : MonoBehaviour
 
         idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
         if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
-            PerchNearby();
+            PerchNearby(GameTuning.Current.birdIdlePerchRadius);
     }
 
-    // False if no branch is on screen.
-    bool PerchNearby()
+    // False if no branch is on screen (within maxDistance world units, when given).
+    bool PerchNearby(float maxDistance = float.MaxValue)
     {
         idleTime = 0f;
         Perchable nearest = null;
@@ -190,7 +191,7 @@ public class BirdController : MonoBehaviour
         foreach (Perchable perchable in Perchable.All)
         {
             float distance = Vector3.Distance(transform.position, perchable.PerchPoint.position);
-            if (perchable.IsIdleSpot && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
+            if (perchable.IsIdleSpot && perchable.CanPerch && distance <= maxDistance && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
                 (nearest, nearestDistance) = (perchable, distance);
         }
         if (nearest == null)
@@ -200,6 +201,7 @@ public class BirdController : MonoBehaviour
     }
 
     // Reached the closed way: lands on the nearest branch on screen and shakes its head there. With no branch on screen it stays.
+    // Unlike idling, this isn't distance-limited: being sent back, the bird commits to acknowledging the block wherever the nearest branch is.
     void Refuse()
     {
         following = false;
@@ -247,7 +249,12 @@ public class BirdController : MonoBehaviour
     void LeavePerch()
     {
         if (perch != null)
+        {
             perch.Released -= LeavePerch;
+            // Released only fires when the perch itself ejects the bird (e.g. the log falling); leaving by
+            // choice (a new click, Refuse, ...) doesn't raise it, so the camera-fade exemption is cleared here too.
+            perch.SetCameraFadeExempt(false);
+        }
         bool takingOff = state == State.Perched || state == State.Landing;
         perch = null;
         refusePending = false;
