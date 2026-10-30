@@ -72,8 +72,11 @@ public class Baby : CryListener
             return;
         }
         GameTuning tuning = GameTuning.Current;
-        float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
-        float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
+        // A slow-moving envelope on top of the shiver itself, so it isn't a constant metronomic hum: it
+        // eases from barely shivering up to a harder tremble and back, unpredictably, like a real chill.
+        float intensity = Mathf.Max(0f, 1f + Noise(130f, tuning.babyShiverIntensityFrequency) * 2f * tuning.babyShiverIntensityVariation);
+        float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle * intensity;
+        float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle * intensity;
         animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
     }
 
