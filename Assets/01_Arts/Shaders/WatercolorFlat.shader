@@ -289,6 +289,9 @@ Shader "ThatGameJam/WatercolorFlat"
         {
             if (_CameraFade < 0.5)
                 return;
+            // Characters are what the fade is there to show, so they never fade themselves.
+            if (_Character > 0.5)
+                return;
             // Perchable sets this (MaterialPropertyBlock) on the whole object the bird currently stands on,
             // so that specific tree/branch never fades, whatever else around it does.
             if (_CameraFadeExempt > 0.5)
