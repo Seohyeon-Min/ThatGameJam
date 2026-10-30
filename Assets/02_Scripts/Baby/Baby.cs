@@ -14,6 +14,7 @@ public class Baby : CryListener
     static readonly int SleepState = Animator.StringToHash("Sleep");
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
+    static readonly int JumpState = Animator.StringToHash("Jump");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -22,6 +23,9 @@ public class Baby : CryListener
     [SerializeField] AnimationClip getUpClip;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
+    // Stepping up onto a balance beam (a log) or down off the far end plays this once, in place, before
+    // Walk/BalanceWalk resumes.
+    [SerializeField] AnimationClip jumpClip;
 
     public static Baby Instance { get; private set; }
 
@@ -197,11 +201,13 @@ public class Baby : CryListener
             if (onBalanceBeam && route[i].TryGetComponent(out BalanceBeamEnd _))
             {
                 onBalanceBeam = false;
+                yield return PlayJump();
                 animator.CrossFade(WalkState, 0.25f);
             }
             else if (!onBalanceBeam && route[i].TryGetComponent(out BalanceBeamStart _))
             {
                 onBalanceBeam = true;
+                yield return PlayJump();
                 animator.CrossFade(BalanceWalkState, 0.25f);
             }
 
@@ -229,6 +235,7 @@ public class Baby : CryListener
             if (blocker is LeaningLog)
             {
                 onBalanceBeam = true;
+                yield return PlayJump();
                 animator.CrossFade(BalanceWalkState, 0.25f);
             }
         }
@@ -289,6 +296,14 @@ public class Baby : CryListener
         animator.SetBool(LookAroundParam, true);
         yield return new WaitForSeconds(tuning.babyLookAroundDuration);
         animator.SetBool(LookAroundParam, false);
+    }
+
+    // Stepping up onto a balance beam or down off the far end: one in-place hop before Walk/BalanceWalk resumes.
+    IEnumerator PlayJump()
+    {
+        StandStill();
+        animator.CrossFade(JumpState, 0.1f);
+        yield return new WaitForSeconds(jumpClip.length);
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
