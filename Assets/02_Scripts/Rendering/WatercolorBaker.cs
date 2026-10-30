@@ -8,7 +8,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // Bakes a WatercolorPaintedModel: mass normals and model-space pattern coordinates into mesh copies, a 3D pattern
-// texture, and ThatGameJam/WatercolorFlat materials. Results go to Assets/01_Arts/Baked/<scene>_<model>_<id>/.
+// texture, and ThatGameJam/WatercolorFlat materials. Instances of one prefab share one bake in
+// Assets/01_Arts/Baked/Shared/<prefab>_<guid>/; other models go to Assets/01_Arts/Baked/<scene>_<model>_<id>/.
 // See WatercolorPaintedModel for what each step is for. Bake the model in its rest pose (no animation playing),
 // because skinned pieces are read in their current pose and the baked data is stored per vertex.
 public static class WatercolorBaker
@@ -51,24 +52,161 @@ public static class WatercolorBaker
     }
 
     // Re-bakes every WatercolorPaintedModel in the open scenes, e.g. after changing the bake-time sizes in WatercolorManager.
+    // Instances of the same prefab are baked once and share the result.
     [MenuItem("Tools/Watercolor/Bake All Models In Scene")]
     public static void BakeAll()
     {
         var models = Object.FindObjectsByType<WatercolorPaintedModel>();
+        var groups = new Dictionary<string, List<WatercolorPaintedModel>>();
+        var unique = new List<WatercolorPaintedModel>();
+        foreach (var model in models)
+        {
+            string key = ShareKey(model);
+            if (key == null)
+                unique.Add(model);
+            else if (groups.TryGetValue(key, out var list))
+                list.Add(model);
+            else
+                groups[key] = new List<WatercolorPaintedModel> { model };
+        }
+
         var watch = System.Diagnostics.Stopwatch.StartNew();
+        int done = 0, total = groups.Count + unique.Count;
         try
         {
-            for (int i = 0; i < models.Length; i++)
+            foreach (var (key, group) in groups)
             {
-                EditorUtility.DisplayProgressBar("Watercolor Bake", models[i].name, (float)i / models.Length);
-                Bake(models[i]);
+                EditorUtility.DisplayProgressBar("Watercolor Bake", group[0].name, (float)done++ / total);
+                BakeGroup(group, key);
+            }
+            foreach (var model in unique)
+            {
+                EditorUtility.DisplayProgressBar("Watercolor Bake", model.name, (float)done++ / total);
+                BakeGroup(new List<WatercolorPaintedModel> { model }, null);
             }
         }
         finally
         {
             EditorUtility.ClearProgressBar();
         }
-        Debug.Log($"Watercolor: baked {models.Length} models in {watch.Elapsed.TotalSeconds:F1} s");
+        Debug.Log($"Watercolor: baked {models.Length} models as {total} bakes in {watch.Elapsed.TotalSeconds:F1} s");
+    }
+
+    // Bakes the model. A shared bake is redone for every instance of the same prefab in the open scenes, so they stay alike.
+    public static string Bake(WatercolorPaintedModel model)
+    {
+        string key = ShareKey(model);
+        if (key == null)
+            return BakeGroup(new List<WatercolorPaintedModel> { model }, null);
+        var group = new List<WatercolorPaintedModel>();
+        foreach (var other in Object.FindObjectsByType<WatercolorPaintedModel>())
+            if (ShareKey(other) == key)
+                group.Add(other);
+        return BakeGroup(group, key);
+    }
+
+    // Models share a bake when their content is the same: the same meshes (vertex positions) with the same materials,
+    // placed the same way under the model's root. So instances of one prefab share, and so do copies of one mesh at
+    // different sizes (the root's scale does not matter). The key works on baked models too, because the baked mesh
+    // copies keep the source positions. Null = this model bakes alone.
+    static string ShareKey(WatercolorPaintedModel model)
+    {
+        if (!model.shareBake)
+            return null;
+        Transform root = model.transform;
+        var key = new System.Text.StringBuilder();
+        foreach (var renderer in root.GetComponentsInChildren<Renderer>())
+        {
+            Mesh mesh = renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh
+                : renderer.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null;
+            if (!renderer.enabled || mesh == null || renderer.sharedMaterial == null)
+                continue;
+            Matrix4x4 meshToRoot = root.worldToLocalMatrix * renderer.transform.localToWorldMatrix;
+            key.Append(PathUnder(root, renderer.transform)).Append('|')
+                .Append(Hash128.Compute(mesh.vertices)).Append('|')
+                .Append(renderer.sharedMaterial.name.Replace("_watercolor", "")).Append('|');
+            for (int i = 0; i < 12; i++)
+                key.Append(Mathf.RoundToInt(meshToRoot[i] * 1000f)).Append(',');
+            key.Append(';');
+        }
+        return key.Length == 0 ? null : Hash128.Compute(key.ToString()).ToString();
+    }
+
+    // Bakes one model of the group and gives the result to the others. Blotch sizes depend on the distance to the camera,
+    // so the instance at the middle distance is baked. Each instance of a shared bake gets its own pattern variation.
+    static string BakeGroup(List<WatercolorPaintedModel> group, string key)
+    {
+        var oldFolders = new HashSet<string>();
+        foreach (var model in group)
+            if (model.pattern != null)
+            {
+                string path = AssetDatabase.GetAssetPath(model.pattern);
+                oldFolders.Add(path.Substring(0, path.LastIndexOf('/')));
+            }
+
+        WatercolorPaintedModel source = group[0];
+        var camera = Camera.main;
+        if (camera != null && group.Count > 2)
+        {
+            var sorted = new List<WatercolorPaintedModel>(group);
+            sorted.Sort((a, b) => Vector3.Distance(camera.transform.position, a.transform.position)
+                .CompareTo(Vector3.Distance(camera.transform.position, b.transform.position)));
+            source = sorted[sorted.Count / 2];
+        }
+
+        string folder = key == null ? EnsureFolder(source) : EnsureSharedFolder(source, key);
+        int seed = key == null && source.seed != 0 ? source.seed : folder.GetHashCode();
+        string result = BakeOne(source, folder, seed);
+        foreach (var model in group)
+        {
+            if (model != source)
+                CopyBake(source, model);
+            model.variation = key == null ? 0 : Variation(model);
+            model.ApplyVariation();
+            EditorUtility.SetDirty(model);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(model);
+        }
+        AssetDatabase.SaveAssets();
+        foreach (string oldFolder in oldFolders)
+            DeleteOldBake(oldFolder, folder);
+        return group.Count > 1 ? $"{result} (shared by {group.Count})" : result;
+    }
+
+    // 1-255, stable per instance.
+    static int Variation(WatercolorPaintedModel model)
+    {
+        unchecked
+        {
+            uint h = (uint)GlobalObjectId.GetGlobalObjectIdSlow(model.gameObject).ToString().GetHashCode();
+            return 1 + (int)(h % 255u);
+        }
+    }
+
+    // Gives `target` the meshes, materials and pattern of `source`, matching renderers by their path under the model.
+    static void CopyBake(WatercolorPaintedModel source, WatercolorPaintedModel target)
+    {
+        var baked = new Dictionary<string, Renderer>();
+        foreach (var renderer in source.GetComponentsInChildren<Renderer>())
+            baked.TryAdd(PathUnder(source.transform, renderer.transform), renderer);
+        foreach (var renderer in target.GetComponentsInChildren<Renderer>())
+        {
+            if (!baked.TryGetValue(PathUnder(target.transform, renderer.transform), out Renderer from))
+                continue;
+            Undo.RecordObject(renderer, "Watercolor Bake");
+            if (renderer is SkinnedMeshRenderer skinned && from is SkinnedMeshRenderer fromSkinned)
+                skinned.sharedMesh = fromSkinned.sharedMesh;
+            else if (renderer.TryGetComponent(out MeshFilter filter) && from.TryGetComponent(out MeshFilter fromFilter))
+            {
+                Undo.RecordObject(filter, "Watercolor Bake");
+                filter.sharedMesh = fromFilter.sharedMesh;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(filter);
+            }
+            renderer.sharedMaterials = from.sharedMaterials;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+        }
+        target.pattern = source.pattern;
+        target.modelBounds = source.modelBounds;
+        EditorSceneManager.MarkSceneDirty(target.gameObject.scene);
     }
 
     struct Part
@@ -81,14 +219,9 @@ public static class WatercolorBaker
         public Bounds boundsRoot;
     }
 
-    public static string Bake(WatercolorPaintedModel model)
+    static string BakeOne(WatercolorPaintedModel model, string folder, int seed)
     {
         Transform root = model.transform;
-        // The model's previous bake, found through its pattern. Its folder can differ from the new one (the object id
-        // changes when the scene is rebuilt), so it is deleted after this bake instead of being left behind.
-        string oldPattern = model.pattern != null ? AssetDatabase.GetAssetPath(model.pattern) : "";
-        string oldFolder = oldPattern.Length > 0 ? oldPattern.Substring(0, oldPattern.LastIndexOf('/')) : null;
-        string folder = EnsureFolder(model);
         var groups = new Dictionary<Material, List<Part>>();
         var allBounds = new Bounds();
         bool first = true;
@@ -113,7 +246,6 @@ public static class WatercolorBaker
         float longest = Mathf.Max(allBounds.size.x, Mathf.Max(allBounds.size.y, allBounds.size.z));
         allBounds.Expand(longest * 0.04f);
         longest = Mathf.Max(allBounds.size.x, Mathf.Max(allBounds.size.y, allBounds.size.z));
-        int seed = model.seed != 0 ? model.seed : folder.GetHashCode();
 
         // Blotch sizes are a share of the screen height, turned into world size at this model's distance from the
         // camera, so near and far, small and large models all get the same blotch size on screen.
@@ -149,22 +281,26 @@ public static class WatercolorBaker
                     groupBounds.Encapsulate(p);
             Vector3 radius = Vector3.Max(groupBounds.extents, Vector3.one * longest * 0.02f);
 
+            // Normals are worked out in the root's own space (without the root's scale) and stored so that Unity's normal
+            // transform turns them into the right world normal at any root scale. So the bake does not depend on the
+            // root's scale and can be shared by copies of different sizes.
+            Matrix4x4 rootToWorldTransposed = root.localToWorldMatrix.transpose;
             foreach (var part in parts)
             {
                 Mesh mesh = Object.Instantiate(part.source);
                 mesh.name = part.source.name.Replace("_watercolor", "") + "_watercolor";
                 var normals = new Vector3[part.positionsRoot.Length];
                 var coords = new List<Vector3>(part.positionsRoot.Length);
-                Matrix4x4 worldToMeshNormal = part.meshToWorld.transpose;
+                Matrix4x4 rootToMeshNormal = (root.worldToLocalMatrix * part.meshToWorld).transpose;
                 for (int i = 0; i < normals.Length; i++)
                 {
                     Vector3 p = part.positionsRoot[i];
                     // Gradient of the group's enclosing ellipsoid: every piece of the group shades as one rounded mass.
                     Vector3 d = p - groupBounds.center;
-                    Vector3 massRoot = new Vector3(d.x / (radius.x * radius.x), d.y / (radius.y * radius.y), d.z / (radius.z * radius.z));
-                    Vector3 massWorld = (root.rotation * massRoot).normalized;
-                    Vector3 n = Vector3.Slerp(part.normalsWorld[i], massWorld, massBlend).normalized;
-                    normals[i] = worldToMeshNormal.MultiplyVector(n).normalized;
+                    Vector3 massRoot = new Vector3(d.x / (radius.x * radius.x), d.y / (radius.y * radius.y), d.z / (radius.z * radius.z)).normalized;
+                    Vector3 ownRoot = rootToWorldTransposed.MultiplyVector(part.normalsWorld[i]).normalized;
+                    Vector3 n = Vector3.Slerp(ownRoot, massRoot, massBlend).normalized;
+                    normals[i] = rootToMeshNormal.MultiplyVector(n).normalized;
                     coords.Add(new Vector3(
                         (p.x - allBounds.min.x) / allBounds.size.x,
                         (p.y - allBounds.min.y) / allBounds.size.y,
@@ -195,8 +331,6 @@ public static class WatercolorBaker
         EditorUtility.SetDirty(model);
         PrefabUtility.RecordPrefabInstancePropertyModifications(model);
         EditorSceneManager.MarkSceneDirty(model.gameObject.scene);
-        AssetDatabase.SaveAssets();
-        DeleteOldBake(oldFolder, folder);
         return $"{root.name}: {pieces} pieces in {masses} masses ({groups.Count} colours) -> {folder}";
     }
 
@@ -336,10 +470,11 @@ public static class WatercolorBaker
             colors[i] = new Color32((byte)(pigment[i] * 255f), (byte)(inside * 255f), (byte)(rim * 255f), (byte)(edgeNoise[i] * 255f));
         }
 
+        // Mirror, so the per-instance shift of a shared pattern never shows a seam.
         var texture = new Texture3D(nx, ny, nz, TextureFormat.RGBA32, false)
         {
             name = "WatercolorPattern",
-            wrapMode = TextureWrapMode.Clamp,
+            wrapMode = TextureWrapMode.Mirror,
             filterMode = FilterMode.Bilinear,
         };
         texture.SetPixels32(colors);
@@ -374,8 +509,8 @@ public static class WatercolorBaker
         return 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
     }
 
-    // r: colour chaos drop (0.5 = no change, 0/1 = -/+ full hue shift).
-    // g: pencil patch coverage. b: pencil stroke angle offset for the patch (0.5 = none).
+    // r: colour chaos drop (0.5 = no change, 0/1 = -/+ full hue shift). g: pencil patch coverage.
+    // Two 8-bit channels (RG16), half the size of RGBA.
     static Texture3D BakeChaos(int nx, int ny, int nz, Bounds bounds, int seed,
         float chunk, float chance, float dropMin, float dropMax,
         float pencilChunk, float pencilChance, string path)
@@ -383,7 +518,7 @@ public static class WatercolorBaker
         chunk = Mathf.Max(chunk, 1e-4f);
         pencilChunk = Mathf.Max(pencilChunk, 1e-4f);
         int s = seed * 7919;
-        var pixels = new Color32[nx * ny * nz];
+        var data = new byte[nx * ny * nz * 2];
         var edgeOffset = new Vector3(seed % 53, 17.3f, 91.7f);
         var pencilEdge = edgeOffset + new Vector3(41.1f, 7.7f, 3.3f);
         for (int z = 0, i = 0; z < nz; z++)
@@ -397,21 +532,18 @@ public static class WatercolorBaker
                     float chaos = signedAmount * coverage;
 
                     // Pencil patches: one patch per chosen chunk, filling most of it.
-                    float patch = Drop(q, pencilChunk, pencilChance, pencilChunk * 0.6f, pencilChunk * 1.0f, s + 101, pencilEdge, out float angle);
+                    float patch = Drop(q, pencilChunk, pencilChance, pencilChunk * 0.6f, pencilChunk * 1.0f, s + 101, pencilEdge, out _);
 
-                    pixels[i] = new Color32(
-                        (byte)Mathf.RoundToInt((0.5f + 0.5f * chaos) * 255f),
-                        (byte)Mathf.RoundToInt(patch * 255f),
-                        (byte)Mathf.RoundToInt(angle * 255f),
-                        255);
+                    data[i * 2] = (byte)Mathf.RoundToInt((0.5f + 0.5f * chaos) * 255f);
+                    data[i * 2 + 1] = (byte)Mathf.RoundToInt(patch * 255f);
                 }
 
-        var texture = new Texture3D(nx, ny, nz, TextureFormat.RGBA32, false)
+        var texture = new Texture3D(nx, ny, nz, TextureFormat.RG16, false)
         {
-            wrapMode = TextureWrapMode.Clamp,
+            wrapMode = TextureWrapMode.Mirror,
             filterMode = FilterMode.Bilinear,
         };
-        texture.SetPixels32(pixels);
+        texture.SetPixelData(data, 0);
         texture.Apply(false);
         return SaveAsset(texture, path);
     }
@@ -427,14 +559,18 @@ public static class WatercolorBaker
         if (material != source)
         {
             material.shader = Shader.Find(FlatShader);
+            // _BASE_COLOR(_MAP): Arnold Standard Surface materials from Maya/Arnold FBX exports.
             if (source.HasProperty("_BaseColor"))
                 material.SetColor("_BaseColor", source.GetColor("_BaseColor"));
             else if (source.HasProperty("_Color"))
                 material.SetColor("_BaseColor", source.GetColor("_Color"));
+            else if (source.HasProperty("_BASE_COLOR"))
+                material.SetColor("_BaseColor", source.GetColor("_BASE_COLOR"));
             // The model's own texture drives every colour calculation. Older materials (Standard, from some FBX
             // exports) keep it in _MainTex.
             string texProperty = source.HasProperty("_BaseMap") && source.GetTexture("_BaseMap") != null ? "_BaseMap"
-                : source.HasProperty("_MainTex") ? "_MainTex" : null;
+                : source.HasProperty("_MainTex") ? "_MainTex"
+                : source.HasProperty("_BASE_COLOR_MAP") ? "_BASE_COLOR_MAP" : null;
             if (texProperty != null)
             {
                 material.SetTexture("_BaseMap", source.GetTexture(texProperty));
@@ -459,15 +595,27 @@ public static class WatercolorBaker
         // The main object's name must match the file name, or Unity warns on every import.
         asset.name = Path.GetFileNameWithoutExtension(path);
         var existing = AssetDatabase.LoadAssetAtPath<T>(path);
+        T saved;
         if (existing == null)
         {
             AssetDatabase.CreateAsset(asset, path);
-            return asset;
+            saved = asset;
         }
-        EditorUtility.CopySerialized(asset, existing);
-        Object.DestroyImmediate(asset);
-        EditorUtility.SetDirty(existing);
-        return existing;
+        else
+        {
+            EditorUtility.CopySerialized(asset, existing);
+            Object.DestroyImmediate(asset);
+            saved = existing;
+        }
+        // Baked textures are only sampled by shaders. Not readable = no CPU copy at runtime (half the memory).
+        if (saved is Texture3D)
+        {
+            var serialized = new SerializedObject(saved);
+            serialized.FindProperty("m_IsReadable").boolValue = false;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+        EditorUtility.SetDirty(saved);
+        return saved;
     }
 
     // Deletes a model's previous bake folder once nothing in the open scenes uses it any more. A duplicated model
@@ -480,6 +628,24 @@ public static class WatercolorBaker
             if (other.pattern != null && AssetDatabase.GetAssetPath(other.pattern).StartsWith(oldFolder + "/"))
                 return;
         AssetDatabase.DeleteAsset(oldFolder);
+    }
+
+    // Assets/01_Arts/Baked/Shared/<name>_<key>: one folder per shared bake, used by all its models in any scene. The name is
+    // the prefab's, or the model's without a trailing number (Bush_3 -> Bush).
+    static string EnsureSharedFolder(WatercolorPaintedModel model, string key)
+    {
+        const string sharedRoot = BakeRoot + "/Shared";
+        if (!AssetDatabase.IsValidFolder(BakeRoot))
+            AssetDatabase.CreateFolder("Assets/01_Arts", "Baked");
+        if (!AssetDatabase.IsValidFolder(sharedRoot))
+            AssetDatabase.CreateFolder(BakeRoot, "Shared");
+        GameObject prefab = PrefabUtility.GetCorrespondingObjectFromOriginalSource(model.gameObject);
+        string baseName = prefab != null ? prefab.name : System.Text.RegularExpressions.Regex.Replace(model.name, @"[_ ]*\(?\d+\)?$", "");
+        string name = Sanitize($"{baseName}_{key.Substring(0, 8)}");
+        string folder = $"{sharedRoot}/{name}";
+        if (!AssetDatabase.IsValidFolder(folder))
+            AssetDatabase.CreateFolder(sharedRoot, name);
+        return folder;
     }
 
     static string EnsureFolder(WatercolorPaintedModel model)
@@ -495,6 +661,9 @@ public static class WatercolorBaker
             AssetDatabase.CreateFolder(BakeRoot, name);
         return folder;
     }
+
+    // Path of a renderer under the model, without the root's own name, so Bush_0 and Bush_1 match.
+    static string PathUnder(Transform root, Transform t) => t == root ? "" : RelativePath(root, t);
 
     static string RelativePath(Transform root, Transform t)
     {
@@ -557,13 +726,50 @@ public class WatercolorPaintedModelEditor : Editor
 [CustomEditor(typeof(WatercolorManager))]
 public class WatercolorManagerEditor : Editor
 {
+    // Kept while the Editor runs, so the choice survives selecting something else.
+    static WatercolorLook s_Look;
+
     public override void OnInspectorGUI()
     {
+        DrawLookRow();
+        EditorGUILayout.Space();
         DrawDefaultInspector();
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox("Blotch / backrun sizes and the colour chaos chunk, chance and drop sizes are used when baking. Re-bake after changing them.", MessageType.Info);
         if (GUILayout.Button("Bake All Models In Scene"))
             WatercolorBaker.BakeAll();
+    }
+
+    // Use a saved look like a preset: load it into these settings, or save these settings over it.
+    void DrawLookRow()
+    {
+        var manager = (WatercolorManager)target;
+        s_Look = (WatercolorLook)EditorGUILayout.ObjectField("Look", s_Look, typeof(WatercolorLook), false);
+        using (new EditorGUI.DisabledScope(s_Look == null))
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Load Look"))
+            {
+                Undo.RecordObject(manager, "Load Watercolor Look");
+                manager.Apply(s_Look.settings, 1f);
+                EditorUtility.SetDirty(manager);
+                var volume = FindAnyObjectByType<UnityEngine.Rendering.Volume>();
+                if (volume != null && s_Look.volumeProfile != null)
+                {
+                    Undo.RecordObject(volume, "Load Watercolor Look");
+                    volume.sharedProfile = s_Look.volumeProfile;
+                    EditorUtility.SetDirty(volume);
+                }
+            }
+            if (GUILayout.Button("Save To Look") && EditorUtility.DisplayDialog("Save To Look", $"Overwrite {s_Look.name} with these settings?", "Overwrite", "Cancel"))
+            {
+                Undo.RecordObject(s_Look, "Save Watercolor Look");
+                s_Look.settings = JsonUtility.FromJson<WatercolorManager.Settings>(JsonUtility.ToJson(manager.settings));
+                s_Look.settings.formLight = null;
+                EditorUtility.SetDirty(s_Look);
+                AssetDatabase.SaveAssetIfDirty(s_Look);
+            }
+        }
     }
 }
 #endif

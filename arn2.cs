@@ -1,0 +1,2 @@
+string s=""; foreach (var p in new string[]{"tree01","tree02","tree03"}) foreach (var o in UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/01_Arts/Mesh/"+p+".fbx")) { var m = o as UnityEngine.Material; if (m==null) continue; s += p+" "+m.name+" col="+m.GetColor("_BASE_COLOR")+" map="+(m.GetTexture("_BASE_COLOR_MAP")?m.GetTexture("_BASE_COLOR_MAP").name:"-")+"
+"; } return s;

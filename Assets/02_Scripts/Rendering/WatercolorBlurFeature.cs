@@ -63,6 +63,9 @@ public class WatercolorBlurPass : ScriptableRenderPass
 {
     const int PassBlur = 0;
     const int PassBlurDepth = 1;
+    // Characters (stencil bit 128) are drawn again without the gouache rough edges.
+    const int PassCharacterClean = 2;
+    const int PassCharacterCleanDepth = 3;
 
     public static readonly ProfilingSampler Sampler = new ProfilingSampler("Watercolor Bilateral Blur");
 
@@ -82,6 +85,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
         public int pass;
         public TextureHandle source;
         public Vector4 blurParams;
+        public bool cleanCharacters;
+        public int cleanPass;
         public Vector4 blurDepth;
         public Vector4 paper;
         public Texture paperTexture;
@@ -97,10 +102,14 @@ public class WatercolorBlurPass : ScriptableRenderPass
         requiresIntermediateTexture = true;
     }
 
+    static readonly int GouacheId = Shader.PropertyToID("_WC_Gouache");
+    static bool GouacheOn => Shader.GetGlobalVector(GouacheId).x > 0f;
+
     public void Setup(WatercolorBlur volume)
     {
         m_Volume = volume;
-        ConfigureInput(volume.depthAware.value ? ScriptableRenderPassInput.Depth : ScriptableRenderPassInput.None);
+        // Gouache rough edges also read the depth: their brush pattern is pinned to the world through it.
+        ConfigureInput(volume.depthAware.value || GouacheOn ? ScriptableRenderPassInput.Depth : ScriptableRenderPassInput.None);
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -120,6 +129,7 @@ public class WatercolorBlurPass : ScriptableRenderPass
         // Radius is authored in 1080p pixels so the look matches at any resolution.
         float stepPixels = m_Volume.blurRadius.value * height / 1080f;
         bool useDepth = m_Volume.depthAware.value && resourceData.cameraDepthTexture.IsValid();
+        bool readDepth = (useDepth || GouacheOn) && resourceData.cameraDepthTexture.IsValid();
 
         TextureHandle source = resourceData.activeColorTexture;
         var destinationDesc = renderGraph.GetTextureDesc(source);
@@ -139,9 +149,14 @@ public class WatercolorBlurPass : ScriptableRenderPass
 
             builder.UseTexture(source);
             // The shader reads the depth through URP's global binding; declaring it keeps the graph ordering right.
-            if (useDepth)
+            if (readDepth)
                 builder.UseTexture(resourceData.cameraDepthTexture);
             builder.SetRenderAttachment(destination, 0, AccessFlags.WriteAll);
+            // The camera depth-stencil, read only, so the character pass can test the stencil.
+            data.cleanCharacters = GouacheOn && resourceData.activeDepthTexture.IsValid();
+            if (data.cleanCharacters)
+                builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+            data.cleanPass = useDepth ? PassCharacterCleanDepth : PassCharacterClean;
             builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) =>
             {
                 var props = s_Props;
@@ -153,6 +168,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
                 props.SetVector(PaperId, d.paper);
                 props.SetTexture(PaperTexId, d.paperTexture);
                 ctx.cmd.DrawProcedural(Matrix4x4.identity, d.material, d.pass, MeshTopology.Triangles, 3, 1, props);
+                if (d.cleanCharacters)
+                    ctx.cmd.DrawProcedural(Matrix4x4.identity, d.material, d.cleanPass, MeshTopology.Triangles, 3, 1, props);
             });
         }
 

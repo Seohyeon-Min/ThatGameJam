@@ -25,6 +25,9 @@ Shader "ThatGameJam/SoftPastel"
         [Header(Surface)]
         [Toggle(_ALPHATEST_ON)] _AlphaClip ("Alpha Clipping", Float) = 0
         _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
+        _SelfShadowSkip ("Ignore Own Shadow Within (m)", Range(0, 3)) = 0
+        [Toggle] _ReceiveCastShadows ("Receive Cast Shadows", Float) = 1
+        [Toggle] _LeavePaper ("Leave Paper White On The Lit Side", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
     }
 
@@ -49,6 +52,7 @@ Shader "ThatGameJam/SoftPastel"
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/01_Arts/Shaders/BakedPatternUV.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -63,6 +67,16 @@ Shader "ThatGameJam/SoftPastel"
                 half _Floor;
                 half _HasPattern;
                 half _Cutoff;
+                half _SelfShadowSkip;
+                half _ReceiveCastShadows;
+                half _LeavePaper;
+                half _Birch;
+                half _Character;
+                half _BirchMarks;
+                half _BirchDarkness;
+                half4 _BirchColour;
+                half _BirchLength;
+                half _BirchThickness;
             CBUFFER_END
 
             half4 _PS_Light;   // rgb 빛 쪽 따뜻한 색(sRGB), a 세기
@@ -71,6 +85,10 @@ Shader "ThatGameJam/SoftPastel"
             half4 _PS_Grain;   // x 알갱이 크기(1080p 화소), y 경계 알갱이 정도, z 종이 결, w 윤곽 흩어짐 폭(1080p 화소)
             half4 _PS_Rim;     // rgb 가장자리 빛 색, a 세기
             half4 _PS_Chips;   // x 최소 크기, y 최대 크기(화면 높이 비율), z 생길 확률, w 얼룩 명도 변화
+            half4 _PS_Haze;    // x 거리 안개 세기, y 시작 거리, z 다 바래는 데까지 거리, w 1 = Pastel Style 이 켜져 있음
+            half4 _PS_HazeLow; // 지평선 쪽 공기 색(sRGB)
+            half4 _PS_HazeHigh;// 위쪽 공기 색(sRGB)
+            half4 _PS_Turn;    // x 그늘 색상을 돌리는 정도, y 보색 근처도 돌리는 정도(0 = 거의 안 돌리고 어둡게)
             half4 _PS_Water;   // x 켜짐(1), y 번짐 세기, z 색 스밈 범위(한 바퀴 = 1), w 번짐 테두리 세기
             half4 _PS_Mottle;  // x 얼룩 세기, y 색 조각 색상 이동(한 바퀴 = 1), z 바닥 얼룩 크기(월드), w 빛 쪽 파스텔 조각 세기
 
@@ -105,7 +123,7 @@ Shader "ThatGameJam/SoftPastel"
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.fogFactor = ComputeFogFactor(positions.positionCS.z);
-                output.patternUV = input.patternUV;
+                output.patternUV = TwistPatternUV(input.patternUV);
                 return output;
             }
 
@@ -182,7 +200,7 @@ Shader "ThatGameJam/SoftPastel"
 
                 float3 normalWS = normalize(input.normalWS);
                 float3 viewWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
-                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS + _MainLightPosition.xyz * _SelfShadowSkip));
 
                 // 화면에 고정한 알갱이(1080p 기준 크기). 굵은 알갱이와 화소 단위의 고운 알갱이를 섞는다.
                 float2 pixel = input.positionCS.xy * (1080.0 / _ScreenParams.y);
@@ -253,7 +271,7 @@ Shader "ThatGameJam/SoftPastel"
 
                 // 빛 받는 정도(부드러운 그라데이션)와 드리운 그림자. 바닥은 면 방향을 쓰지 않고 그림자만 쓴다.
                 half wrap = lerp(1.0, dot(normalWS, mainLight.direction) * 0.5 + 0.5, objectOnly);
-                half tone = wrap * lerp(1.0, mainLight.shadowAttenuation, smoothstep(0.1, 0.3, wrap));
+                half tone = wrap * lerp(1.0, mainLight.shadowAttenuation, smoothstep(0.1, 0.3, wrap) * _ReceiveCastShadows);
                 // 경계는 알갱이로: 알갱이만큼 위치를 흔든 뒤 부드럽게 나눈다.
                 half toneGrain = tone + (grain - 0.5) * _PS_Grain.y * 0.6;
                 half lit = smoothstep(_PS_Tone.x - _PS_Tone.y * 0.5, _PS_Tone.x + _PS_Tone.y * 0.5, toneGrain);
@@ -265,10 +283,18 @@ Shader "ThatGameJam/SoftPastel"
                 half3 tintHsv = RgbToHsv(_PS_Shade.rgb);
                 half turn = tintHsv.x - shadeHsv.x;
                 turn -= round(turn);
-                half turned = frac(shadeHsv.x + turn * _PS_Shade.a * 0.6);
-                shadeHsv.x = lerp(tintHsv.x, turned, saturate(shadeHsv.y * 4.0));
+                // 보색 근처(색상 차이가 반 바퀴에 가까울수록)는 덜 돌린다. 돌리면 노란 길이 분홍이 되기 때문이다.
+                // 덜 돌린 만큼 명도를 조금 더 내려서, 노랑은 채도를 지킨 채 황토·머스터드처럼 어두워진다.
+                half turnFade = lerp(1.0 - 4.0 * turn * turn, 1.0, _PS_Turn.y);
+                half chroma = saturate(shadeHsv.y * 4.0);
+                half turned = frac(shadeHsv.x + turn * turnFade * _PS_Shade.a * _PS_Turn.x);
+                // 무채색 쪽은 그늘 색상으로 간다. 색상환의 가까운 쪽으로 섞어야 노랑→보라 사이 초록을 지나지 않는다.
+                half toTint = tintHsv.x - turned;
+                toTint -= round(toTint);
+                shadeHsv.x = frac(turned + toTint * (1.0 - chroma));
                 shadeHsv.y = max(shadeHsv.y, tintHsv.y * _PS_Shade.a);
                 shadeHsv.z *= lerp(1.0, tintHsv.z * 0.85, _PS_Shade.a);
+                shadeHsv.z *= 1.0 - (1.0 - turnFade) * chroma * 0.3 * _PS_Shade.a;
                 half3 shadeColor = HsvToRgb(shadeHsv);
                 half3 lightColor = lerp(albedo, _PS_Light.rgb, _PS_Light.a * saturate(wrap * 2.0 - 1.0) * objectOnly);
                 half3 color = lerp(shadeColor, lightColor, lit);
@@ -288,6 +314,13 @@ Shader "ThatGameJam/SoftPastel"
 
                 // 종이 결: 알갱이만큼 살짝 밝고 어둡다.
                 color *= 1.0 + (grain - 0.5) * 2.0 * _PS_Grain.z;
+
+                // 거리 안개: 멀수록 공기 색으로 바랜다. 지평선 쪽(시선이 수평)은 아래 색, 올려다보는 쪽은 위 색.
+                if (_PS_Haze.x > 0)
+                {
+                    half hazeAmount = saturate((length(input.positionWS - GetCameraPositionWS()) - _PS_Haze.y) / max(_PS_Haze.z, 0.1)) * _PS_Haze.x;
+                    color = lerp(color, lerp(_PS_HazeLow.rgb, _PS_HazeHigh.rgb, saturate(-viewWS.y * 2.0)), hazeAmount);
+                }
 
                 color = SRGBToLinear(saturate(color));
                 color = MixFog(color, input.fogFactor);

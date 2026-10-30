@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // Development controls, only in the Editor and development builds (plan 4.18): a row of buttons along the top of the screen,
-// each describing itself while the pointer is on it. The keys F1 to F4 do the same as the buttons.
+// each describing itself while the pointer is on it. The keys F1 to F8 do the same as the buttons.
 public class DevTools : MonoBehaviour
 {
     const int MaxTimeScale = 3;
@@ -12,7 +12,7 @@ public class DevTools : MonoBehaviour
     const float Top = 8f;
     const float TooltipWidth = 320f;
 
-    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4 };
+    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8 };
     static DevTools active;
 
     (System.Func<string> label, string tooltip, System.Action action)[] buttons;
@@ -39,6 +39,13 @@ public class DevTools : MonoBehaviour
                 () => CurrentTimer()?.ResolveByBird()),
             (() => "Next stage", "Puts the baby asleep at this stage's sunlit spot, as if it had walked the stage: the season advances and the next stage starts there. The bird comes along. (F4)",
                 () => GameFlow.Instance.SkipToNextStage()),
+            (() => "Ring", "Plays the ring from the sunlit spot nearest the baby, as when it falls asleep there. (F5)", SunlitSpot.PlayRingNearestBaby),
+            (() => "Lie down", "The baby lies down at this stage's sunlit spot, with its animation: when it's done, the season advances and the next stage starts, as at the end of a walk. The bird comes along. (F6)",
+                () => GameFlow.Instance.LieDownAtSunlitSpot()),
+            (() => "Back", "Back one stage and one season, to watch the season change again. The baby sleeps at that stage's start; opened devices stay open. (F7)",
+                () => GameFlow.Instance.BackOneStage()),
+            (() => GameFlow.Instance.CameraLocked ? "Cam: locked" : "Cam: bird", "Holds the camera on this stage's sunlit spot, or lets it follow the bird again. (F8)",
+                () => GameFlow.Instance.ToggleCameraLock()),
         };
     }
 

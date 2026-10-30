@@ -72,7 +72,8 @@ MonoBehaviour:
   - {fileID: 976510020837988257}
   - {fileID: 1706596297977497664}
   - {fileID: -4074364379582627839}
-  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7
+  - {fileID: 2830710763801503158}
+  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b44827
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -177,6 +178,25 @@ MonoBehaviour:
       restoreCamera: 1
       offset: {x: 0, y: 0, z: 0, w: 0}
       cameraFieldOfView: 60
+--- !u!114 &2830710763801503158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2a97206f08ada144a8192e104a4a5cb, type: 3}
+  m_Name: SeasonWipe
+  m_EditorClassIdentifier: Assembly-CSharp::SeasonWipeFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 5d9d7f1225e573c4495932e6e97217d1, type: 3}
+  edgeSoftness: 0.6
+  lumpHeight: 3
+  lumpSize: 2.5
+  fadeStart: 26
+  fadeEnd: 38
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0

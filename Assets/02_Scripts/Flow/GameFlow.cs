@@ -57,6 +57,44 @@ public class GameFlow : MonoBehaviour
         birdCamera.Cut();
     }
 
+    // Dev tool: the baby lies down at this stage's sunlit spot, so the end of the stage plays out as usual. The bird and camera go there.
+    public void LieDownAtSunlitSpot()
+    {
+        BabyRoute route = CurrentStage.route;
+        Transform spot = route[route.Count - 1];
+        Baby.Instance.LieDownAt(spot);
+        birdCamera.MoveLock(spot.position);
+        BirdController.Instance.Teleport(spot.position);
+        BirdController.Instance.SetAltitude(CurrentStage.birdAltitude, true);
+        birdCamera.Cut();
+    }
+
+    // Dev tool: back one stage and one season, to watch the change again. The baby sleeps at that stage's start. Opened devices
+    // stay open: this is for the season change, not for playing the stage over.
+    public void BackOneStage()
+    {
+        if (finished)
+            finished = false;
+        else if (current > 0)
+            BeginStage(current - 1);
+        else
+            return;
+        season.SetSeason(season.Level - 1);
+        Baby.Instance.PlaceAsleep(CurrentStage.babyStart, CurrentStage.route);
+        BirdController.Instance.Teleport(CurrentStage.birdStart.position);
+        BirdController.Instance.SetAltitude(CurrentStage.birdAltitude, true);
+        birdCamera.MoveLock(SunlitSpotPosition);
+        birdCamera.Cut();
+    }
+
+    // Dev tool: holds the camera on this stage's sunlit spot, or lets it follow the bird again. The lock stays there when the
+    // stage changes, so the change can be watched.
+    public void ToggleCameraLock() => birdCamera.ToggleLock(SunlitSpotPosition);
+
+    public bool CameraLocked => birdCamera.IsLocked;
+
+    Vector3 SunlitSpotPosition => CurrentStage.route[CurrentStage.route.Count - 1].position;
+
     void OnReachedRest() => EndStage();
 
     // Advances the season and starts the next stage where the baby sleeps. False after the last stage.

@@ -16,6 +16,9 @@ public class Perchable : MonoBehaviour
     // Devices (the leaning log, a blocker) must stay visible and clickable even when nothing is perched on
     // them, unlike decorative perches (roadside branches) that may fade like any other background tree.
     [SerializeField] bool alwaysExempt;
+    // While landing, the bird turns to face along the perch point's forward axis, whichever way is nearer its heading (roadside
+    // branches: the axis runs across the branch, so its feet hold the branch). Off, it keeps the heading it flew in with (devices).
+    [SerializeField] bool alignBird;
     [SerializeField] UnityEvent onPerched;
 
     public static IReadOnlyList<Perchable> All => all;
@@ -28,6 +31,7 @@ public class Perchable : MonoBehaviour
     public bool CanPerch { get; set; } = true;
     public Transform PerchPoint => perchPoint != null ? perchPoint : transform;
     public bool IsIdleSpot => idleSpot;
+    public bool AlignsBird => alignBird;
 
     // The whole object this perch belongs to (for a tree's branch, the tree itself), not just this collider's own
     // renderer, so camera-fade can be held off the whole thing instead of only the branch the bird's feet touch.

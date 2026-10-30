@@ -64,6 +64,8 @@ public class BirdController : MonoBehaviour
     bool following;
     Perchable perch;
     float landTime;
+    // The turn while landing, from the heading it arrived with.
+    Quaternion landFrom, landTo;
     float nextCryTime;
     bool perchCursorShown;
     Vector3 baseScale;
@@ -303,6 +305,8 @@ public class BirdController : MonoBehaviour
             currentSpeed = 0f;
             state = State.Landing;
             landTime = 0f;
+            landFrom = transform.rotation;
+            landTo = perch.AlignsBird ? AlongPerch() : landFrom;
             return;
         }
         // Brakes into the branch instead of cruising straight into it: speed falls away as the remaining
@@ -318,6 +322,7 @@ public class BirdController : MonoBehaviour
     {
         transform.position = perch.PerchPoint.position;
         landTime += Time.deltaTime;
+        transform.rotation = Quaternion.Slerp(landFrom, landTo, landTime / GameTuning.Current.birdPerchDuration);
         if (landTime < GameTuning.Current.birdPerchDuration)
             return;
         state = State.Perched;
@@ -327,6 +332,16 @@ public class BirdController : MonoBehaviour
             refusePending = false;
             animator.SetTrigger(RefuseParam);
         }
+    }
+
+    // Facing along the perch point's forward axis, the way nearer the current heading.
+    Quaternion AlongPerch()
+    {
+        Vector3 axis = perch.PerchPoint.forward;
+        axis.y = 0f;
+        if (Vector3.Dot(axis, transform.forward) < 0f)
+            axis = -axis;
+        return axis.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(axis) : transform.rotation;
     }
 
     void Face(Vector3 direction)

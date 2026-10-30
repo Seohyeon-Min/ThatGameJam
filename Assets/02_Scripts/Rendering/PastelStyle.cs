@@ -46,6 +46,10 @@ public class PastelStyle : MonoBehaviour
     public Color shadeTint = new Color(0.55f, 0.55f, 1f);
     [Tooltip("How strongly the shade side takes on Shade Tint.")]
     [Range(0f, 1f)] public float shadeStrength = 0.6f;
+    [Tooltip("How far the shade side's hue turns toward Shade Tint. 0 = keeps its own hue (only darker), 1 = all the way.")]
+    [Range(0f, 1f)] public float shadeHueTurn = 0.6f;
+    [Tooltip("How much colours near the opposite of Shade Tint still turn (e.g. yellow under a violet shade). 0 = they barely turn and get a little darker instead (yellow -> ochre); 1 = they turn like any other colour (yellow -> pink).")]
+    [Range(0f, 1f)] public float complementTurn = 0f;
     [Tooltip("Where the light-to-shade transition sits. Higher = more of each object in shade.")]
     [Range(0f, 1f)] public float shadeThreshold = 0.55f;
     [Tooltip("How wide the transition is.")]
@@ -66,7 +70,19 @@ public class PastelStyle : MonoBehaviour
     [Tooltip("How far in from the silhouette objects dissolve into grain, in pixels at 1080p. 0 = hard edges.")]
     [Range(0f, 20f)] public float edgeDissolve = 4f;
 
+    [Header("Haze")]
+    [Tooltip("Distance haze: far things fade into the air colour (Haze Low toward the horizon, Haze High looking up). The WatercolorSky skybox follows it while this component is on. 0 = off.")]
+    [Range(0f, 1f)] public float haze = 0.5f;
+    [Tooltip("Distance where the haze starts, in world units.")]
+    [Range(0f, 200f)] public float hazeStart = 12f;
+    [Tooltip("Distance over which it reaches full strength, in world units.")]
+    [Range(1f, 300f)] public float hazeRange = 40f;
+    public Color hazeLow = new Color(1f, 0.86f, 0.92f);
+    public Color hazeHigh = new Color(0.8f, 0.88f, 1f);
+
     void OnEnable() => Push();
+    // The sky goes back to the watercolor haze when this is off.
+    void OnDisable() => Shader.SetGlobalVector("_PS_Haze", Vector4.zero);
     void OnValidate() => Push();
 
     void Push()
@@ -78,6 +94,10 @@ public class PastelStyle : MonoBehaviour
         Shader.SetGlobalVector("_PS_Grain", new Vector4(grainSize, graininess, paperTooth, edgeDissolve));
         Shader.SetGlobalVector("_PS_Rim", new Vector4(rimColor.r, rimColor.g, rimColor.b, rimStrength));
         Shader.SetGlobalVector("_PS_Chips", new Vector4(Mathf.Min(chipSizeMin, chipSizeMax) / 100f, Mathf.Max(chipSizeMin, chipSizeMax) / 100f, chipChance, mottleBrightness));
+        Shader.SetGlobalVector("_PS_Haze", new Vector4(haze, hazeStart, hazeRange, 1f));
+        Shader.SetGlobalVector("_PS_HazeLow", (Vector4)hazeLow);
+        Shader.SetGlobalVector("_PS_HazeHigh", (Vector4)hazeHigh);
+        Shader.SetGlobalVector("_PS_Turn", new Vector4(shadeHueTurn, complementTurn, 0f, 0f));
         Shader.SetGlobalVector("_PS_Water", new Vector4(waterBleed ? 1f : 0f, bleedBloom, bleedHueRange / 360f, bleedRim));
         Shader.SetGlobalVector("_PS_Mottle", new Vector4(mottle, colourPatches / 360f, floorMottleSize, pastelChips));
     }

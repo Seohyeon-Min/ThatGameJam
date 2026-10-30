@@ -37,6 +37,9 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("Baked backrun blooms (pale inside, dark rim). Needs baked models.")]
         [Range(0f, 1f)] public float backruns = 0.6f;
 
+        [Tooltip("How much blotches and backrun rims gain saturation as they get darker, in proportion to how much darker. 0 = only the small built-in boost. Applies immediately.")]
+        [Range(0f, 2f)] public float blotchSaturation = 0.5f;
+
         [Tooltip("Size of a blotch on screen, in % of screen height. Used when baking; re-bake after changing.")]
         [Range(0.5f, 30f)] public float blotchSizePercent = 5f;
 
@@ -104,6 +107,66 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("Chance that a chunk of the surface gets a pencil patch. Used when baking.")]
         [Range(0f, 1f)] public float pencilPatchChance = 0.4f;
 
+        [Header("Environment Light")]
+        [Tooltip("Intensity of the main Directional Light that counts as full sun: at or above it the look is as tuned. A weaker light (an overcast day) fades the cast shadows and shrinks the paper white and the cream band. Set the light, not this, to change the weather.")]
+        [Min(0.01f)] public float fullSunIntensity = 1f;
+        [Tooltip("How much the lit side (paper included) takes on the main light's colour. 0 = ignore the light colour.")]
+        [Range(0f, 1f)] public float lightColourInfluence = 0f;
+        [Tooltip("How much the shade, and everything when the sun is weak, takes on the Environment Lighting (sky) colour. 0 = ignore it.")]
+        [Range(0f, 1f)] public float ambientColourInfluence = 0f;
+
+        [Header("Gouache")]
+        [Tooltip("0 = watercolor (transparent, paper left white, blooms), 1 = gouache (opaque flat steps, dry-brush edges, highlights painted on top of the wash). In between it reads as watery gouache. Applies immediately.")]
+        [Range(0f, 1f)] public float gouache = 0f;
+        [Tooltip("How much darker (same hue, never greyer) the form-shadow tone is than the light tone.")]
+        [Range(0f, 2f)] public float gouacheShadeDepth = 0.7f;
+        [Tooltip("Saturation of the form-shadow tone, as a multiple of the paint's own. Higher keeps shaded pale colours (cream clothes, skin) clear instead of muddy. 1 = same as the paint.")]
+        [Range(0.5f, 3f)] public float gouacheShadeSaturation = 1.6f;
+        [Tooltip("Where light turns to form shadow on a surface (how much of each object is in shade). Higher = more shade.")]
+        [Range(0.2f, 0.8f)] public float gouacheTerminator = 0.5f;
+        [Tooltip("Width of the one transition colour between light and shade (form and cast shadows).")]
+        [Range(0f, 0.2f)] public float gouacheTransitionWidth = 0.03f;
+        [Tooltip("Tint of that transition colour (warm, like light bouncing into the shade edge).")]
+        public Color gouacheTransitionColour = new Color(1f, 0.8f, 0.7f);
+        [Range(0f, 1f)] public float gouacheTransitionTint = 0.5f;
+        [Tooltip("Strength of the light paint laid on the floor's lit snow patches, over the wash.")]
+        [Range(0f, 1f)] public float gouacheHighlight = 0.85f;
+        [Tooltip("Colour of that light paint (a touch of the light's colour reads best).")]
+        public Color gouacheHighlightColour = new Color(0.94f, 0.97f, 1f);
+        [Tooltip("How broken the step edges are, like a dry brush.")]
+        [Range(0f, 0.5f)] public float gouacheDryBrush = 0.18f;
+        [Tooltip("How far in from the silhouette the edges break up like a dry brush tip, in pixels at 1080p. Thin pieces (branches, limbs) get less so they keep their shape. 0 = clean edges.")]
+        [Range(0f, 10f)] public float gouacheRoughEdge = 1f;
+        [Tooltip("Fine bristle lines where the paint breaks up, near the edges between light, transition and shade. Faces stay flat.")]
+        [Range(0f, 0.5f)] public float gouacheBrushGrain = 0.15f;
+        [Tooltip("Light spilling over the lit edge of a silhouette (backlit trunks).")]
+        [Range(0f, 1f)] public float gouacheRimGlow = 0.35f;
+        [Tooltip("World size of one unit of the brush pattern, in metres. The pattern is pinned to the world, so it never swims when the camera moves. About one screen pixel at the game camera's distance reads best.")]
+        [Range(0.002f, 0.1f)] public float gouacheBrushSize = 0.014f;
+
+        [Header("Gouache: Characters")]
+        [Tooltip("Gouache values for materials painted as Character (Painted As = Character): usually cleaner than the background. The rough silhouette edges are never applied to characters.")]
+        [Range(0.5f, 3f)] public float characterShadeSaturation = 1.6f;
+        [Range(0f, 0.5f)] public float characterBrushGrain = 0f;
+        [Range(0f, 0.5f)] public float characterDryBrush = 0.04f;
+        [Tooltip("How much darker the characters' form-shadow tone is (like Gouache Shade Depth, for characters).")]
+        [Range(0f, 2f)] public float characterShadeDepth = 0.7f;
+        [Tooltip("Colour the characters' shade turns toward (e.g. lavender for cream clothes), keeping it clear rather than brown.")]
+        public Color characterShadeColour = new Color(0.72f, 0.66f, 0.92f);
+        [Tooltip("How far the characters' shade hue turns toward Character Shade Colour. 0 = own hue.")]
+        [Range(0f, 1f)] public float characterShadeHueTurn = 0.5f;
+        [Tooltip("How much the baby brightens inside a LightBeam's pool of light, in the same lumpy shape. 0 = not at all.")]
+        [Range(0f, 1f)] public float characterSunPoolGlow = 0.6f;
+
+        [Header("Base Wash")]
+        [Tooltip("A first wash laid over the whole paper (sky, ground, water and every object), like the slate blue of an overcast snowy day. Everything is painted on top of it, so the scene gets darker without getting murky. 0 = off.")]
+        [Range(0f, 1f)] public float washStrength = 0f;
+        public Color washColour = new Color(0.62f, 0.74f, 0.8f);
+        [Tooltip("How directly a surface must face the light to stay unpainted paper white through the wash. 0 = all the paper white stays; 1 = almost none. The whitest white is always the paper.")]
+        [Range(0f, 1f)] public float washReserve = 0.6f;
+        [Tooltip("How much of the floor's pale blooms stay paper white through the wash (patches of lit snow).")]
+        [Range(0f, 1f)] public float washFloorReserve = 0.5f;
+
         [Header("Light and Shadow")]
         [Tooltip("Light for the form: which side of each mass stays paper white, the cream and boundary bands, and the side the pencil strokes gather on. Uses this object's facing direction (blue arrow) and rotating it updates the view immediately. Only the Transform is used: use an empty object, or turn off the Light component if it is a copy of a light, otherwise that light also lights and casts shadows. Empty = the scene's main light. Cast shadows always come from the main light.")]
         public Transform formLight;
@@ -157,11 +220,46 @@ public class WatercolorManager : MonoBehaviour
         [Tooltip("How uneven the darkness inside cast shadows is.")]
         [Range(0f, 1f)] public float shadowUnevenness = 0.4f;
 
+        [Header("Scene Colour")]
+        [Tooltip("Colour of the light and shade drifting across the scene: a very large world-space noise moves the lit side between Light Tint A and B and the shade side between Shade Tint A and B. Tints, never darkens; paper white takes the light colour too. 0 = off.")]
+        [Range(0f, 1f)] public float sceneColour = 0.5f;
+        [Tooltip("Size of one colour zone, in world units.")]
+        [Range(1f, 200f)] public float sceneColourSize = 10f;
+        public Color lightTintA = new Color(1f, 0.95f, 0.78f);
+        public Color lightTintB = new Color(1f, 0.86f, 0.88f);
+        public Color shadeTintA = new Color(0.72f, 0.82f, 1f);
+        public Color shadeTintB = new Color(0.84f, 0.76f, 1f);
+
+        [Tooltip("Shade facing up takes the sky's colour, shade facing down or sideways the warm ground colour. 0 = off.")]
+        [Range(0f, 1f)] public float bounce = 0.4f;
+        public Color skyBounce = new Color(0.75f, 0.85f, 1f);
+        public Color groundBounce = new Color(1f, 0.86f, 0.86f);
+
+        [Tooltip("A thin warm complementary accent on the boundary band next to the paper (like orange at the edge of blue ice). 0 = off.")]
+        [Range(0f, 1f)] public float edgeAccent = 0.3f;
+        public Color edgeAccentColour = new Color(1f, 0.62f, 0.4f);
+
+        [Tooltip("Distance haze: far things fade into the air colour (Haze Low toward the horizon, Haze High looking up). Match it to the sky. 0 = off.")]
+        [Range(0f, 1f)] public float haze = 0.5f;
+        [Tooltip("Distance where the haze starts, in world units.")]
+        [Range(0f, 200f)] public float hazeStart = 12f;
+        [Tooltip("Distance over which it reaches full strength, in world units.")]
+        [Range(1f, 300f)] public float hazeRange = 40f;
+        public Color hazeLow = new Color(1f, 0.9f, 0.92f);
+        public Color hazeHigh = new Color(0.82f, 0.9f, 1f);
+
         [Header("Floor")]
         [Tooltip("Size of one blotch on floors (surfaces with Floor on), in % of screen height. Floors keep this size on screen near and far, like a flat painting, while the pattern stays attached to the floor. Applies immediately.")]
         [Range(1f, 30f)] public float floorBlotchSizePercent = 6f;
 
         [Header("Colour")]
+        [Tooltip("Colour difference between models sharing a bake (e.g. the trees of one kind): each one's hue turns by up to this many degrees either way. Applies immediately.")]
+        [Range(0f, 60f)] public float instanceHueRange = 12f;
+        [Tooltip("Brightness difference between models sharing a bake, in % either way.")]
+        [Range(0f, 50f)] public float instanceBrightnessRange = 10f;
+        [Tooltip("Saturation difference between models sharing a bake, in % either way.")]
+        [Range(0f, 100f)] public float instanceSaturationRange = 40f;
+
         [Tooltip("Saturation of the paint colours. Negative = calmer, positive = more vivid. Paper white is not affected.")]
         [Range(-100f, 100f)] public float saturation = 0f;
 
@@ -204,6 +302,27 @@ public class WatercolorManager : MonoBehaviour
     // Back to defaults when the scene's manager goes away, so materials never fall to zeroed globals.
     void OnDisable() => Push(new Settings());
 
+    // Sets this manager's values to a blend of two looks (t 0 = a, 1 = b): numbers and colours blend, everything else
+    // (switches) flips halfway. The Form Light stays this manager's own. Used by WatercolorSeasonLooks.
+    public void Blend(Settings a, Settings b, float t)
+    {
+        Transform keepFormLight = settings.formLight;
+        foreach (var field in typeof(Settings).GetFields())
+        {
+            object va = field.GetValue(a), vb = field.GetValue(b);
+            if (field.FieldType == typeof(float))
+                field.SetValue(settings, Mathf.Lerp((float)va, (float)vb, t));
+            else if (field.FieldType == typeof(Color))
+                field.SetValue(settings, Color.Lerp((Color)va, (Color)vb, t));
+            else if (field.FieldType != typeof(AnimationCurve) && !typeof(UnityEngine.Object).IsAssignableFrom(field.FieldType))
+                field.SetValue(settings, t < 0.5f ? va : vb);
+        }
+        settings.formLight = keepFormLight;
+        Push(settings);
+    }
+
+    public void Apply(Settings look, float t) => Blend(settings, look, t);
+
     public static void Push(Settings s)
     {
         Shader.SetGlobalFloat("_WC_PigmentThickness", s.pigmentThickness);
@@ -213,10 +332,36 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalFloat("_WC_OutlineWidth", s.outlineWidthPercent / 100f);
         Shader.SetGlobalFloat("_WC_Blotches", s.blotches);
         Shader.SetGlobalFloat("_WC_Backruns", s.backruns);
+        Shader.SetGlobalFloat("_WC_BlotchSaturation", s.blotchSaturation);
+        Shader.SetGlobalVector("_WC_InstanceColour", new Vector4(s.instanceHueRange / 360f, s.instanceBrightnessRange / 100f, s.instanceSaturationRange / 100f, 0f));
         // sRGB values as they are (not converted to linear), because the shader mixes colours in sRGB.
         Shader.SetGlobalVector("_WC_LightCream", new Vector4(s.lightCream.r, s.lightCream.g, s.lightCream.b, s.lightFade));
         Shader.SetGlobalVector("_WC_LightShade", new Vector4(s.lightPastelChips, s.shadowDarkening, s.shadowHueFrom / 360f, s.shadowHueTo / 360f));
         Shader.SetGlobalFloat("_WC_PastelShadows", s.pastelShadows ? 1f : 0f);
+        // sRGB value as it is, like the other colours the shaders mix in sRGB.
+        Shader.SetGlobalVector("_WC_Gouache", new Vector4(s.gouache, s.gouacheShadeDepth, s.gouacheHighlight, s.gouacheDryBrush));
+        Shader.SetGlobalVector("_WC_GouacheHighlight", (Vector4)s.gouacheHighlightColour);
+        Shader.SetGlobalVector("_WC_GouacheSteps", new Vector4(s.gouacheTerminator, s.gouacheTransitionWidth, s.gouacheShadeSaturation, 0f));
+        Shader.SetGlobalVector("_WC_GouacheTransition", new Vector4(s.gouacheTransitionColour.r, s.gouacheTransitionColour.g, s.gouacheTransitionColour.b, s.gouacheTransitionTint));
+        Shader.SetGlobalVector("_WC_CharacterGouache", new Vector4(s.characterShadeSaturation, s.characterBrushGrain, s.characterDryBrush, s.characterShadeDepth));
+        Shader.SetGlobalVector("_WC_CharacterShade", new Vector4(s.characterShadeColour.r, s.characterShadeColour.g, s.characterShadeColour.b, s.characterShadeHueTurn));
+        Shader.SetGlobalVector("_WC_GouacheEdge", new Vector4(s.gouacheRoughEdge, s.gouacheBrushGrain, s.gouacheBrushSize, s.gouacheRimGlow));
+        Shader.SetGlobalVector("_WC_Wash", new Vector4(s.washColour.r, s.washColour.g, s.washColour.b, s.washStrength));
+        Shader.SetGlobalVector("_WC_WashReserve", new Vector4(s.washReserve, s.washFloorReserve, 0f, 0f));
+        Shader.SetGlobalVector("_WC_Environment", new Vector4(s.fullSunIntensity, s.lightColourInfluence, s.ambientColourInfluence, 0f));
+        // Scene colours: sRGB values as they are, like the other colours the shader mixes in sRGB.
+        Shader.SetGlobalVector("_WC_SceneColour", new Vector4(s.sceneColour, s.sceneColourSize, s.bounce, s.edgeAccent));
+        Shader.SetGlobalVector("_WC_LightTintA", (Vector4)s.lightTintA);
+        Shader.SetGlobalVector("_WC_LightTintB", (Vector4)s.lightTintB);
+        Shader.SetGlobalVector("_WC_ShadeTintA", (Vector4)s.shadeTintA);
+        Shader.SetGlobalVector("_WC_ShadeTintB", (Vector4)s.shadeTintB);
+        Shader.SetGlobalVector("_WC_SkyBounce", (Vector4)s.skyBounce);
+        Shader.SetGlobalVector("_WC_GroundBounce", (Vector4)s.groundBounce);
+        Shader.SetGlobalVector("_WC_EdgeAccent", (Vector4)s.edgeAccentColour);
+        Shader.SetGlobalVector("_WC_Haze", new Vector4(s.haze, s.hazeStart, s.hazeRange, 0f));
+        Shader.SetGlobalFloat("_WC_SunPoolGlow", s.characterSunPoolGlow);
+        Shader.SetGlobalVector("_WC_HazeLow", (Vector4)s.hazeLow);
+        Shader.SetGlobalVector("_WC_HazeHigh", (Vector4)s.hazeHigh);
         Shader.SetGlobalFloat("_WC_ShadowSaturation", s.shadowSaturation);
         Shader.SetGlobalFloat("_WC_WarmWidth", s.lightYellowWidthPercent / 100f);
         Shader.SetGlobalFloat("_WC_CoolShift", s.darkPigmentBluePercent / 100f);

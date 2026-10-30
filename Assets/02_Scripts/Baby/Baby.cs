@@ -12,6 +12,7 @@ public class Baby : CryListener
     static readonly int AsleepParam = Animator.StringToHash("Asleep");
     static readonly int LookAroundParam = Animator.StringToHash("LookAround");
     static readonly int SleepState = Animator.StringToHash("Sleep");
+    static readonly int IdleState = Animator.StringToHash("Idle");
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
     static readonly int JumpState = Animator.StringToHash("Jump");
@@ -156,6 +157,31 @@ public class Baby : CryListener
         wakeTimer.ResetTimer();
     }
 
+    // Dev tool: stands the baby on the spot and has it lie down there, as at the end of its route: Reached Rest follows.
+    public void LieDownAt(Transform spot)
+    {
+        StopAllCoroutines();
+        transform.SetPositionAndRotation(spot.position, spot.rotation);
+        CurrentBlocker = null;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(LookAroundParam, false);
+        animator.SetBool(AsleepParam, false);
+        animator.Play(IdleState, 0, 0f);
+        wakeTimer.ResetTimer();
+        StartCoroutine(LieDown());
+    }
+
+    IEnumerator LieDown()
+    {
+        State = BabyState.Resting;
+        // One frame standing, so the animator goes through its lying-down transition.
+        yield return null;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(AsleepParam, true);
+        yield return new WaitForSeconds(lieDownClip.length);
+        ReachedRest?.Invoke();
+    }
+
     // Asleep where it is, ready to wake and walk the route. The next stage starts this way where the baby fell asleep (ADR 0010).
     public void Sleep(BabyRoute route)
     {
@@ -253,11 +279,7 @@ public class Baby : CryListener
             }
         }
 
-        State = BabyState.Resting;
-        animator.SetBool(WalkingParam, false);
-        animator.SetBool(AsleepParam, true);
-        yield return new WaitForSeconds(lieDownClip.length);
-        ReachedRest?.Invoke();
+        yield return LieDown();
     }
 
     IEnumerator WalkTo(Vector3 target)

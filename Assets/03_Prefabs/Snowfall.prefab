@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 9131057907070441076}
   - component: {fileID: 5980066499111424303}
   - component: {fileID: 3062638231370418476}
+  - component: {fileID: 5216960230678855593}
   m_Layer: 0
   m_Name: Snowfall
   m_TagString: Untagged
@@ -27,9 +28,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3070333576498324983}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 10, z: 0}
-  m_LocalScale: {x: 0.6, y: 0.01, z: 0.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -50,7 +51,7 @@ ParticleSystem:
   ringBufferLoopRange: {x: 0, y: 1}
   emitterVelocityMode: 1
   looping: 1
-  prewarm: 0
+  prewarm: 1
   playOnAwake: 1
   useUnscaledTime: 0
   autoRandomSeed: 1
@@ -117,7 +118,7 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 10
+      scalar: 11
       minScalar: 5
       maxCurve:
         serializedVersion: 2
@@ -288,8 +289,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 0.11
-      minScalar: 0.049999997
+      scalar: 0.37
+      minScalar: 0.030000001
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -605,7 +606,7 @@ ParticleSystem:
         m_RotationOrder: 4
     randomizeRotationDirection: 0
     gravitySource: 0
-    maxNumParticles: 6500
+    maxNumParticles: 28600
     customEmitterVelocity: {x: 0, y: 0, z: 0}
     size3D: 0
     rotation3D: 0
@@ -673,7 +674,7 @@ ParticleSystem:
     donutRadius: 0.2
     m_Position: {x: 0, y: 0, z: 0}
     m_Rotation: {x: 0, y: 0, z: 0}
-    m_Scale: {x: 12, y: 0.1, z: 30}
+    m_Scale: {x: 70.685, y: 0.1, z: 78.97758}
     placementMode: 0
     m_MeshMaterialIndex: 0
     m_MeshNormalOffset: 0
@@ -871,7 +872,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 500
+      scalar: 2000
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -1139,7 +1140,7 @@ ParticleSystem:
         m_RotationOrder: 4
     separateAxes: 0
   RotationModule:
-    enabled: 1
+    enabled: 0
     x:
       serializedVersion: 2
       minMaxState: 0
@@ -1496,8 +1497,8 @@ ParticleSystem:
     x:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 1.1
-      minScalar: 0.9
+      scalar: 0.6
+      minScalar: 0.4
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -1549,8 +1550,8 @@ ParticleSystem:
     y:
       serializedVersion: 2
       minMaxState: 3
-      scalar: -120
-      minScalar: -120.4
+      scalar: -1.5
+      minScalar: -2.1
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -3226,7 +3227,7 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
   SizeBySpeedModule:
-    enabled: 0
+    enabled: 1
     curve:
       serializedVersion: 2
       minMaxState: 1
@@ -3237,22 +3238,22 @@ ParticleSystem:
         m_Curve:
         - serializedVersion: 3
           time: 0
-          value: 0
+          value: 1
           inSlope: 0
           outSlope: 1
           tangentMode: 0
           weightedMode: 0
-          inWeight: 0.33333334
-          outWeight: 0.33333334
+          inWeight: 0
+          outWeight: 0
         - serializedVersion: 3
           time: 1
-          value: 1
+          value: 2
           inSlope: 1
           outSlope: 0
           tangentMode: 0
           weightedMode: 0
-          inWeight: 0.33333334
-          outWeight: 0.33333334
+          inWeight: 0
+          outWeight: 0
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
@@ -3386,7 +3387,7 @@ ParticleSystem:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-    range: {x: 0, y: 1}
+    range: {x: 5.2440443, y: 5.4460993}
     separateAxes: 0
   RotationBySpeedModule:
     enabled: 0
@@ -4783,7 +4784,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: fd17f7b7e75f4670983b0e2f85f82e54, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4806,14 +4807,14 @@ ParticleSystemRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_RenderMode: 0
+  m_RenderMode: 1
   m_MeshDistribution: 0
   m_SortMode: 0
   m_MinParticleSize: 0
   m_MaxParticleSize: 0.5
-  m_CameraVelocityScale: 0
-  m_VelocityScale: 0
-  m_LengthScale: 2
+  m_CameraVelocityScale: 0.05
+  m_VelocityScale: 0.02
+  m_LengthScale: 1
   m_SortingFudge: 0
   m_NormalDirection: 1
   m_ShadowBias: 0
@@ -4849,25 +4850,47 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76f65bcafce2a81479ea394c2f349e1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Snowfall
-  areaSize: {x: 12, y: 30}
+  areaSize: {x: 70.685, y: 78.97758}
   followTarget: {fileID: 0}
-  spawnRate: 500
-  fallSpeed: 120
-  fallSpeedVariation: 0.4
-  wind: {x: 1, y: -5}
+  spawnRate: 2000
+  fallSpeed: 1.5
+  fallSpeedVariation: 0.6
+  wind: {x: 0.5, y: -5}
   turbulence: 0.3
-  flakeSize: 0.08
-  sizeVariation: 0.03
+  flakeSize: 0.2
+  sizeVariation: 0.17
   rotationSpeed: 20
   snowColor: {r: 1, g: 1, b: 1, a: 1}
-  maxLifetime: 10
+  maxLifetime: 11
   particleBudgetHeadroom: 1.3
+  stretch: 0.02
+  cameraStretch: 0.05
+  fastFlakeSize: 2
   collideWithWorld: 0
   collisionLayers:
     serializedVersion: 2
     m_Bits: 4294967295
   bounce: 0
   collisionLifetimeLoss: 1
-  snowMaterial: {fileID: 0}
+  snowMaterial: {fileID: 2100000, guid: fd17f7b7e75f4670983b0e2f85f82e54, type: 2}
   generatedTextureSize: 32
   autoRegenerate: 1
+--- !u!114 &5216960230678855593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3070333576498324983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42335428b7809fe49bc8cf6a2c76010b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SeasonSnow
+  season: {fileID: 0}
+  stopsAt: 1
+  gustStrength: 0.25
+  gustThickness: 4
+  wispMaterial: {fileID: 2100000, guid: e3e59d3d1dbe4c6f84144992b6f4f6c2, type: 2}
+  wispHeight: 2
+  wispReach: 60

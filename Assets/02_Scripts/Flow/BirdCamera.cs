@@ -24,6 +24,10 @@ public class BirdCamera : MonoBehaviour
     // magnitude isn't portable across browsers), then eased towards smoothly.
     float targetZoom = 1f;
     float zoom = 1f;
+    // Dev tool: while set, the camera stays on this point instead of following the bird.
+    Vector3? lockedPoint;
+
+    public bool IsLocked => lockedPoint.HasValue;
 
     void Awake()
     {
@@ -42,6 +46,20 @@ public class BirdCamera : MonoBehaviour
     {
         zones = stage.GetComponentsInChildren<CameraZone>();
         zoneWeights = new float[zones.Length];
+    }
+
+    // Dev tool: locks the camera on the point, or unlocks it. Cuts there at once.
+    public void ToggleLock(Vector3 point)
+    {
+        lockedPoint = lockedPoint.HasValue ? null : point;
+        Cut();
+    }
+
+    // Dev tool: if locked, moves the lock to this point.
+    public void MoveLock(Vector3 point)
+    {
+        if (lockedPoint.HasValue)
+            lockedPoint = point;
     }
 
     // Puts the camera on the bird at once instead of sweeping there.
@@ -72,6 +90,8 @@ public class BirdCamera : MonoBehaviour
             zoneWeights[i] = Mathf.MoveTowards(zoneWeights[i], zone.IsLocked ? 1f : 0f, Time.deltaTime / zoneEaseTime);
             point = Vector3.Lerp(point, ClampXZ(point, zone.AreaMin, zone.AreaMax), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
         }
+        if (lockedPoint.HasValue)
+            point = lockedPoint.Value;
         point.y = area.center.y;
         transform.position = point;
         BirdController.Instance.SetArea(area);
