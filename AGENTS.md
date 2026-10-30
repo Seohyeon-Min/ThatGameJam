@@ -14,6 +14,7 @@
 - 개인 테스트 씬 `Assets/00_Scenes/<이름>_Test.unity`에서 작업한다.
 - 폴더 용도: `00_Scenes` 씬, `01_Arts` 아트와 머티리얼, `02_Scripts` 스크립트, `03_Prefabs` 프리팹, `04_Data` 데이터, `05_Sounds` 사운드.
 - 오브젝트를 여러 개 만드는 작업은 `AgentScripts/`(Assets 밖)에 빌더 스크립트로 둔다. 실행은 `unity command script run --file ... --entry ...`로 한다.
+- `sam` 브랜치에서 작업할 때는 작업 중에 어떠한 아트, 사운드 에셋도 임의로 생성하지 않는다.
 
 ## Unity CLI (Pipeline)
 - 에디터가 열려 있으면 씬과 에셋 파일을 직접 고치지 않는다. CLI로 에디터를 조작한다.
