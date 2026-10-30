@@ -42,6 +42,7 @@ public static class BuildSamTestScene
     const float ScreenAspect = 16f / 9f;
     const float ViewMargin = 12f;
     const string SnowfallPrefabPath = "Assets/03_Prefabs/Snowfall.prefab";
+    const string SunlitSpotPrefabPath = "Assets/03_Prefabs/SunlitSpot.prefab";
     // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
     const float SnowHeight = 14f;
     // New flakes per second on each square metre of the box. With the box upwind (ADR 0024), 0.9 keeps the snow near the camera as
@@ -269,12 +270,11 @@ public static class BuildSamTestScene
             new Bounds(new Vector3(0.5f, 0f, 18.875f), new Vector3(13.5f, 1f, 41.75f)));
     }
 
-    // The sunlit spot at the end of a route: a narrow shaft of light, like a portal.
+    // The sunlit spot at the end of a route: shafts of light falling to the ground here. The look is on the prefab.
     static void RestLight(GameObject parent, Vector3 position)
     {
-        GameObject light = Primitive(PrimitiveType.Cylinder, "SunlitSpot", position + Vector3.up * 3f, new Vector3(1.6f, 3f, 1.6f),
-            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), parent);
-        Object.DestroyImmediate(light.GetComponent<Collider>());
+        var spot = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(SunlitSpotPrefabPath), parent.transform);
+        spot.transform.position = position;
     }
 
     static void StopAt(Transform point, PathBlocker blocker)

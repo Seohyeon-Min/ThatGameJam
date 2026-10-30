@@ -71,6 +71,7 @@ Shader "ThatGameJam/SoftPastel"
                 half _ReceiveCastShadows;
                 half _LeavePaper;
                 half _Birch;
+                half _Character;
                 half _BirchMarks;
                 half _BirchDarkness;
                 half4 _BirchColour;

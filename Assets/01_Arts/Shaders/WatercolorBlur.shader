@@ -110,11 +110,11 @@ Shader "Hidden/ThatGameJam/WatercolorBlur"
             return lerp(center, sum / weightSum, _BlurParams.w);
         }
 
-        float4 Watercolor(float2 uv, bool useDepth)
+        float4 Watercolor(float2 uv, bool useDepth, bool rough)
         {
             float alpha = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearClamp, uv, 0).a;
             float3 color = Bilateral(uv, useDepth);
-            if (_WC_Gouache.x > 0 && _WC_GouacheEdge.x > 0)
+            if (rough && _WC_Gouache.x > 0 && _WC_GouacheEdge.x > 0)
                 color = RoughEdges(uv, color);
             // URP 톤매핑에는 세기 조절이 없어서 여기서 Neutral 톤매핑을 원본과 섞는다(수채화 볼륨에서는 URP 톤매핑을 끈다).
             // 종이는 그 뒤에 곱해서, 종이 질감 자체는 톤매핑으로 눌리지 않는다.
@@ -129,8 +129,10 @@ Shader "Hidden/ThatGameJam/WatercolorBlur"
             return float4(color, alpha);
         }
 
-        float4 FragBlur(Varyings input) : SV_Target { return Watercolor(input.texcoord, false); }
-        float4 FragBlurDepth(Varyings input) : SV_Target { return Watercolor(input.texcoord, true); }
+        float4 FragBlur(Varyings input) : SV_Target { return Watercolor(input.texcoord, false, true); }
+        float4 FragBlurDepth(Varyings input) : SV_Target { return Watercolor(input.texcoord, true, true); }
+        float4 FragClean(Varyings input) : SV_Target { return Watercolor(input.texcoord, false, false); }
+        float4 FragCleanDepth(Varyings input) : SV_Target { return Watercolor(input.texcoord, true, false); }
         ENDHLSL
 
         Pass
@@ -148,6 +150,27 @@ Shader "Hidden/ThatGameJam/WatercolorBlur"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment FragBlurDepth
+            ENDHLSL
+        }
+
+        // 2, 3: 캐릭터 자리(스텐실 128)만 다시 그린다. 윤곽 오돌토돌함 없이 깔끔하게.
+        Pass
+        {
+            Name "CharacterClean"
+            Stencil { Ref 128 ReadMask 128 Comp Equal }
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragClean
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "CharacterCleanDepth"
+            Stencil { Ref 128 ReadMask 128 Comp Equal }
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragCleanDepth
             ENDHLSL
         }
     }

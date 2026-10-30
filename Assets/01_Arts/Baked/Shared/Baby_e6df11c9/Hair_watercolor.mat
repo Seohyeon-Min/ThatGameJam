@@ -14,6 +14,8 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords:
   - _HASPATTERN_ON
+  - _LEAVEPAPER_ON
+  - _RECEIVECASTSHADOWS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -39,12 +41,21 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaClip: 0
+    - _Birch: 0
+    - _BirchDarkness: 0.85
+    - _BirchLength: 0.28
+    - _BirchMarks: 2.5
+    - _BirchThickness: 0.16
+    - _Character: 128
     - _Cull: 2
     - _Cutoff: 0.5
     - _Floor: 0
     - _HasPattern: 1
+    - _LeavePaper: 1
+    - _ReceiveCastShadows: 1
     - _SelfShadowSkip: 0.8
     m_Colors:
     - _BaseColor: {r: 1, g: 0.92301023, b: 0.62364805, a: 1}
+    - _BirchColour: {r: 0.41999996, g: 0.26999995, b: 0.17999998, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

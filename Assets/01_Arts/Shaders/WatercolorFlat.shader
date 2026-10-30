@@ -42,11 +42,14 @@ Shader "ThatGameJam/WatercolorFlat"
         _SelfShadowSkip ("Ignore Own Shadow Within (m)", Range(0, 3)) = 0
         [Toggle] _ReceiveCastShadows ("Receive Cast Shadows", Float) = 1
         [Toggle] _LeavePaper ("Leave Paper White On The Lit Side", Float) = 1
+        [Header(Character)]
+        [Enum(Background, 0, Character, 128)] _Character ("Painted As", Float) = 0
+
         [Header(Birch Bark)]
         [Toggle] _Birch ("Birch Bark Marks", Float) = 0
         _BirchMarks ("Birch Marks Per Metre", Range(0.5, 8)) = 2.5
         _BirchDarkness ("Birch Mark Darkness", Range(0, 1)) = 0.85
-        _BirchColour ("Birch Mark Colour", Color) = (0.24, 0.2, 0.19, 1)
+        _BirchColour ("Birch Mark Colour", Color) = (0.42, 0.27, 0.18, 1)
         _BirchLength ("Birch Mark Length (share of the trunk's girth)", Range(0.05, 0.6)) = 0.28
         _BirchThickness ("Birch Mark Thickness (share of a row)", Range(0.02, 0.5)) = 0.16
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
@@ -80,6 +83,7 @@ Shader "ThatGameJam/WatercolorFlat"
             half _ReceiveCastShadows;
             half _LeavePaper;
             half _Birch;
+            half _Character;
             half _BirchMarks;
             half _BirchDarkness;
             half4 _BirchColour;
@@ -111,9 +115,11 @@ Shader "ThatGameJam/WatercolorFlat"
         half4 _WC_Wash;           // 바탕칠: rgb 색(sRGB), a 세기
         half4 _WC_Gouache;        // 구아슈: x 섞는 정도(0 수채화 ~ 1 구아슈), y 그늘 진하기, z 덧칠한 하이라이트 세기, w 마른 붓 경계
         half4 _WC_GouacheHighlight; // 하이라이트로 덧칠하는 밝은 물감 색(sRGB)
-        half4 _WC_GouacheSteps;   // x 명암 경계 위치(0~1), y 전환색 띠의 반폭
+        half4 _WC_GouacheSteps;   // x 명암 경계 위치(0~1), y 전환색 띠의 반폭, z 형태 그림자 채도 배율
         half4 _WC_GouacheTransition; // rgb 전환색(곱해서 물들인다, sRGB), a 세기
-        half4 _WC_GouacheEdge;    // x 윤곽 오돌토돌함(화면 효과 WatercolorBlur 에서 쓴다), y 면 위 붓결 세기
+        half4 _WC_CharacterGouache; // 캐릭터 머티리얼의 구아슈 값: x 그늘 채도 배율, y 경계 붓결 세기, z 마른 붓 정도, w 그늘 깊이
+        half4 _WC_CharacterShade;   // 캐릭터 그늘 색: rgb 그늘이 돌아갈 색(sRGB), a 색상을 그쪽으로 돌리는 정도
+        half4 _WC_GouacheEdge;    // x 윤곽 오돌토돌함(화면 효과 WatercolorBlur 에서 쓴다), y 경계 붓결 세기, z 붓 무늬 한 칸(m), w 빛 쪽 테두리 빛남
         half4 _WC_WashReserve;    // x 흰색으로 남길 만큼 빛을 정면으로 받아야 하는 정도(0~1), y 바닥 번짐 자리를 남기는 정도
         half _WC_Saturation;      // -1~1
         half _WC_Brightness;      // -1~1
@@ -222,10 +228,18 @@ Shader "ThatGameJam/WatercolorFlat"
             float2 plane = float2(dot(positionWS, UNITY_MATRIX_V[0].xyz), dot(positionWS, UNITY_MATRIX_V[1].xyz)) / max(_WC_GouacheEdge.z, 1e-4);
             float2 across = float2(-dir.y, dir.x);
             float u = dot(plane, dir), v = dot(plane, across);
-            half stroke = SceneNoise(float2(u / 70.0, v / 11.0)) * 0.7 + SceneNoise(float2(u / 35.0, v / 6.0) + 7.3) * 0.3;
-            // 붓털 결: 붓질 방향으로 길고, 가로로 몇 화소 간격의 가는 줄.
-            half bristle = SceneNoise(float2(u / 45.0, v / 1.6) + 19.1);
-            return stroke * 0.7 + bristle * 0.3;
+            // 평붓 붓질: 붓 폭(9칸)마다 한 줄, 줄마다 길이가 다른 납작한 붓질이 엇갈려 놓인다. 붓질 안은 한 값이고
+            // 끝은 각지게 비스듬히 잘린다(잡음처럼 둥글게 흐려지지 않는다).
+            float row = floor(v / 9.0);
+            float inRow = frac(v / 9.0);
+            float length = lerp(25.0, 70.0, SceneHash(float2(row, 2.3)));
+            float along = u / length + SceneHash(float2(row, 7.7)) + inRow * 0.35;   // 끝이 비스듬히 잘리게 기울인다
+            float cell = floor(along);
+            half stroke = SceneHash(float2(cell, row));
+            // 붓털 결: 붓질 방향으로 길고 화면 1~2화소 간격의 가는 줄. 붓질 끝에서 붓털이 갈라진다.
+            half bristle = SceneNoise(float2(u / 40.0, v / 1.3) + 19.1);
+            half tip = smoothstep(0.0, 0.12, frac(along)) * smoothstep(1.0, 0.88, frac(along));
+            return lerp(bristle, stroke * 0.6 + bristle * 0.4, tip);
         }
 
         void AlphaClip(float2 uv)
@@ -240,6 +254,14 @@ Shader "ThatGameJam/WatercolorFlat"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+            // 캐릭터는 스텐실 128 비트에 표시한다. 화면 효과가 그 자리에는 윤곽 오돌토돌함을 넣지 않는다.
+            Stencil
+            {
+                Ref [_Character]
+                WriteMask 128
+                Comp Always
+                Pass Replace
+            }
 
             HLSLPROGRAM
             #pragma vertex Vert
@@ -411,8 +433,10 @@ Shader "ThatGameJam/WatercolorFlat"
                         float seed = r * 1.37 + k * 17.0;
                         half chance = SceneHash(float2(seed, 1.3));
                         float centre = SceneHash(float2(seed, 5.1));
-                        half halfLength = _BirchLength * lerp(0.35, 1.0, SceneHash(float2(seed, 9.7)));
-                        half thickness = _BirchThickness * lerp(0.5, 1.3, SceneHash(float2(seed, 2.9)));
+                        // 아래쪽 자국이 크고 진하며, 위로 갈수록 작고 옅어진다.
+                        half lowness = saturate(1.0 - input.positionOS.y / 7.0);
+                        half halfLength = _BirchLength * lerp(0.35, 1.0, SceneHash(float2(seed, 9.7))) * lerp(0.6, 1.3, lowness);
+                        half thickness = _BirchThickness * lerp(0.5, 1.3, SceneHash(float2(seed, 2.9))) * lerp(0.6, 1.4, lowness);
                         float da = angle - centre;
                         da -= round(da);
                         half t = da / halfLength;
@@ -432,7 +456,7 @@ Shader "ThatGameJam/WatercolorFlat"
                     // 껍질 결: 아주 옅은 가로 줄.
                     half grain = (SceneNoise(float2(angle * 60.0, bark.y * 40.0)) - 0.5) * 0.1;
                     albedo = saturate(albedo * (1.0 + grain));
-                    albedo = lerp(albedo, LinearToSRGB(_BirchColour.rgb), mark * _BirchDarkness);
+                    albedo = lerp(albedo, LinearToSRGB(_BirchColour.rgb), mark * _BirchDarkness * lerp(0.6, 1.0, saturate(1.0 - input.positionOS.y / 7.0)));
                 }
                 half3 solidHsv = RgbToHsv(saturate(albedo));
                 half drop = 0.0;
@@ -587,7 +611,12 @@ Shader "ThatGameJam/WatercolorFlat"
                     float2 floorDir = float2(cos(floorAngle), sin(floorAngle));
                     float2 brushDir = normalize(lerp(floorDir, contour, objectOnly * saturate(gradientLength * 400.0)));
                     half brush = DryBrush(input.positionWS, brushDir);
-                    half dry = (brush - 0.5) * 2.0 * _WC_Gouache.w;
+                    // 먼 곳은 붓질이 뭉개진다(안개가 짙어지는 거리를 따라 붓 자국이 줄어든다).
+                    half nearBrush = 1.0 - saturate((length(input.positionWS - GetCameraPositionWS()) - _WC_Haze.y) / max(_WC_Haze.z, 0.1)) * 0.8;
+                    // 캐릭터와 배경은 매니저의 값을 따로 쓴다(캐릭터는 보통 더 깔끔하게).
+                    half isCharacter = step(0.5, _Character);
+                    half dryAmount = lerp(_WC_Gouache.w, _WC_CharacterGouache.z, isCharacter);
+                    half dry = (brush - 0.5) * 2.0 * dryAmount * nearBrush;
 
                     // 형태: 명암 경계(Terminator) 위는 빛, 아래는 어둠, 경계 양쪽 Width 만큼이 전환색.
                     half t = ndotlRaw + (pattern.r - 0.5) * 0.1 + dry;
@@ -596,21 +625,47 @@ Shader "ThatGameJam/WatercolorFlat"
                     formLevel = lerp(1.0, formLevel, objectOnly);
                     // 드리운 그림자: 경계 근처에서만 붓질로 흔들고, 같은 세 단계로 나눈다(가운데가 전환색).
                     half shadowEdgeBand = saturate((1.0 - abs(saturate(shadowAtten) * 2.0 - 1.0)) * 3.0);
-                    half castDry = saturate(cast + dry * 1.5 * shadowEdgeBand);
-                    half castLevel = 0.5 * smoothstep(0.30, 0.34, castDry) + 0.5 * smoothstep(0.66, 0.70, castDry);
+                    // 그림자 경계는 단단하게: 그림자 맵의 부드러운 경계를 좁게 자르고, 붓질로만 갈라지게 한다.
+                    half castSharp = saturate((cast - 0.5) * 3.0 + 0.5);
+                    half castDry = saturate(castSharp + dry * 1.5 * shadowEdgeBand);
+                    half castW = _WC_GouacheSteps.y * 2.0;
+                    half castLevel = 0.5 * smoothstep(0.5 - castW - 0.02, 0.5 - castW + 0.02, castDry) + 0.5 * smoothstep(0.5 + castW - 0.02, 0.5 + castW + 0.02, castDry);
                     half level = min(formLevel, castLevel);
 
                     half3 lightTone = HsvToRgb(half3(solidHsv.x, solidHsv.y, lerp(solidHsv.z, 1.0, 0.2 * sun)));
-                    half3 darkTone = HsvToRgb(half3(solidHsv.x, saturate(solidHsv.y * 1.1), solidHsv.z * (1.0 - saturate(_WC_Gouache.y * 0.45))));
+                    // 형태 그림자 톤: 같은 색상으로 명도를 낮추고 채도를 올린다(Gouache Shade Saturation). 채도가 낮은 색
+                    // (크림색 옷 등)도 그늘에서 탁해지지 않게, 배율에 비례해 채도를 조금 더한다.
+                    half shadeSatScale = lerp(_WC_GouacheSteps.z, _WC_CharacterGouache.x, isCharacter);
+                    half shadeSat = saturate(solidHsv.y * shadeSatScale + (shadeSatScale - 1.0) * 0.12);
+                    // 캐릭터 그늘: 정한 그늘 색 쪽으로 간다(크림색 옷 그늘을 라벤더로 등). 깊이도 캐릭터 값을 쓴다.
+                    // 채도가 높은 색은 색상환의 가까운 쪽으로 색상만 돌리고, 채도가 낮은 색(크림, 흰색)은 색상환을 돌면
+                    // 중간의 분홍·자주를 지나 쨍해지므로 같은 밝기의 그늘 색과 섞는다.
+                    half shadeDepth = lerp(_WC_Gouache.y, _WC_CharacterGouache.w, isCharacter);
+                    half shadeValue = solidHsv.z * (1.0 - saturate(shadeDepth * 0.45));
+                    half3 darkTone = HsvToRgb(half3(solidHsv.x, shadeSat, shadeValue));
+                    if (isCharacter > 0.5 && _WC_CharacterShade.a > 0)
+                    {
+                        half3 tintHsv = RgbToHsv(_WC_CharacterShade.rgb);
+                        half toTint = tintHsv.x - solidHsv.x;
+                        toTint -= round(toTint);
+                        half3 turned = HsvToRgb(half3(frac(solidHsv.x + toTint * _WC_CharacterShade.a), shadeSat, shadeValue));
+                        half3 mixed = lerp(darkTone, HsvToRgb(half3(tintHsv.x, tintHsv.y, shadeValue)), _WC_CharacterShade.a);
+                        darkTone = lerp(mixed, turned, smoothstep(0.25, 0.45, solidHsv.y));
+                    }
                     // 바닥(흰 눈)의 어둠은 회청색 그림자 그대로(같은 물감을 더 쌓은 색).
                     darkTone = lerp(Accumulate(lightTone, shadowAmount), darkTone, objectOnly);
                     half3 midTone = lerp(darkTone, lightTone, 0.5) * lerp(1.0, _WC_GouacheTransition.rgb, _WC_GouacheTransition.a);
                     half3 gouache = level < 0.5 ? lerp(darkTone, midTone, level * 2.0) : lerp(midTone, lightTone, level * 2.0 - 1.0);
+                    // 빛 쪽 실루엣에 빛이 번진 듯 밝은 테두리(역광에 줄기 가장자리가 빛나는 것처럼). 같은 색을 밝힌다.
+                    half rimGlow = pow(1.0 - saturate(dot(normalWS, viewWS)), 4.0) * saturate(dot(normalWS, formLightDir) * 0.5 + 0.6) * objectOnly * castSharp;
+                    gouache = lerp(gouache, HsvToRgb(half3(solidHsv.x, solidHsv.y * 0.7, 1.0)), saturate(rimGlow * _WC_GouacheEdge.w));
                     color = lerp(color, gouache, _WC_Gouache.x);
                     // 면 위 붓결: 붓질 방향으로 가는 결이 조금 밝고 어둡게 보인다(바닥 포함). 물감이 고르게 덮이지 않은 느낌.
                     // 붓결은 군데군데만 보인다(큰 잡음으로 고른 자리). 바닥은 하나의 흰색이라 더 약하고 드물게.
-                    half grainPatch = smoothstep(0.45, 0.7, SceneNoise(input.positionWS.xz / 2.5 + input.positionWS.y * 0.3 + 9.1));
-                    half grain = _WC_GouacheEdge.y * lerp(0.35 * grainPatch, 0.5 + 0.5 * grainPatch, objectOnly);
+                    // 면 가운데는 평평하고, 단계 경계 근처에서만 붓결이 보인다(물감이 갈라지며 아래 색이 비친다).
+                    half nearStep = 1.0 - saturate(abs(level - 0.5) * 2.0);
+                    nearStep = max(nearStep, saturate(1.0 - abs(t - e) / max(w * 3.0, 0.02)) * objectOnly);
+                    half grain = lerp(_WC_GouacheEdge.y, _WC_CharacterGouache.y, isCharacter) * nearStep * nearBrush;
                     color *= 1.0 + (brush - 0.5) * 2.0 * grain * _WC_Gouache.x;
                 }
 
