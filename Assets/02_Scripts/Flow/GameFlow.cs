@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Runs the stages in order on one long road (ADR 0010). After the baby falls asleep at a stage's sunlit spot, the season advances
@@ -15,6 +16,8 @@ public class GameFlow : MonoBehaviour
     bool finished;
 
     public Stage CurrentStage => stages[current];
+    // The authored stage order (StageEditor's spacing tool cascades along this, not scene hierarchy order).
+    public IReadOnlyList<Stage> Stages => stages;
 
     // Where the bird may fly: every stage's area up to the current one, and in the current stage only up to its sunlit spot (ADR 0012).
     // The stages' areas follow each other along +Z.
