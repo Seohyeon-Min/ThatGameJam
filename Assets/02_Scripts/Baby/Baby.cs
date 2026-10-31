@@ -12,6 +12,7 @@ public class Baby : CryListener
     static readonly int AsleepParam = Animator.StringToHash("Asleep");
     static readonly int LookAroundParam = Animator.StringToHash("LookAround");
     static readonly int SleepState = Animator.StringToHash("Sleep");
+    static readonly int QuietWaitParam = Animator.StringToHash("QuietWait");
     static readonly int IdleState = Animator.StringToHash("Idle");
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
@@ -48,12 +49,15 @@ public class Baby : CryListener
     float noiseSeed;
     Quaternion modelBaseRotation;
 
-    // The head bone, turned toward a PointOfInterest while walking (LateUpdate, after the animator has posed it).
+    // The head bone, turned toward a PointOfInterest (or the sheltering bird) while walking (LateUpdate, after the animator has posed it).
     // Null is handled gracefully: the rig just never gained this bone and the baby simply never glances.
     Transform headBone;
     PointOfInterest gazeTarget;
     float gazeTimeRemaining;
     float gazeBlend;
+    Vector3 lookPoint;
+    // Paused to look around (CuriousPause).
+    bool lookingAround;
 
     protected override float CryRadius => GameTuning.Current.babyWakeCryRadius;
 
@@ -94,14 +98,21 @@ public class Baby : CryListener
             return;
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
-        bool active = gazeTarget != null && gazeTimeRemaining > 0f && State == BabyState.Walking && !onBalanceBeam;
+        bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
+        // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
+        if (BirdController.Instance.IsSheltering)
+            lookPoint = BirdController.Instance.transform.position;
+        else if (gazeTarget != null && gazeTimeRemaining > 0f)
+            lookPoint = gazeTarget.LookPoint;
+        else
+            active = false;
         GameTuning tuning = GameTuning.Current;
         gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, tuning.babyGazeBlendTime));
         if (gazeBlend <= 0.001f)
             return;
 
         Vector3 animatedForward = headBone.forward;
-        Vector3 toTarget = (gazeTarget.LookPoint - headBone.position).normalized;
+        Vector3 toTarget = (lookPoint - headBone.position).normalized;
         Vector3 desiredDir = Vector3.RotateTowards(animatedForward, toTarget, Mathf.Deg2Rad * tuning.babyGazeMaxAngle, 0f);
         Quaternion desiredRot = Quaternion.LookRotation(desiredDir, headBone.up);
         headBone.rotation = Quaternion.Slerp(headBone.rotation, desiredRot, gazeBlend);
@@ -146,6 +157,7 @@ public class Baby : CryListener
     public void RestAt(Transform spot)
     {
         StopAllCoroutines();
+        lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         // Already lying: no lying-down animation after the move.
         animator.Play(SleepState, 0, 0f);
@@ -153,6 +165,7 @@ public class Baby : CryListener
         State = BabyState.Resting;
         animator.SetBool(WalkingParam, false);
         animator.SetBool(LookAroundParam, false);
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         wakeTimer.ResetTimer();
     }
@@ -161,6 +174,7 @@ public class Baby : CryListener
     public void LieDownAt(Transform spot)
     {
         StopAllCoroutines();
+        lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         CurrentBlocker = null;
         animator.SetBool(WalkingParam, false);
@@ -177,6 +191,7 @@ public class Baby : CryListener
         // One frame standing, so the animator goes through its lying-down transition.
         yield return null;
         animator.SetBool(WalkingParam, false);
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         yield return new WaitForSeconds(lieDownClip.length);
         ReachedRest?.Invoke();
@@ -186,11 +201,13 @@ public class Baby : CryListener
     public void Sleep(BabyRoute route)
     {
         StopAllCoroutines();
+        lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
         State = BabyState.Sleeping;
         animator.SetBool(WalkingParam, false);
         animator.SetBool(LookAroundParam, false);
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         wakeTimer.ResetTimer();
         wakeTimer.Begin();
@@ -261,6 +278,8 @@ public class Baby : CryListener
 
             // The bird may have opened it before the baby arrived (ADR 0003 Q4); the baby then only reacts.
             PathBlocker blocker = stop.Blocker;
+            // No crouch clip yet: use only calm breathing for this pose, including its reaction.
+            animator.SetBool(QuietWaitParam, stop.Pose == WaitPose.Crouch);
             if (!blocker.IsOpen)
             {
                 // Waits standing whatever the stop's pose: the model has no crouch or sit yet.
@@ -268,13 +287,34 @@ public class Baby : CryListener
                 StandStill();
                 CurrentBlocker = blocker;
                 blocker.BeginWaiting();
-                yield return new WaitUntil(() => blocker.IsOpen);
+                while (!blocker.IsOpen)
+                {
+                    if (stop.ObserveTarget != null)
+                        TurnToward(stop.ObserveTarget.position - transform.position);
+                    yield return null;
+                }
                 CurrentBlocker = null;
+            }
+            if (stop.ObserveTarget != null)
+            {
+                State = BabyState.Reacting;
+                StandStill();
+                for (float time = 0f; time < 0.8f; time += Time.deltaTime)
+                {
+                    TurnToward(stop.ObserveTarget.position - transform.position);
+                    yield return null;
+                }
             }
             if (blocker.OpenedByBird && blocker.LookUpWhenOpenedByBird)
             {
                 State = BabyState.Reacting;
                 yield return LookUp(tuning.babyLookUpDuration);
+            }
+            if (blocker.OpenedByBird && stop.ByBirdRoute != null)
+            {
+                State = BabyState.Walking;
+                for (int detour = 0; detour < stop.ByBirdRoute.Count; detour++)
+                    yield return WalkTo(stop.ByBirdRoute[detour].position);
             }
             // A fallen log or similar: arms-out balance until the far end (BalanceBeamEnd) is reached.
             // The climb onto it is the next segment (see jumpNextSegment above).
@@ -334,9 +374,12 @@ public class Baby : CryListener
     {
         GameTuning tuning = GameTuning.Current;
         StandStill();
+        // Looks around even under the sheltering bird: LateUpdate leaves the head to the animation meanwhile.
+        lookingAround = true;
         animator.SetBool(LookAroundParam, true);
         yield return new WaitForSeconds(tuning.babyLookAroundDuration);
         animator.SetBool(LookAroundParam, false);
+        lookingAround = false;
     }
 
     // Stepping up onto a balance beam or down off the far end: one in-place hop before Walk/BalanceWalk resumes.
@@ -362,6 +405,7 @@ public class Baby : CryListener
     // closes in on the exact target, so arrival (and anything retracing this path, e.g. the fog trail) is unaffected.
     public bool StepToward(Vector3 target)
     {
+        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(WalkingParam, true);
         GameTuning tuning = GameTuning.Current;
         Vector3 toTarget = target - transform.position;

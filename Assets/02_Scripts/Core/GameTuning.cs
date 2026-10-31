@@ -71,6 +71,12 @@ public class GameTuning : ScriptableObject
     public float birdTakeoffHoldTimeout = 1f;
     // Degrees/second the bird's heading can turn. Caps how sharply it can snap towards a new target.
     public float birdTurnSpeed = 240f;
+    // Sheltering the baby from the snow: how far ahead of her the bird flies, and how fast (m/s) it closes a gap
+    // on top of matching her pace once it has reached her.
+    public float birdShelterAhead = 0.6f;
+    // Height above her feet it flies at while sheltering, lower than the stage's altitude; it climbs back on release.
+    public float birdShelterHeight = 2.8f;
+    public float birdShelterCatchUp = 0.5f;
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;
     // Bank degrees per degree/second of turn rate.
