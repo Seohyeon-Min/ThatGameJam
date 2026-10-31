@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 using UnityEngine.Timeline;
 
@@ -130,6 +131,10 @@ public class Cutscene : MonoBehaviour
 
     void Update()
     {
+        // Debug only: Debug.isDebugBuild is also true in the Editor.
+        if (IsPlaying && Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            Stop();
+
         if (!lookHeld)
             return;
         float step = lookBlendSeconds > 0f ? Time.deltaTime / lookBlendSeconds : 1f;
