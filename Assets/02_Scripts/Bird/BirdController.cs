@@ -32,6 +32,11 @@ public class BirdController : MonoBehaviour
     public static BirdController Instance { get; private set; }
 
     public bool IsPerched => state == State.Perched;
+    // Held over the walking baby, keeping the snow off her (SnowShelter).
+    public bool IsSheltering { get; private set; }
+    // Sheltering and over her (not held back at the edge of its area or the screen): its wings keep the snow off.
+    public bool IsCoveringBaby => IsSheltering && shelterReached
+        && Vector2.Distance(new Vector2(transform.position.x, transform.position.z), new Vector2(shelterSpot.x, shelterSpot.z)) <= 0.3f;
 
     InputAction moveAction;
     InputAction cryAction;
@@ -69,6 +74,11 @@ public class BirdController : MonoBehaviour
     float nextCryTime;
     bool perchCursorShown;
     Vector3 baseScale;
+    // While sheltering: reached the spot over the baby, from then on moving at her pace.
+    bool shelterReached;
+    Vector3 lastBabyPosition;
+    // Where it would be over her, before the area and screen limits.
+    Vector3 shelterSpot;
 
     void Awake()
     {
@@ -115,6 +125,7 @@ public class BirdController : MonoBehaviour
     {
         LeavePerch();
         following = false;
+        IsSheltering = false;
         idleTime = 0f;
         liftingOff = false;
         currentSpeed = 0f;
@@ -153,12 +164,21 @@ public class BirdController : MonoBehaviour
             hasHit = Physics.Raycast(ray, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
         ShowPerchCursor(hovered != null);
 
-        if (moveAction.WasPressedThisFrame() && hasHit && !DevTools.Covers(pointAction.ReadValue<Vector2>()))
+        bool pressed = moveAction.WasPressedThisFrame() && !DevTools.Covers(pointAction.ReadValue<Vector2>());
+        if (pressed && CanShelter() && Baby.Instance.GetComponent<Collider>().Raycast(ray, out _, Mathf.Infinity))
+            StartShelter();
+        else if (pressed && hasHit)
             Click(hit, hovered);
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
             target = hit.point;
+        if (IsSheltering && (!moveAction.IsPressed() || !CanShelter()))
+        {
+            // Let go, or the baby has reached the sunlit spot: hovers where it is.
+            IsSheltering = false;
+            target = transform.position;
+        }
 
         bool cried = cryAction.WasPressedThisFrame();
         if (cried && Time.time >= nextCryTime)
@@ -209,6 +229,19 @@ public class BirdController : MonoBehaviour
             refusePending = true;
         else
             target = transform.position;
+    }
+
+    // Only in a stage that has it, and only while the baby is up and on her way (not asleep, waking or lying at the sunlit spot).
+    static bool CanShelter() => GameFlow.Instance.CurrentStage.snowShelter
+        && Baby.Instance.State is BabyState.Walking or BabyState.Reacting or BabyState.Waiting;
+
+    void StartShelter()
+    {
+        LeavePerch();
+        following = false;
+        IsSheltering = true;
+        shelterReached = false;
+        lastBabyPosition = Baby.Instance.transform.position;
     }
 
     void Click(RaycastHit hit, Perchable hovered)
@@ -280,6 +313,11 @@ public class BirdController : MonoBehaviour
                 return;
             liftingOff = false;
         }
+        if (IsSheltering)
+        {
+            Shelter();
+            return;
+        }
 
         // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
@@ -292,6 +330,35 @@ public class BirdController : MonoBehaviour
         // Heading past the far end of its area, it has reached the line where the way is closed (ADR 0016).
         if (target.z > bounds.max.z && flat.z >= bounds.max.z - 0.01f)
             Refuse();
+    }
+
+    // Flies to a spot a little ahead of the baby, then keeps over it at her pace, facing the way she walks.
+    void Shelter()
+    {
+        Transform baby = Baby.Instance.transform;
+        Vector3 forward = Vector3.ProjectOnPlane(baby.forward, Vector3.up).normalized;
+        shelterSpot = baby.position + forward * GameTuning.Current.birdShelterAhead;
+        Vector3 spot = Limit(shelterSpot);
+        Vector3 position = transform.position;
+        var flat = new Vector3(position.x, 0f, position.z);
+        spot.y = 0f;
+        float babyStep = Vector3.ProjectOnPlane(baby.position - lastBabyPosition, Vector3.up).magnitude;
+        lastBabyPosition = baby.position;
+        float step;
+        if (shelterReached)
+            step = babyStep + GameTuning.Current.birdShelterCatchUp * Time.deltaTime;
+        else
+        {
+            currentSpeed = Mathf.MoveTowards(currentSpeed, GameTuning.Current.birdSpeed, GameTuning.Current.birdAcceleration * Time.deltaTime);
+            step = currentSpeed * Time.deltaTime;
+        }
+        Vector3 next = Vector3.MoveTowards(flat, spot, step);
+        Face(shelterReached ? forward : next - flat);
+        float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
+        transform.position = new Vector3(next.x, y, next.z);
+        // Over her once at the spot and at flying height (it may have taken off from a low branch).
+        if (next == spot && Mathf.Approximately(y, altitude))
+            shelterReached = true;
     }
 
     void FlyToPerch()

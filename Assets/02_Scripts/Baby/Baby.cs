@@ -45,12 +45,13 @@ public class Baby : CryListener
     float noiseSeed;
     Quaternion modelBaseRotation;
 
-    // The head bone, turned toward a PointOfInterest while walking (LateUpdate, after the animator has posed it).
+    // The head bone, turned toward a PointOfInterest (or the sheltering bird) while walking (LateUpdate, after the animator has posed it).
     // Null is handled gracefully: the rig just never gained this bone and the baby simply never glances.
     Transform headBone;
     PointOfInterest gazeTarget;
     float gazeTimeRemaining;
     float gazeBlend;
+    Vector3 lookPoint;
 
     protected override float CryRadius => GameTuning.Current.babyWakeCryRadius;
 
@@ -88,14 +89,21 @@ public class Baby : CryListener
             return;
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
-        bool active = gazeTarget != null && gazeTimeRemaining > 0f && State == BabyState.Walking && !onBalanceBeam;
+        bool active = State == BabyState.Walking && !onBalanceBeam;
+        // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
+        if (BirdController.Instance.IsSheltering)
+            lookPoint = BirdController.Instance.transform.position;
+        else if (gazeTarget != null && gazeTimeRemaining > 0f)
+            lookPoint = gazeTarget.LookPoint;
+        else
+            active = false;
         GameTuning tuning = GameTuning.Current;
         gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, tuning.babyGazeBlendSpeed * Time.deltaTime);
         if (gazeBlend <= 0.001f)
             return;
 
         Vector3 animatedForward = headBone.forward;
-        Vector3 toTarget = (gazeTarget.LookPoint - headBone.position).normalized;
+        Vector3 toTarget = (lookPoint - headBone.position).normalized;
         Vector3 desiredDir = Vector3.RotateTowards(animatedForward, toTarget, Mathf.Deg2Rad * tuning.babyGazeMaxAngle, 0f);
         Quaternion desiredRot = Quaternion.LookRotation(desiredDir, headBone.up);
         headBone.rotation = Quaternion.Slerp(headBone.rotation, desiredRot, gazeBlend);
@@ -332,7 +340,9 @@ public class Baby : CryListener
     {
         GameTuning tuning = GameTuning.Current;
         StandStill();
-        animator.SetBool(LookAroundParam, true);
+        // Under the sheltering bird she pauses as long, but keeps looking up at it (LateUpdate) instead of around.
+        bool sheltered = BirdController.Instance.IsSheltering;
+        animator.SetBool(LookAroundParam, !sheltered);
         yield return new WaitForSeconds(tuning.babyLookAroundDuration);
         animator.SetBool(LookAroundParam, false);
     }
