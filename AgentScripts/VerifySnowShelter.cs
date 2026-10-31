@@ -90,9 +90,11 @@ public static class VerifySnowShelter
             baby.WakeTimer.ResolveByBird();
             await Until(() => baby.State == BabyState.Walking, 25f, "Baby never walks");
             await Task.Delay(1500);
-            bird.Teleport(baby.transform.position + new Vector3(6f, 4f, -4f));
+            // Away from her but close enough that the camera following the bird keeps her on screen.
+            bird.Teleport(baby.transform.position + new Vector3(3f, 4f, -1f));
+            await Task.Delay(300);
             await Press(true);
-            if (!bird.IsSheltering) throw new Exception("Holding on the walking baby did not shelter");
+            if (!bird.IsSheltering) throw new Exception($"Holding on the walking baby did not shelter (state {baby.State}, pointer {OnBaby()}, screen {Screen.width}x{Screen.height})");
             if (block.gameObject.activeSelf) throw new Exception("Snow block on before the bird reached her");
             await Hold(4f);
             Vector3 forward = Vector3.ProjectOnPlane(baby.transform.forward, Vector3.up).normalized;
@@ -110,8 +112,17 @@ public static class VerifySnowShelter
             var (inside, beside) = await SnowAround(snow, baby.transform);
             if (beside == 0 || inside * 10 > beside) throw new Exception($"Snow still over her: {inside} near her vs {beside} in 4 columns beside");
             Transform head = baby.GetComponentInChildren<Animator>().transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
+            var girl = baby.GetComponentInChildren<Animator>();
+            await Hold(10f, () => !girl.GetBool("LookAround"));
             float headToBird = Vector3.Angle(head.forward, bird.transform.position - head.position);
             if (headToBird > 30f) throw new Exception("Not looking at the bird: " + headToBird + " deg");
+            // A curious pause still looks around under the bird.
+            await Hold(12f, () => girl.GetBool("LookAround"));
+            if (!girl.GetBool("LookAround")) throw new Exception("No look-around pause while sheltered");
+            if (!bird.IsSheltering) throw new Exception("Sheltering dropped during the pause");
+            await Hold(0.6f);
+            if (!girl.GetCurrentAnimatorStateInfo(0).IsName("LookAround") && !girl.IsInTransition(0)) throw new Exception("Look-around animation not playing under the bird");
+            log.Append("PASS looks around under the bird. ");
             log.Append($"PASS sheltering: height {lowered:0.00}, gap {gap:0.00}, pace bird {birdMoved:0.00}/baby {babyMoved:0.00}, snow inside {inside} vs beside {beside}, head-to-bird {headToBird:0}deg. ");
 
             await Press(false);

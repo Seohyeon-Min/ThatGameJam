@@ -52,6 +52,8 @@ public class Baby : CryListener
     float gazeTimeRemaining;
     float gazeBlend;
     Vector3 lookPoint;
+    // Paused to look around (CuriousPause).
+    bool lookingAround;
 
     protected override float CryRadius => GameTuning.Current.babyWakeCryRadius;
 
@@ -89,7 +91,7 @@ public class Baby : CryListener
             return;
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
-        bool active = State == BabyState.Walking && !onBalanceBeam;
+        bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
         // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
         if (BirdController.Instance.IsSheltering)
             lookPoint = BirdController.Instance.transform.position;
@@ -148,6 +150,7 @@ public class Baby : CryListener
     public void RestAt(Transform spot)
     {
         StopAllCoroutines();
+        lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         // Already lying: no lying-down animation after the move.
         animator.Play(SleepState, 0, 0f);
@@ -164,6 +167,7 @@ public class Baby : CryListener
     public void LieDownAt(Transform spot)
     {
         StopAllCoroutines();
+        lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         CurrentBlocker = null;
         animator.SetBool(WalkingParam, false);
@@ -190,6 +194,7 @@ public class Baby : CryListener
     public void Sleep(BabyRoute route)
     {
         StopAllCoroutines();
+        lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
         State = BabyState.Sleeping;
@@ -340,11 +345,12 @@ public class Baby : CryListener
     {
         GameTuning tuning = GameTuning.Current;
         StandStill();
-        // Under the sheltering bird she pauses as long, but keeps looking up at it (LateUpdate) instead of around.
-        bool sheltered = BirdController.Instance.IsSheltering;
-        animator.SetBool(LookAroundParam, !sheltered);
+        // Looks around even under the sheltering bird: LateUpdate leaves the head to the animation meanwhile.
+        lookingAround = true;
+        animator.SetBool(LookAroundParam, true);
         yield return new WaitForSeconds(tuning.babyLookAroundDuration);
         animator.SetBool(LookAroundParam, false);
+        lookingAround = false;
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
