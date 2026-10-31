@@ -23,7 +23,7 @@ public static class VerifyStage2Waiting
             var family=stage.GetComponentInChildren<RabbitFamily>();
             if(family.GetComponent<AudioSource>()!=null)throw new Exception("Family still has obsolete rustle source");
             var branches=stage.GetComponentsInChildren<SnowBranch>().Where(b=>b.name.StartsWith("Bypass")).ToArray();
-            var sounds=branches.Select(b=>b.GetComponent<AudioSource>()).ToArray();
+            if(branches.Any(b=>b.GetComponent<AudioSource>()!=null))throw new Exception("Branch still has a sound source");
             var girl=Baby.Instance.GetComponentInChildren<Animator>();
             BirdController.Instance.Teleport(new Vector3(0f,2.5f,30.7f));
             UnityEngine.Object.FindAnyObjectByType<BirdCamera>().Cut();
@@ -32,7 +32,6 @@ public static class VerifyStage2Waiting
             if(!girl.GetCurrentAnimatorStateInfo(0).IsName("QuietWait"))throw new Exception("Not QuietWait at rabbit stop");
             while(!family.Timer.IsResolved)
             {
-                if(sounds.Any(s=>s.isPlaying))throw new Exception("Snow-clear sound during idle waiting");
                 if(!girl.GetCurrentAnimatorStateInfo(0).IsName("QuietWait"))throw new Exception("Girl left calm breathing while waiting");
                 if(branches.Any(b=>b.IsOpen))throw new Exception("Waiting cleared a branch");
                 await Task.Delay(25);
@@ -42,11 +41,10 @@ public static class VerifyStage2Waiting
             await Until(()=>Baby.Instance.State==BabyState.Walking,3f,"Baby never resumes walking");
             await Task.Delay(200);
             if(girl.GetBool("QuietWait")||!girl.GetCurrentAnimatorStateInfo(0).IsName("Walk"))throw new Exception("QuietWait not cleared on walk");
-            // The real clear effect still makes a sound and disables the snow/perch.
+            // The real clear effect still disables the snow/perch.
             branches[0].ShedSnow();
-            if(!sounds[0].isPlaying)throw new Exception("Actual branch clear lost its sound");
             await Until(()=>branches[0].IsOpen,2f,"Actual branch did not clear");
-            return "PASS: all 3 waiting signals silent; QuietWait breathing throughout; natural resumes Walk; actual ShedSnow still plays sound.";
+            return "PASS: all 3 waiting signals; no branch sound sources; QuietWait breathing throughout; natural resumes Walk; actual ShedSnow clears.";
         }
         finally{Time.timeScale=scale;}
     }

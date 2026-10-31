@@ -11,7 +11,6 @@ public class SnowBranch : MonoBehaviour
     [SerializeField] Vector3 raisedEuler;
     [SerializeField, Min(0f)] float springDuration = 0.65f;
     [SerializeField] ParticleSystem powder;
-    [SerializeField] AudioSource snowSound;
 
     bool shedding;
 
@@ -56,8 +55,6 @@ public class SnowBranch : MonoBehaviour
     {
         if (powder != null)
             powder.Emit(12);
-        if (snowSound != null)
-            snowSound.Play();
     }
 
     IEnumerator Raise()

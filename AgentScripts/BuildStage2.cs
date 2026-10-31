@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Events;
@@ -14,7 +13,8 @@ public static class BuildStage2
 {
     const string RabbitFolder = "Assets/01_Arts/Models/Rabbits";
     const string MatFolder = "Assets/01_Arts/Materials/Test";
-    const string SoundPath = "Assets/05_Sounds/BranchRustle.wav";
+    // main's snowflake material (Snowfall), also used for the snow a branch sheds.
+    const string SnowflakeMaterialPath = "Assets/01_Arts/Materials/Snow.mat";
     static Material snow, wood;
 
     public static string Run()
@@ -35,17 +35,33 @@ public static class BuildStage2
         return "Stage 2: demo bird, 2 snow branches, mother + 3 babies, bypass/natural routes and local snow melt.";
     }
 
+    // Brings the saved Sam_Test in line without rebuilding stage 2: no branch sound sources, main's snowflake material on the shed snow.
+    public static string UseMainSnowAssets()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        if (Application.isPlaying || scene.path != "Assets/00_Scenes/Sam_Test.unity")
+            throw new InvalidOperationException("Open Sam_Test in Edit Mode.");
+        SnowBranch[] branches = GameObject.Find("Stage2").GetComponentsInChildren<SnowBranch>(true);
+        int sources = 0;
+        foreach (SnowBranch branch in branches)
+        {
+            foreach (AudioSource source in branch.GetComponents<AudioSource>())
+            {
+                UnityEngine.Object.DestroyImmediate(source);
+                sources++;
+            }
+            var powder = (ParticleSystem)new SerializedObject(branch).FindProperty("powder").objectReferenceValue;
+            powder.GetComponent<ParticleSystemRenderer>().sharedMaterial = ParticleMat();
+        }
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        return branches.Length + " branches: " + sources + " sound sources removed, shed snow uses " + SnowflakeMaterialPath;
+    }
+
     public static void Configure(Stage stage)
     {
         snow = Mat("RabbitStageSnow", new Color(0.95f, 0.97f, 1f));
         wood = Mat("RabbitStageWood", new Color(0.28f, 0.19f, 0.12f));
-        if (!AssetDatabase.IsValidFolder("Assets/05_Sounds")) AssetDatabase.CreateFolder("Assets", "05_Sounds");
-        // One-time import only; the WAV is versioned in Assets for normal builder re-runs.
-        if (!File.Exists(SoundPath))
-        {
-            File.Copy("Temp/BranchRustle.wav", SoundPath);
-            AssetDatabase.ImportAsset(SoundPath, ImportAssetOptions.ForceSynchronousImport);
-        }
         GameObject root = Child(stage.gameObject, "RabbitStage", Vector3.zero);
         var snowbanks = new List<Transform>();
         // An inner bank separates the sleeping family from the left bypass; its ends are the entrance and merge.
@@ -150,7 +166,6 @@ public static class BuildStage2
             so.FindProperty("snow").objectReferenceValue = snowCap.transform;
             so.FindProperty("raisedEuler").vector3Value = new Vector3(0f,0f,-15f);
             so.FindProperty("powder").objectReferenceValue = powder;
-            so.FindProperty("snowSound").objectReferenceValue = Sound(root);
         });
         return branch;
     }
@@ -237,20 +252,7 @@ public static class BuildStage2
         for(int i=0;i<points.Length;i++)Child(root,"Point_"+i,points[i]);
         return root.AddComponent<BabyRoute>();
     }
-    static AudioSource Sound(GameObject parent)
-    {
-        var source=parent.AddComponent<AudioSource>(); source.playOnAwake=false;
-        source.clip=AssetDatabase.LoadAssetAtPath<AudioClip>(SoundPath);source.volume=0.24f;source.spatialBlend=0f;
-        return source;
-    }
-    static Material ParticleMat()
-    {
-        string path=MatFolder+"/RabbitSnowPowder.mat";
-        var mat=AssetDatabase.LoadAssetAtPath<Material>(path);
-        if(mat==null){mat=new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));AssetDatabase.CreateAsset(mat,path);}
-        mat.SetColor("_BaseColor",Color.white);
-        return mat;
-    }
+    static Material ParticleMat()=>AssetDatabase.LoadAssetAtPath<Material>(SnowflakeMaterialPath);
     static Material Mat(string name,Color color)
     {
         string path=MatFolder+"/"+name+".mat";

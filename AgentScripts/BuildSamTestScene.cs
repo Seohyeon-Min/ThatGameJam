@@ -186,7 +186,7 @@ public static class BuildSamTestScene
         StopPoint stop = Enumerable.Range(0, route.Count).Select(i => route[i])
             .First(p => Mathf.Approximately(p.position.z, 18f)).gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
-        SetupStage1Logs.MarkBeamEnd(route);
+        SetupStage1Logs.MarkBalanceBeams(route);
 
         // When the bird enters the band at z 15 .. 17, the camera eases onto the log and stream until the log has fallen or the bird
         // flies near the edge of the map: out of x ±10, z 10 .. 24 (the sunlit spot is at z 25). The band is 2 deep, so even a slow frame
@@ -599,8 +599,8 @@ public static class BuildSamTestScene
         // Cross-fades of 0.3 s between gliding and hovering, as the README suggests.
         Fly(Go(glide, hover, 0.3f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
         Fly(Go(hover, glide, 0.3f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
-        // After taking off: gliding at once if it moves, else one Flap cycle and then hovering.
-        Fly(Go(flap, glide, 0.25f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
+        // After taking off: one Flap cycle, then gliding if it moves, else hovering (JU's tuning on main).
+        Fly(Go(flap, glide, 0.25f, 1f)).AddCondition(AnimatorConditionMode.If, 0f, "Moving");
         Fly(Go(flap, hover, 0.3f, 1f)).AddCondition(AnimatorConditionMode.IfNot, 0f, "Moving");
         // One Flap cycle, then back to gliding, which starts its clip again.
         Fly(Go(glide, glideFlap, 0.25f, BirdGlideFlapInterval / clips["Bird_Glide"].length));
@@ -1033,7 +1033,7 @@ public static class SetupStage1Logs
             }
         }
         stage.route = routeRoot.AddComponent<BabyRoute>();
-        MarkBeamEnd(stage.route);
+        MarkBalanceBeams(stage.route);
         UnityEngine.Object.DestroyImmediate(oldRoute.gameObject);
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -1114,25 +1114,35 @@ public static class SetupStage1Logs
         return log;
     }
 
-    // The baby balance-walks from the leaning log's stop to the first point back on the ground past the log (Baby, BalanceBeamEnd).
-    public static void MarkBeamEnd(BabyRoute route)
+    // Where the baby balance-walks (Baby, BalanceBeamStart/End), as JU marked Sam_Test_JU: over the fallen log, from the ground
+    // before it to its last point before the stop at z 18; and from the leaning log's stop to the first point back on the ground past it.
+    public static void MarkBalanceBeams(BabyRoute route)
     {
-        Transform end = Enumerable.Range(0, route.Count).Select(i => route[i]).First(p => p.position.z > 18f && p.position.y <= 0f);
-        if (!end.TryGetComponent(out BalanceBeamEnd _))
-            end.gameObject.AddComponent<BalanceBeamEnd>();
+        Transform[] points = Enumerable.Range(0, route.Count).Select(i => route[i]).ToArray();
+        Mark<BalanceBeamStart>(points[0]);
+        Mark<BalanceBeamEnd>(points.Last(p => p.position.z < 18f));
+        Mark<BalanceBeamEnd>(points.First(p => p.position.z > 18f && p.position.y <= 0f));
     }
 
-    // Adds the balance-beam end to the open Sam_Test without rebuilding stage 1.
-    public static string MarkBeamEndInScene()
+    static void Mark<T>(Transform point) where T : Component
+    {
+        if (!point.TryGetComponent(out T _))
+            point.gameObject.AddComponent<T>();
+    }
+
+    // Marks the balance beams in the open Sam_Test without rebuilding stage 1.
+    public static string MarkBalanceBeamsInScene()
     {
         var scene = EditorSceneManager.GetActiveScene();
         if (scene.path != "Assets/00_Scenes/Sam_Test.unity" || Application.isPlaying)
             throw new System.InvalidOperationException("Open Sam_Test in Edit Mode first.");
         BabyRoute route = GameObject.Find("Stage1").GetComponent<Stage>().route;
-        MarkBeamEnd(route);
+        MarkBalanceBeams(route);
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        return "BalanceBeamEnd on " + Enumerable.Range(0, route.Count).Select(i => route[i]).First(p => p.GetComponent<BalanceBeamEnd>()).name;
+        var points = Enumerable.Range(0, route.Count).Select(i => route[i]);
+        return "Start: " + string.Join(",", points.Where(p => p.GetComponent<BalanceBeamStart>()).Select(p => p.name))
+            + " End: " + string.Join(",", points.Where(p => p.GetComponent<BalanceBeamEnd>()).Select(p => p.name));
     }
 
     static void RaiseApproach(List<Vector3> points, int from, int to, float slope)
