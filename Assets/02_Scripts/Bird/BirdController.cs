@@ -332,7 +332,8 @@ public class BirdController : MonoBehaviour
             Refuse();
     }
 
-    // Flies to a spot a little ahead of the baby, then keeps over it at her pace, facing the way she walks.
+    // Flies down to a spot a little ahead of and above the baby, then keeps over it at her pace, facing the way she walks.
+    // Released, Fly climbs back to the stage's altitude.
     void Shelter()
     {
         Transform baby = Baby.Instance.transform;
@@ -354,10 +355,11 @@ public class BirdController : MonoBehaviour
         }
         Vector3 next = Vector3.MoveTowards(flat, spot, step);
         Face(shelterReached ? forward : next - flat);
-        float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
+        float height = baby.position.y + GameTuning.Current.birdShelterHeight;
+        float y = Mathf.MoveTowards(position.y, height, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
         transform.position = new Vector3(next.x, y, next.z);
-        // Over her once at the spot and at flying height (it may have taken off from a low branch).
-        if (next == spot && Mathf.Approximately(y, altitude))
+        // Over her once at the spot and down at sheltering height.
+        if (next == spot && Mathf.Approximately(y, height))
             shelterReached = true;
     }
 

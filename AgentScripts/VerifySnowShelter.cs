@@ -40,7 +40,7 @@ public static class VerifySnowShelter
         }
     }
 
-    // Snowflakes over 1 s in a column around her, against 4 columns of the same size 2.5 m away, while still held.
+    // Snowflakes over 1 s in a column around her up to the bird, against 4 columns of the same size 2.5 m away, while still held.
     static async Task<(int, int)> SnowAround(ParticleSystem snow, Transform baby)
     {
         var particles = new ParticleSystem.Particle[snow.main.maxParticles];
@@ -54,7 +54,7 @@ public static class VerifySnowShelter
             for (int i = 0; i < count; i++)
             {
                 Vector3 d = particles[i].position - baby.position;
-                if (d.y < 0f || d.y > 3.5f) continue;
+                if (d.y < 0f || d.y > GameTuning.Current.birdShelterHeight) continue;
                 var flat = new Vector2(d.x, d.z);
                 if (flat.magnitude < 0.6f) inside++;
                 beside += offsets.Count(o => (flat - o).magnitude < 0.6f);
@@ -100,6 +100,8 @@ public static class VerifySnowShelter
             Vector3 spot = baby.transform.position + forward * GameTuning.Current.birdShelterAhead;
             float gap = Vector2.Distance(new Vector2(bird.transform.position.x, bird.transform.position.z), new Vector2(spot.x, spot.z));
             if (gap > 0.35f) throw new Exception("Bird not over the spot ahead of the baby, gap " + gap);
+            float lowered = bird.transform.position.y - baby.transform.position.y;
+            if (Mathf.Abs(lowered - GameTuning.Current.birdShelterHeight) > 0.05f) throw new Exception("Not down at sheltering height: " + lowered);
             Vector3 b0 = bird.transform.position, g0 = baby.transform.position;
             await Hold(1f);
             float birdMoved = Vector3.ProjectOnPlane(bird.transform.position - b0, Vector3.up).magnitude;
@@ -112,13 +114,15 @@ public static class VerifySnowShelter
             Transform head = baby.GetComponentInChildren<Animator>().transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
             float headToBird = Vector3.Angle(head.forward, bird.transform.position - head.position);
             if (headToBird > 30f) throw new Exception("Not looking at the bird: " + headToBird + " deg");
-            log.Append($"PASS sheltering: gap {gap:0.00}, pace bird {birdMoved:0.00}/baby {babyMoved:0.00}, snow inside {inside} vs beside {beside}, head-to-bird {headToBird:0}deg. ");
+            log.Append($"PASS sheltering: height {lowered:0.00}, gap {gap:0.00}, pace bird {birdMoved:0.00}/baby {babyMoved:0.00}, snow inside {inside} vs beside {beside}, head-to-bird {headToBird:0}deg. ");
 
             await Press(false);
             if (bird.IsSheltering) throw new Exception("Still sheltering after release");
             await Task.Delay(600);
             if (shadow.gameObject.activeSelf || block.gameObject.activeSelf) throw new Exception("Shadow or block left after release");
-            log.Append("PASS release clears. ");
+            float stageAltitude = GameFlow.Instance.CurrentStage.birdAltitude;
+            await Until(() => Mathf.Abs(bird.transform.position.y - stageAltitude) < 0.01f, 3f, "Did not climb back to the stage altitude");
+            log.Append($"PASS release clears and climbs back to {stageAltitude}. ");
 
             Time.timeScale = 3f;
             await Press(true);

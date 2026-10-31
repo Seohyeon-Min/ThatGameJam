@@ -69,6 +69,8 @@ public class GameTuning : ScriptableObject
     // Sheltering the baby from the snow: how far ahead of her the bird flies, and how fast (m/s) it closes a gap
     // on top of matching her pace once it has reached her.
     public float birdShelterAhead = 0.6f;
+    // Height above her feet it flies at while sheltering, lower than the stage's altitude; it climbs back on release.
+    public float birdShelterHeight = 2.8f;
     public float birdShelterCatchUp = 0.5f;
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;

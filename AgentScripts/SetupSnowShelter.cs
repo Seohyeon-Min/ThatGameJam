@@ -51,8 +51,9 @@ public static class SetupSnowShelter
         block.layer = LayerMask.NameToLayer("Ignore Raycast");
         var box = block.AddComponent<BoxCollider>();
         box.isTrigger = true;
-        box.center = new Vector3(0f, 2.4f, 0f);
-        box.size = new Vector3(1.8f, 4.8f, 1.8f);
+        // From her feet up to the bird's sheltering height (GameTuning.birdShelterHeight).
+        box.center = new Vector3(0f, 1.4f, 0f);
+        box.size = new Vector3(1.8f, 2.8f, 1.8f);
         block.SetActive(false);
 
         var sun = Object.FindObjectsByType<Light>().First(l => l.type == LightType.Directional);
