@@ -31,6 +31,14 @@ public class Snowfall : MonoBehaviour
     [Tooltip("Extra headroom above the steady-state particle count (spawnRate x maxLifetime). Too little here is what causes snow to burst, stall, then burst again - raising it never hurts, it only costs a bit of memory for unused slots.")]
     [SerializeField] float particleBudgetHeadroom = 1.3f;
 
+    [Header("Streak")]
+    [Tooltip("Stretches each flake along its own fall. Keep small so most flakes stay round and only the fastest few streak.")]
+    [SerializeField] float stretch = 0.02f;
+    [Tooltip("Motion blur: stretches flakes along the camera's movement while the camera moves. 0 = off.")]
+    [SerializeField] float cameraStretch = 0.05f;
+    [Tooltip("Size multiplier for the fastest flakes (the slowest stay at 1). Ties size to speed so near-looking flakes are both bigger and faster - widen fallSpeedVariation to see more spread.")]
+    [SerializeField] float fastFlakeSize = 2f;
+
     [Header("Physical Interaction")]
     [SerializeField] bool collideWithWorld = true;
     [SerializeField] LayerMask collisionLayers = ~0;
@@ -56,6 +64,11 @@ public class Snowfall : MonoBehaviour
         if (autoRegenerate)
             Configure();
     }
+
+    // OnValidate is editor-only, so a built player never configures the particle system
+    // (and its auto-generated material) without this - the renderer is left with whatever
+    // material was last serialized, which can be null.
+    void Awake() => Configure();
 
     void LateUpdate()
     {
@@ -108,8 +121,19 @@ public class Snowfall : MonoBehaviour
         noise.scrollSpeed = 0.2f;
         noise.damping = true;
 
+        // Size follows speed: the slowest flakes keep their start size, the fastest grow to fastFlakeSize times it.
+        float windSpeed = wind.magnitude;
+        float slowest = new Vector2(fallSpeed, windSpeed).magnitude;
+        float fastest = new Vector2(fallSpeed + fallSpeedVariation, windSpeed).magnitude;
+        var sizeBySpeed = ps.sizeBySpeed;
+        sizeBySpeed.enabled = fastFlakeSize != 1f && fastest > slowest;
+        sizeBySpeed.range = new Vector2(slowest, fastest);
+        sizeBySpeed.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, fastFlakeSize));
+
+        // Stretched flakes ignore rotation, so only tumble round dots.
+        bool streaked = stretch > 0f || cameraStretch > 0f;
         var rotation = ps.rotationOverLifetime;
-        rotation.enabled = rotationSpeed != 0f;
+        rotation.enabled = rotationSpeed != 0f && !streaked;
         rotation.z = new ParticleSystem.MinMaxCurve(-rotationSpeed * Mathf.Deg2Rad, rotationSpeed * Mathf.Deg2Rad);
 
         var collision = ps.collision;
@@ -124,7 +148,10 @@ public class Snowfall : MonoBehaviour
         collision.maxCollisionShapes = 256;
 
         ParticleSystemRenderer renderer = GetComponent<ParticleSystemRenderer>();
-        renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        renderer.renderMode = streaked ? ParticleSystemRenderMode.Stretch : ParticleSystemRenderMode.Billboard;
+        renderer.velocityScale = stretch;
+        renderer.lengthScale = 1f;
+        renderer.cameraVelocityScale = cameraStretch;
         renderer.sharedMaterial = snowMaterial != null ? snowMaterial : GetGeneratedMaterial();
     }
 

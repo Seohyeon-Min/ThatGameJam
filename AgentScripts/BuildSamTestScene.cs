@@ -44,6 +44,8 @@ public static class BuildSamTestScene
     const float ScreenAspect = 16f / 9f;
     const float ViewMargin = 12f;
     const string SnowfallPrefabPath = "Assets/03_Prefabs/Snowfall.prefab";
+    const string SunlitSpotPrefabPath = "Assets/03_Prefabs/SunlitSpot.prefab";
+    const string SnowWispsMaterialPath = "Assets/01_Arts/Materials/vfx/SnowWisps.mat";
     // The snow starts above the camera (11.5 over the ground), so flakes fall past it too.
     const float SnowHeight = 14f;
     // New flakes per second on each square metre of the box. With the box upwind (ADR 0024), 0.9 keeps the snow near the camera as
@@ -184,6 +186,7 @@ public static class BuildSamTestScene
         StopPoint stop = Enumerable.Range(0, route.Count).Select(i => route[i])
             .First(p => Mathf.Approximately(p.position.z, 18f)).gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = leaningLog);
+        SetupStage1Logs.MarkBeamEnd(route);
 
         // When the bird enters the band at z 15 .. 17, the camera eases onto the log and stream until the log has fallen or the bird
         // flies near the edge of the map: out of x ±10, z 10 .. 24 (the sunlit spot is at z 25). The band is 2 deep, so even a slow frame
@@ -257,12 +260,11 @@ public static class BuildSamTestScene
             new Bounds(new Vector3(0.5f, 0f, 18.875f), new Vector3(13.5f, 1f, 41.75f)));
     }
 
-    // The sunlit spot at the end of a route: a narrow shaft of light, like a portal.
+    // The sunlit spot at the end of a route: shafts of light falling to the ground here. The look is on the prefab.
     static void RestLight(GameObject parent, Vector3 position)
     {
-        GameObject light = Primitive(PrimitiveType.Cylinder, "SunlitSpot", position + Vector3.up * 3f, new Vector3(1.6f, 3f, 1.6f),
-            Mat("RestLight", new Color(1f, 0.9f, 0.5f, 0.25f), transparent: true), parent);
-        Object.DestroyImmediate(light.GetComponent<Collider>());
+        var spot = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(SunlitSpotPrefabPath), parent.transform);
+        spot.transform.position = position;
     }
 
     static void StopAt(Transform point, PathBlocker blocker)
@@ -453,6 +455,9 @@ public static class BuildSamTestScene
         };
         AnimatorState lookAround = State("LookAround", "Girl_Idle_LookAround", new Vector2(850f, -120f));
         AnimatorState walk = State("Walk", "Girl_Walk", new Vector2(850f, 120f));
+        // Played directly by Baby (CrossFade), so no transitions.
+        State("BalanceWalk", "Girl_BalanceWalk", new Vector2(1150f, -120f));
+        State("Jump", "Girl_Jump", new Vector2(1150f, 120f));
         machine.defaultState = sleep;
 
         AnimatorStateTransition Go(AnimatorState from, AnimatorState to, float duration, float? exitTime = null)
@@ -892,8 +897,14 @@ public static class BuildSamTestScene
             so.FindProperty("collideWithWorld").boolValue = false;
         });
         snowfall.Configure();
-        var seasonSnow = snow.AddComponent<SeasonSnow>();
-        Set(seasonSnow, so => so.FindProperty("season").objectReferenceValue = season);
+        // The prefab may already carry it; a second one would blow a second gust.
+        if (!snow.TryGetComponent(out SeasonSnow seasonSnow))
+            seasonSnow = snow.AddComponent<SeasonSnow>();
+        Set(seasonSnow, so =>
+        {
+            so.FindProperty("season").objectReferenceValue = season;
+            so.FindProperty("wispMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>(SnowWispsMaterialPath);
+        });
     }
 
     // A TreeGenerator over each X range times each Z range, on the ground, with the seed fixed so rebuilding gives the same trees.
@@ -1022,6 +1033,7 @@ public static class SetupStage1Logs
             }
         }
         stage.route = routeRoot.AddComponent<BabyRoute>();
+        MarkBeamEnd(stage.route);
         UnityEngine.Object.DestroyImmediate(oldRoute.gameObject);
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -1032,16 +1044,14 @@ public static class SetupStage1Logs
     public static LeaningLog Build(GameObject parent, out Vector3[] route)
     {
         var clips = AssetDatabase.LoadAllAssetsAtPath(ModelPath).OfType<AnimationClip>().ToDictionary(c => c.name);
-        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath)
-            ?? AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+        // Tommy's controller (main): its idle loop stays the default state; only the one-shot Break that LeaningLog plays is added.
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
         var machine = controller.layers[0].stateMachine;
-        foreach (var state in machine.states) machine.RemoveState(state.state);
-        var idle = machine.AddState("Idle");
-        idle.motion = clips["idle"];
-        machine.defaultState = idle;
-        var fall = machine.AddState("Break");
-        fall.motion = clips["break"];
-        EditorUtility.SetDirty(controller);
+        if (!machine.states.Any(s => s.state.name == "Break"))
+        {
+            machine.AddState("Break").motion = clips["break"];
+            EditorUtility.SetDirty(controller);
+        }
 
         var bridge = Model(parent, "FallenLog_Art", new Vector3(0f, 0f, 7f), BridgeScale, out GameObject bridgeModel);
         clips["break"].SampleAnimation(bridgeModel, clips["break"].length);
@@ -1102,6 +1112,27 @@ public static class SetupStage1Logs
         route = points.ToArray();
         clips["idle"].SampleAnimation(model, 0f);
         return log;
+    }
+
+    // The baby balance-walks from the leaning log's stop to the first point back on the ground past the log (Baby, BalanceBeamEnd).
+    public static void MarkBeamEnd(BabyRoute route)
+    {
+        Transform end = Enumerable.Range(0, route.Count).Select(i => route[i]).First(p => p.position.z > 18f && p.position.y <= 0f);
+        if (!end.TryGetComponent(out BalanceBeamEnd _))
+            end.gameObject.AddComponent<BalanceBeamEnd>();
+    }
+
+    // Adds the balance-beam end to the open Sam_Test without rebuilding stage 1.
+    public static string MarkBeamEndInScene()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.path != "Assets/00_Scenes/Sam_Test.unity" || Application.isPlaying)
+            throw new System.InvalidOperationException("Open Sam_Test in Edit Mode first.");
+        BabyRoute route = GameObject.Find("Stage1").GetComponent<Stage>().route;
+        MarkBeamEnd(route);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        return "BalanceBeamEnd on " + Enumerable.Range(0, route.Count).Select(i => route[i]).First(p => p.GetComponent<BalanceBeamEnd>()).name;
     }
 
     static void RaiseApproach(List<Vector3> points, int from, int to, float slope)

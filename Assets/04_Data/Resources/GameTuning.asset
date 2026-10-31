@@ -20,12 +20,23 @@ MonoBehaviour:
   signal1At: 0.25
   signal2At: 0.5
   signal3At: 0.75
-  babyWalkSpeed: 1.2
+  babyWalkSpeed: 0.9
   babyLookUpDuration: 1.5
   babyLookAroundDuration: 1.5
   babyWakeCryRadius: 8
-  birdSpeed: 6
-  birdAltitudeSpeed: 3
+  birdSpeed: 5
+  birdAltitudeSpeed: 2.8
   birdPerchDuration: 1.2
   birdCryCooldown: 0.8
-  fadeDuration: 0.6
+  birdIdlePerchDelay: 2
+  birdAcceleration: 10
+  birdLandingDeceleration: 12
+  birdTakeoffHoldTimeout: 1
+  birdTurnSpeed: 300
+  birdMaxBankAngle: 25
+  birdBankSensitivity: 0.15
+  birdBankSpeed: 150
+  cameraZoomStep: 0.1
+  cameraZoomMin: 0.5
+  cameraZoomMax: 1.25
+  cameraZoomSpeed: 3

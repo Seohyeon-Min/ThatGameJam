@@ -5,7 +5,8 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Left idle in the air, it lands on the nearest roadside branch by itself. Sent past where the way is still closed
+// right-click cries. Left idle in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
+// hopping the camera to any branch on screen. Sent past where the way is still closed
 // (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
 // Flies at the current map's fixed altitude inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015).
 // The transform is where the bird's feet are, so it stands on a perch point.
@@ -17,6 +18,9 @@ public class BirdController : MonoBehaviour
 
     [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
+    // Rolled for the turn bank (Face), separate from this transform so the root's rotation stays pure yaw
+    // for perch alignment and area clamping. Usually the Animator's GameObject (e.g. "Bird-Animated").
+    [SerializeField] Transform visualRoot;
     [SerializeField] Texture2D perchCursor;
     [SerializeField] Vector2 perchCursorHotspot;
     // The bird and the branches it perches on stay this far inside the screen's edges, as a fraction of the screen (ADR 0015).
@@ -39,6 +43,17 @@ public class BirdController : MonoBehaviour
     // Horizontal target while flying. Y is unused; the bird's height follows altitude.
     Vector3 target;
     float altitude;
+    // Current horizontal speed, ramping toward GameTuning.birdSpeed (or down, braking into a landing).
+    float currentSpeed;
+    // True from the moment a perch is left until the Takeoff clip's FootRelease event fires: the body holds
+    // still at the branch so it doesn't glide away while the feet are still visually gripping it.
+    bool liftingOff;
+    float liftingOffTimer;
+    float bankAngle;
+    float facingYaw;
+    // visualRoot's authored local rotation (e.g. a corrective 180Y flip to face the model forward). Bank is
+    // composed on top of this, never replacing it.
+    Quaternion visualBaseRotation = Quaternion.identity;
     // Where it flies, in X and Z (GameFlow.FlyArea). Past its far Z end the way ahead is closed: the bird refuses there (ADR 0012, ADR 0016).
     Bounds bounds = new(Vector3.zero, Vector3.positiveInfinity);
     // Shakes its head once it has landed.
@@ -61,6 +76,9 @@ public class BirdController : MonoBehaviour
         target = transform.position;
         altitude = transform.position.y;
         baseScale = transform.localScale;
+        facingYaw = transform.eulerAngles.y;
+        if (visualRoot != null)
+            visualBaseRotation = visualRoot.localRotation;
         clickMask = LayerMask.GetMask("Ground", "Interactable", "ClickPlane");
         groundMask = LayerMask.GetMask("Ground", "ClickPlane");
         interactableLayer = LayerMask.NameToLayer("Interactable");
@@ -98,9 +116,16 @@ public class BirdController : MonoBehaviour
         LeavePerch();
         following = false;
         idleTime = 0f;
+        liftingOff = false;
+        currentSpeed = 0f;
         transform.position = position;
         target = position;
     }
+
+    // Hooked to BirdAnimationEvents.onFootRelease (Bird_Takeoff, feet leave the branch): the body was holding
+    // still at the perch since LeavePerch and starts moving/rising from here, instead of jumping to speed the
+    // instant the player clicks away while the Takeoff clip is still showing the feet gripping it.
+    public void OnTakeoffFootRelease() => liftingOff = false;
 
     public void SetAltitude(float y, bool instant)
     {
@@ -144,8 +169,8 @@ public class BirdController : MonoBehaviour
         {
             case State.Flying: Fly(); break;
             case State.ToPerch: FlyToPerch(); break;
-            case State.Landing: Land(); break;
-            case State.Perched: transform.position = perch.PerchPoint.position; break;
+            case State.Landing: Land(); Bank(0f); break;
+            case State.Perched: transform.position = perch.PerchPoint.position; Bank(0f); break;
         }
         bool moved = transform.position != before;
         // Glides while it moves and hovers in place otherwise.
@@ -154,11 +179,11 @@ public class BirdController : MonoBehaviour
 
         idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
         if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
-            PerchNearby();
+            PerchNearby(GameTuning.Current.birdIdlePerchRadius);
     }
 
-    // False if no branch is on screen.
-    bool PerchNearby()
+    // False if no branch is on screen (within maxDistance world units, when given).
+    bool PerchNearby(float maxDistance = float.MaxValue)
     {
         idleTime = 0f;
         Perchable nearest = null;
@@ -166,7 +191,7 @@ public class BirdController : MonoBehaviour
         foreach (Perchable perchable in Perchable.All)
         {
             float distance = Vector3.Distance(transform.position, perchable.PerchPoint.position);
-            if (perchable.IsIdleSpot && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
+            if (perchable.IsIdleSpot && perchable.CanPerch && distance <= maxDistance && OnScreen(perchable.PerchPoint.position) && distance < nearestDistance)
                 (nearest, nearestDistance) = (perchable, distance);
         }
         if (nearest == null)
@@ -176,6 +201,7 @@ public class BirdController : MonoBehaviour
     }
 
     // Reached the closed way: lands on the nearest branch on screen and shakes its head there. With no branch on screen it stays.
+    // Unlike idling, this isn't distance-limited: being sent back, the bird commits to acknowledging the block wherever the nearest branch is.
     void Refuse()
     {
         following = false;
@@ -223,21 +249,43 @@ public class BirdController : MonoBehaviour
     void LeavePerch()
     {
         if (perch != null)
+        {
             perch.Released -= LeavePerch;
+            // Released only fires when the perch itself ejects the bird (e.g. the log falling); leaving by
+            // choice (a new click, Refuse, ...) doesn't raise it, so the camera-fade exemption is cleared here too.
+            perch.SetCameraFadeExempt(false);
+        }
+        bool takingOff = state == State.Perched || state == State.Landing;
         perch = null;
         refusePending = false;
         animator.ResetTrigger(RefuseParam);
         if (state != State.Flying)
             target = transform.position;
         state = State.Flying;
+        if (takingOff)
+        {
+            liftingOff = true;
+            liftingOffTimer = GameTuning.Current.birdTakeoffHoldTimeout;
+            currentSpeed = 0f;
+        }
     }
 
     void Fly()
     {
+        // Held at the branch (LeavePerch) until OnTakeoffFootRelease fires, or this safety timeout runs out.
+        if (liftingOff)
+        {
+            liftingOffTimer -= Time.deltaTime;
+            if (liftingOffTimer > 0f)
+                return;
+            liftingOff = false;
+        }
+
         // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
+        currentSpeed = Mathf.MoveTowards(currentSpeed, GameTuning.Current.birdSpeed, GameTuning.Current.birdAcceleration * Time.deltaTime);
         Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Limit(new Vector3(target.x, 0f, target.z)),
-            GameTuning.Current.birdSpeed * Time.deltaTime);
+            currentSpeed * Time.deltaTime);
         float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
         Face(flat - position);
         transform.position = new Vector3(flat.x, y, flat.z);
@@ -249,15 +297,25 @@ public class BirdController : MonoBehaviour
     void FlyToPerch()
     {
         Vector3 point = perch.PerchPoint.position;
-        Face(point - transform.position);
-        transform.position = Vector3.MoveTowards(transform.position, point, GameTuning.Current.birdSpeed * Time.deltaTime);
-        if (transform.position == point)
+        Vector3 position = transform.position;
+        float distance = Vector3.Distance(position, point);
+        if (distance <= 0.02f)
         {
+            transform.position = point;
+            currentSpeed = 0f;
             state = State.Landing;
             landTime = 0f;
             landFrom = transform.rotation;
             landTo = perch.AlignsBird ? AlongPerch() : landFrom;
+            return;
         }
+        // Brakes into the branch instead of cruising straight into it: speed falls away as the remaining
+        // distance does, so it always has time to slow to a stop right at the perch point.
+        float stoppingSpeed = Mathf.Sqrt(2f * GameTuning.Current.birdLandingDeceleration * distance);
+        currentSpeed = Mathf.MoveTowards(currentSpeed, Mathf.Min(GameTuning.Current.birdSpeed, stoppingSpeed),
+            GameTuning.Current.birdAcceleration * Time.deltaTime);
+        Face(point - position);
+        transform.position = Vector3.MoveTowards(position, point, currentSpeed * Time.deltaTime);
     }
 
     void Land()
@@ -289,8 +347,25 @@ public class BirdController : MonoBehaviour
     void Face(Vector3 direction)
     {
         direction.y = 0f;
-        if (direction.sqrMagnitude > 0.0001f)
-            transform.rotation = Quaternion.LookRotation(direction);
+        // Turns at a limited rate instead of snapping to point straight at wherever the target just moved to;
+        // the nose lagging slightly behind a sudden direction change is what reads as a turn rather than a snap.
+        float desiredYaw = direction.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(direction).eulerAngles.y : facingYaw;
+        float previousYaw = facingYaw;
+        facingYaw = Mathf.MoveTowardsAngle(facingYaw, desiredYaw, GameTuning.Current.birdTurnSpeed * Time.deltaTime);
+        float turnRate = Mathf.DeltaAngle(previousYaw, facingYaw) / Mathf.Max(Time.deltaTime, 0.0001f);
+        transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
+        float bankTarget = Mathf.Clamp(-turnRate * GameTuning.Current.birdBankSensitivity,
+            -GameTuning.Current.birdMaxBankAngle, GameTuning.Current.birdMaxBankAngle);
+        Bank(bankTarget);
+    }
+
+    // Rolls visualRoot only; the root's own rotation stays pure yaw (OnScreen/Limit don't care about rotation,
+    // but keeping it yaw-only avoids surprises for anything added later that reads the bird's facing).
+    void Bank(float targetAngle)
+    {
+        bankAngle = Mathf.MoveTowards(bankAngle, targetAngle, GameTuning.Current.birdBankSpeed * Time.deltaTime);
+        if (visualRoot != null)
+            visualRoot.localRotation = visualBaseRotation * Quaternion.Euler(0f, 0f, bankAngle);
     }
 
     void Cry()

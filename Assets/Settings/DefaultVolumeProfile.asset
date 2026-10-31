@@ -66,6 +66,65 @@ MonoBehaviour:
   p21:
     m_OverrideState: 1
     m_Value: 0
+--- !u!114 &-7934122744280954522
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dee8ee8608bbc4eb2745ce7179a4ed, type: 3}
+  m_Name: WatercolorKuwahara
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorKuwahara
+  active: 1
+  enableFilter:
+    m_OverrideState: 1
+    m_Value: 0
+  filterMode:
+    m_OverrideState: 1
+    m_Value: 1
+  filterRadius:
+    m_OverrideState: 1
+    m_Value: 8
+  anisotropyStrength:
+    m_OverrideState: 1
+    m_Value: 1
+  sectorSharpness:
+    m_OverrideState: 1
+    m_Value: 8
+  filterIntensity:
+    m_OverrideState: 1
+    m_Value: 1
+  edgePreservation:
+    m_OverrideState: 1
+    m_Value: 0.6
+  colorSimplification:
+    m_OverrideState: 1
+    m_Value: 0
+  pigmentVariation:
+    m_OverrideState: 1
+    m_Value: 0.35
+  pigmentBleeding:
+    m_OverrideState: 1
+    m_Value: 0.3
+  edgeDarkening:
+    m_OverrideState: 1
+    m_Value: 0.3
+  paperTexture:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  paperTextureStrength:
+    m_OverrideState: 1
+    m_Value: 0.2
+  paperTextureScale:
+    m_OverrideState: 1
+    m_Value: 1
+  brushTextureStrength:
+    m_OverrideState: 1
+    m_Value: 0.25
 --- !u!114 &-7750755424749557576
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -146,6 +205,47 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+--- !u!114 &-6612676485865474993
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efc077a750e83af4a806d295a6d946f0, type: 3}
+  m_Name: WatercolorBlur
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorBlur
+  active: 1
+  enableBlur:
+    m_OverrideState: 1
+    m_Value: 0
+  blurRadius:
+    m_OverrideState: 1
+    m_Value: 1.5
+  colorThreshold:
+    m_OverrideState: 1
+    m_Value: 0.15
+  blurIntensity:
+    m_OverrideState: 1
+    m_Value: 1
+  depthAware:
+    m_OverrideState: 1
+    m_Value: 0
+  depthThreshold:
+    m_OverrideState: 1
+    m_Value: 0.05
+  paperTexture:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+    dimension: 1
+  paperStrength:
+    m_OverrideState: 1
+    m_Value: 1
+  paperTiling:
+    m_OverrideState: 1
+    m_Value: 1
 --- !u!114 &-6335409530604852063
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -342,6 +442,9 @@ MonoBehaviour:
   skyOcclusionIntensityMultiplier:
     m_OverrideState: 1
     m_Value: 1
+  worldOffset:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0, z: 0}
 --- !u!114 &-1216621516061285780
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -374,6 +477,9 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   highQualityFiltering:
+    m_OverrideState: 1
+    m_Value: 0
+  filter:
     m_OverrideState: 1
     m_Value: 0
   downscale:
@@ -462,8 +568,8 @@ MonoBehaviour:
   - {fileID: -6288072647309666549}
   - {fileID: 7518938298396184218}
   - {fileID: -1410297666881709256}
-  - {fileID: -7750755424749557576}
-  - {fileID: -5139089513906902183}
+  - {fileID: -7934122744280954522}
+  - {fileID: -6612676485865474993}
 --- !u!114 &853819529557874667
 MonoBehaviour:
   m_ObjectHideFlags: 3

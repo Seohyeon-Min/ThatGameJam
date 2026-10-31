@@ -5,7 +5,8 @@ using UnityEngine;
 
 // Builds Seohyeon_Pastel_Test.unity: a copy of the watercolor test scene (as it is in the editor, unsaved changes
 // included) with every WatercolorFlat material swapped for a ThatGameJam/SoftPastel copy and a PastelStyle object added.
-// The watercolor scene stays open and unchanged. Pastel materials go to Assets/01_Arts/Materials/Pastel.
+// The watercolor scene stays open and unchanged. Pastel materials go to Assets/01_Arts/Materials/Pastel (rebuilt each
+// run). When the pastel scene already exists, its Pastel Style values are kept.
 // Run: unity command script run --file AgentScripts/BuildPastelTestScene.cs --entry BuildPastelTestScene.Build
 public static class BuildPastelTestScene
 {
@@ -18,12 +19,26 @@ public static class BuildPastelTestScene
         var source = EditorSceneManager.GetSceneByPath(SourceScenePath);
         if (!source.isLoaded)
             return "Open " + SourceScenePath + " first";
-        EditorSceneManager.SaveScene(source, ScenePath, true);
+        if (EditorSceneManager.GetSceneByPath(ScenePath).isLoaded)
+            return "Close " + ScenePath + " first";
 
+        // Keep the tuned style of an existing pastel scene.
+        string styleJson = null;
+        if (System.IO.File.Exists(ScenePath))
+        {
+            var old = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            foreach (var root in old.GetRootGameObjects())
+                if (root.GetComponentInChildren<PastelStyle>() is PastelStyle oldStyle)
+                    styleJson = EditorJsonUtility.ToJson(oldStyle);
+            EditorSceneManager.CloseScene(old, true);
+        }
+
+        EditorSceneManager.SaveScene(source, ScenePath, true);
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
         Shader pastel = Shader.Find("ThatGameJam/SoftPastel");
-        if (!AssetDatabase.IsValidFolder(MaterialFolder))
-            AssetDatabase.CreateFolder("Assets/01_Arts/Materials", "Pastel");
+        if (AssetDatabase.IsValidFolder(MaterialFolder))
+            AssetDatabase.DeleteAsset(MaterialFolder);
+        AssetDatabase.CreateFolder("Assets/01_Arts/Materials", "Pastel");
 
         var copies = new Dictionary<Material, Material>();
         int swapped = 0;
@@ -59,6 +74,8 @@ public static class BuildPastelTestScene
 
         var style = new GameObject("Pastel Style", typeof(PastelStyle));
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(style, scene);
+        if (styleJson != null)
+            EditorJsonUtility.FromJsonOverwrite(styleJson, style.GetComponent<PastelStyle>());
 
         EditorSceneManager.SaveScene(scene);
         EditorSceneManager.CloseScene(scene, true);

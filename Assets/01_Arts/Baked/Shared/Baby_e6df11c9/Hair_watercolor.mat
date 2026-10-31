@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hair_watercolor
+  m_Shader: {fileID: 4800000, guid: 1e9b512877cd5804da930abaa62cc45b, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _HASPATTERN_ON
+  - _LEAVEPAPER_ON
+  - _RECEIVECASTSHADOWS_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ChaosTex:
+        m_Texture: {fileID: 11700000, guid: 366cbcee246359f41b73df95d48a7e1d, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PatternTex:
+        m_Texture: {fileID: 11700000, guid: e58d993be90aaa74690578c85c87002a, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 0
+    - _Birch: 0
+    - _BirchDarkness: 0.85
+    - _BirchLength: 0.28
+    - _BirchMarks: 2.5
+    - _BirchThickness: 0.16
+    - _Character: 128
+    - _Cull: 2
+    - _Cutoff: 0.5
+    - _Floor: 0
+    - _HasPattern: 1
+    - _LeavePaper: 1
+    - _ReceiveCastShadows: 1
+    - _SelfShadowSkip: 0.8
+    m_Colors:
+    - _BaseColor: {r: 1, g: 0.92301023, b: 0.62364805, a: 1}
+    - _BirchColour: {r: 0.41999996, g: 0.26999995, b: 0.17999998, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

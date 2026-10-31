@@ -1,0 +1,524 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!181963792 &2655988077585873504
+Preset:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Watercolor_ColourVariety
+  m_TargetType:
+    m_NativeTypeID: 114
+    m_ManagedTypePPtr: {fileID: 11500000, guid: f0531ba4de729324987f431f3a8ae583, type: 3}
+    m_ManagedTypeFallback: 
+  m_Properties:
+  - target: {fileID: 0}
+    propertyPath: m_Enabled
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: m_EditorHideFlags
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: m_EditorClassIdentifier
+    value: Assembly-CSharp::WatercolorManager
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pigmentThickness
+    value: 1.22
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.boundaryPigment
+    value: 0.53
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.boundaryWidthPercent
+    value: 0.25
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.outlinePigment
+    value: 0.742
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.outlineWidthPercent
+    value: 0.4
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.blotches
+    value: 0.367
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.backruns
+    value: 0.223
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.blotchSaturation
+    value: 1.11
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.blotchSizePercent
+    value: 5
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.backrunSizePercent
+    value: 3.7
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.chaosHueRange
+    value: 2.6
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.chaosChunkSizePercent
+    value: 39.1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.chaosSplitChance
+    value: 0.828
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.chaosDropSizeMinPercent
+    value: 15.4
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.chaosDropSizeMaxPercent
+    value: 28.8
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pencilStrength
+    value: 0.391
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pencilDarkness
+    value: 1.372
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeLengthPercent
+    value: 4.03
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeSizeInfluence
+    value: 0.557
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeWidth
+    value: 1.82
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeWidthVariation
+    value: 0.184
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeDensity
+    value: 1.87
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeAlignment
+    value: 0.87
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeAngle
+    value: -5.9
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.strokeAngleJitter
+    value: 20.7
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pencilShadowFocus
+    value: 0.862
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pencilShadowFadePercent
+    value: 4
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pencilPatchSizePercent
+    value: 19.2
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pencilPatchChance
+    value: 0.739
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.fullSunIntensity
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightColourInfluence
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.ambientColourInfluence
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouache
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheShadeDepth
+    value: 0.937
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheHighlight
+    value: 0.093
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheHighlightColour.r
+    value: 0.94
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheHighlightColour.g
+    value: 0.97
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheHighlightColour.b
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheHighlightColour.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheDryBrush
+    value: 0.251
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheRoughEdge
+    value: 0.51
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheBrushGrain
+    value: 0.054
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.gouacheBrushSize
+    value: 0.002
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washStrength
+    value: 0.532
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washColour.r
+    value: 0.57796365
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washColour.g
+    value: 0.620788
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washColour.b
+    value: 0.6415094
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washColour.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washReserve
+    value: 0.751
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.washFloorReserve
+    value: 0.078
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.formLight
+    value: 
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightYellowPercent
+    value: 13.1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightYellowWidthPercent
+    value: 7.8
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightCream.r
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightCream.g
+    value: 0.96
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightCream.b
+    value: 0.86
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightCream.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightFade
+    value: 0.02
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightPastelChips
+    value: 0.232
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.pastelShadows
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowSaturation
+    value: 0.13
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowDarkening
+    value: 0.057
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowHueFrom
+    value: 201
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowHueTo
+    value: 225
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.darkPigmentBluePercent
+    value: 61
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowDepth
+    value: 1.412
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.receiveShadows
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowEdgePigment
+    value: 0.421
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowRaggedness
+    value: 0.291
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadowUnevenness
+    value: 0.795
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.sceneColour
+    value: 0.185
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.sceneColourSize
+    value: 22
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintA.r
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintA.g
+    value: 0.95
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintA.b
+    value: 0.78
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintA.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintB.r
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintB.g
+    value: 0.86
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintB.b
+    value: 0.88
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.lightTintB.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintA.r
+    value: 0.72
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintA.g
+    value: 0.82
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintA.b
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintA.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintB.r
+    value: 0.84
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintB.g
+    value: 0.76
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintB.b
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.shadeTintB.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.bounce
+    value: 0.537
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.skyBounce.r
+    value: 0.4339623
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.skyBounce.g
+    value: 0.4339623
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.skyBounce.b
+    value: 0.4339623
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.skyBounce.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.groundBounce.r
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.groundBounce.g
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.groundBounce.b
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.groundBounce.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.edgeAccent
+    value: 0
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.edgeAccentColour.r
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.edgeAccentColour.g
+    value: 0.47965217
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.edgeAccentColour.b
+    value: 0.17924517
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.edgeAccentColour.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.haze
+    value: 0.849
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeStart
+    value: 8.8
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeRange
+    value: 43
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeLow.r
+    value: 0.9146174
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeLow.g
+    value: 0.9019608
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeLow.b
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeLow.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeHigh.r
+    value: 0.7830188
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeHigh.g
+    value: 0.983543
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeHigh.b
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.hazeHigh.a
+    value: 1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.floorBlotchSizePercent
+    value: 19.6
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.instanceHueRange
+    value: 12
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.instanceBrightnessRange
+    value: 10
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.instanceSaturationRange
+    value: 40
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.saturation
+    value: 26.1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.brightness
+    value: 1.5
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.contrast
+    value: -11.1
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.tonemappingPercent
+    value: 5.8
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.paperThreshold
+    value: 0.631
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: settings.paperSoftnessPercent
+    value: 0.11
+    objectReference: {fileID: 0}
+  m_ExcludedProperties: []
+  m_CoupledType:
+    m_NativeTypeID: 0
+    m_ManagedTypePPtr: {fileID: 0}
+    m_ManagedTypeFallback: 
+  m_CoupledProperties: []

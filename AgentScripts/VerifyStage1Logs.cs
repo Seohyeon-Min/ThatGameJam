@@ -26,7 +26,7 @@ public static class VerifyStage1Logs
             await Task.Delay(600);
             if (Time.frameCount <= frame) throw new Exception("Play Mode is not advancing");
             var animator = log.GetComponentInChildren<Animator>();
-            if (!animator.GetCurrentAnimatorStateInfo(0).IsName("Idle")) throw new Exception("Idle is not playing");
+            if (!animator.GetCurrentAnimatorStateInfo(0).IsName("idle")) throw new Exception("idle is not playing");
             Vector3 hitPoint = top.PerchPoint.position - Vector3.up * 0.3f;
             Vector3 screen = Camera.main.WorldToScreenPoint(hitPoint);
             Physics.SyncTransforms();
