@@ -94401,6 +94401,7 @@ MonoBehaviour:
   animator: {fileID: 1966365371}
   getUpClip: {fileID: 3110401735797763657, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
   lieDownClip: {fileID: -1042312109918624011, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
+  jumpClip: {fileID: -3957281064412759843, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
 --- !u!136 &1018082307
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -170484,6 +170485,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Perchable
   perchPoint: {fileID: 1844736180}
   idleSpot: 0
+  alwaysExempt: 1
   alignBird: 0
   onPerched:
     m_PersistentCalls:
