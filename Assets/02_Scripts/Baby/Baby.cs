@@ -200,6 +200,10 @@ public class Baby : CryListener
     IEnumerator WakeAndWalk(bool byBird)
     {
         State = BabyState.Waking;
+        // Starts as the baby starts to get up, so it can show that; the baby walks only once both are over.
+        Cutscene cutscene = GameFlow.Instance.CurrentStage.wakeCutscene;
+        if (cutscene != null)
+            cutscene.Play();
         GameTuning tuning = GameTuning.Current;
         animator.SetBool(AsleepParam, false);
         yield return new WaitForSeconds(getUpClip.length);
@@ -211,6 +215,9 @@ public class Baby : CryListener
             yield return new WaitForSeconds(tuning.babyLookAroundDuration);
             animator.SetBool(LookAroundParam, false);
         }
+
+        if (cutscene != null)
+            yield return new WaitUntil(() => !cutscene.IsPlaying);
 
         for (int i = 0; i < route.Count; i++)
         {

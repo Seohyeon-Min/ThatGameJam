@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // Development controls, only in the Editor and development builds (plan 4.18): a row of buttons along the top of the screen,
-// each describing itself while the pointer is on it. The keys F1 to F8 do the same as the buttons.
+// each describing itself while the pointer is on it. The keys F1 to F9 do the same as the buttons.
 public class DevTools : MonoBehaviour
 {
     const int MaxTimeScale = 3;
@@ -12,7 +12,7 @@ public class DevTools : MonoBehaviour
     const float Top = 8f;
     const float TooltipWidth = 320f;
 
-    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8 };
+    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8, Key.F9 };
     static DevTools active;
 
     (System.Func<string> label, string tooltip, System.Action action)[] buttons;
@@ -46,6 +46,7 @@ public class DevTools : MonoBehaviour
                 () => GameFlow.Instance.BackOneStage()),
             (() => GameFlow.Instance.CameraLocked ? "Cam: locked" : "Cam: bird", "Holds the camera on this stage's sunlit spot, or lets it follow the bird again. (F8)",
                 () => GameFlow.Instance.ToggleCameraLock()),
+            (() => "Cutscene", "Plays this stage's wake cutscene from the start, or stops it if it is playing. The baby stays where it is. (F9)", ToggleCutscene),
         };
     }
 
@@ -66,6 +67,17 @@ public class DevTools : MonoBehaviour
         for (int i = 0; i < Keys.Length; i++)
             if (keyboard[Keys[i]].wasPressedThisFrame)
                 buttons[i].action();
+    }
+
+    static void ToggleCutscene()
+    {
+        Cutscene cutscene = GameFlow.Instance.CurrentStage.wakeCutscene;
+        if (cutscene == null)
+            Debug.LogWarning("This stage has no Wake Cutscene.");
+        else if (cutscene.IsPlaying)
+            cutscene.Stop();
+        else
+            cutscene.Play();
     }
 
     static void CycleSpeed() => Time.timeScale = Mathf.Round(Time.timeScale) % MaxTimeScale + 1f;

@@ -153,14 +153,16 @@ public class BirdController : MonoBehaviour
             hasHit = Physics.Raycast(ray, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
         ShowPerchCursor(hovered != null);
 
-        if (moveAction.WasPressedThisFrame() && hasHit && !DevTools.Covers(pointAction.ReadValue<Vector2>()))
+        if (Cutscene.AnyPlaying)
+            following = false;
+        else if (moveAction.WasPressedThisFrame() && hasHit && !DevTools.Covers(pointAction.ReadValue<Vector2>()))
             Click(hit, hovered);
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
             target = hit.point;
 
-        bool cried = cryAction.WasPressedThisFrame();
+        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.AnyPlaying;
         if (cried && Time.time >= nextCryTime)
             Cry();
 

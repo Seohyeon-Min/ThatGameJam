@@ -8,6 +8,8 @@ public class Stage : MonoBehaviour
     public Transform birdStart;
     public BabyRoute route;
     public float birdAltitude = 3f;
+    // Plays after the baby wakes in this stage, before it walks. Empty: it just walks.
+    public Cutscene wakeCutscene;
     // World-space area of the stage's road and the terrain beside it, in X and Z. The bird flies over this and the earlier stages' areas
     // (ADR 0010, ADR 0013).
     public Bounds area = new(Vector3.zero, new Vector3(6f, 1f, 30f));

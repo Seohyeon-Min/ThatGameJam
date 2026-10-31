@@ -128,6 +128,11 @@ Shader "ThatGameJam/WatercolorFlat"
         half4 _WC_Wash;           // 바탕칠: rgb 색(sRGB), a 세기
         half4 _WC_Gouache;        // 구아슈: x 섞는 정도(0 수채화 ~ 1 구아슈), y 그늘 진하기, z 덧칠한 하이라이트 세기, w 마른 붓 경계
         half4 _WC_GouacheHighlight; // 하이라이트로 덧칠하는 밝은 물감 색(sRGB)
+        half4 _WC_GouacheStroke;  // 붓 자국 색 흔들림: x 세기, y 붓 자국 폭(m), z 물체가 받는 정도(바닥 대비)
+        half4 _WC_GouacheStrokeLightA; // 빛 쪽 붓 자국이 오가는 두 색(곱한다, sRGB)
+        half4 _WC_GouacheStrokeLightB;
+        half4 _WC_GouacheStrokeShadeA; // 그늘 쪽 붓 자국이 오가는 두 색(곱한다, sRGB)
+        half4 _WC_GouacheStrokeShadeB;
         half4 _WC_GouacheSteps;   // x 명암 경계 위치(0~1), y 전환색 띠의 반폭, z 형태 그림자 채도 배율
         half4 _WC_GouacheTransition; // rgb 전환색(곱해서 물들인다, sRGB), a 세기
         half4 _WC_CharacterGouache; // 캐릭터 머티리얼의 구아슈 값: x 그늘 채도 배율, y 경계 붓결 세기, z 마른 붓 정도, w 그늘 깊이
@@ -236,6 +241,25 @@ Shader "ThatGameJam/WatercolorFlat"
             f = f * f * (3.0 - 2.0 * f);
             return lerp(lerp(SceneHash(i), SceneHash(i + float2(1, 0)), f.x),
                 lerp(SceneHash(i + float2(0, 1)), SceneHash(i + float2(1, 1)), f.x), f.y);
+        }
+
+        // 붓 자국 색 흔들림(구아슈): 납작한 큰 붓 자국마다 고른 값 0~1. 좌표는 DryBrush 처럼 카메라가 보는 평면(월드 고정)이고,
+        // 경계는 일렁이고 고운 붓결(brush)로 갈라진다. 작은 붓 자국 한 겹이 군데군데 덧칠된다.
+        half GouacheStrokePick(float3 positionWS, half brush)
+        {
+            float2 plane = float2(dot(positionWS, UNITY_MATRIX_V[0].xyz), dot(positionWS, UNITY_MATRIX_V[1].xyz)) / max(_WC_GouacheStroke.y, 0.01);
+            plane += (float2(SceneNoise(plane * 0.7 + 3.1), SceneNoise(plane * 0.7 + 8.4)) - 0.5) * 0.8 + (brush - 0.5) * 0.15;
+            float2 p = float2(plane.x * 0.98 + plane.y * 0.2, plane.y * 0.98 - plane.x * 0.2);
+            float row = floor(p.y);
+            float cell = floor(p.x * 0.4 + SceneHash(float2(row, 4.1)) * 3.0);
+            half pick = SceneHash(float2(cell, row));
+            // 덧칠: 더 작은 붓 자국 40% 가 그 위에 얹힌다.
+            float2 small = p * 1.7 + 5.3;
+            float smallRow = floor(small.y);
+            float smallCell = floor(small.x * 0.4 + SceneHash(float2(smallRow, 9.2)) * 3.0);
+            if (SceneHash(float2(smallCell, smallRow) + 13.7) < 0.4)
+                pick = SceneHash(float2(smallCell, smallRow) + 27.1);
+            return pick;
         }
 
         // 마른 붓 결(구아슈): 길고 방향이 있는 붓질. 붓질 하나는 길게 늘린 잡음 덩어리이고, 그 안에 붓털 자국 같은
@@ -717,6 +741,18 @@ Shader "ThatGameJam/WatercolorFlat"
                     darkTone = lerp(Accumulate(lightTone, shadowAmount), darkTone, objectOnly);
                     half3 midTone = lerp(darkTone, lightTone, 0.5) * lerp(1.0, _WC_GouacheTransition.rgb, _WC_GouacheTransition.a);
                     half3 gouache = level < 0.5 ? lerp(darkTone, midTone, level * 2.0) : lerp(midTone, lightTone, level * 2.0 - 1.0);
+                    // 붓 자국 색 흔들림: 같은 밝기 안에서도 붓 자국마다 색이 다르다. 곱해서 물들이므로 흰 눈에도 든다.
+                    if (_WC_GouacheStroke.x > 0 && isCharacter < 0.5)
+                    {
+                        half strokePick = GouacheStrokePick(input.positionWS, brush);
+                        half3 strokeLight = lerp(_WC_GouacheStrokeLightA.rgb, _WC_GouacheStrokeLightB.rgb, strokePick);
+                        half3 strokeShade = lerp(_WC_GouacheStrokeShadeA.rgb, _WC_GouacheStrokeShadeB.rgb, strokePick);
+                        half strokeAmount = _WC_GouacheStroke.x * lerp(1.0, _WC_GouacheStroke.z, objectOnly);
+                        // 밝기는 그대로 두고 색만 옮긴다(색의 밝기로 나눠, 어두운 틴트를 골라도 화면이 어두워지지 않는다).
+                        half3 strokeTint = lerp(strokeShade, strokeLight, level);
+                        strokeTint /= max(dot(strokeTint, half3(0.3, 0.59, 0.11)), 0.01);
+                        gouache = saturate(gouache * lerp(half3(1, 1, 1), strokeTint, strokeAmount));
+                    }
                     // 빛 쪽 실루엣에 빛이 번진 듯 밝은 테두리(역광에 줄기 가장자리가 빛나는 것처럼). 같은 색을 밝힌다.
                     half rimGlow = pow(1.0 - saturate(dot(normalWS, viewWS)), 4.0) * saturate(dot(normalWS, formLightDir) * 0.5 + 0.6) * objectOnly * castSharp;
                     gouache = lerp(gouache, HsvToRgb(half3(solidHsv.x, solidHsv.y * 0.7, 1.0)), saturate(rimGlow * _WC_GouacheEdge.w));

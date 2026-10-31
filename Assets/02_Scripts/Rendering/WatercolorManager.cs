@@ -143,6 +143,18 @@ public class WatercolorManager : MonoBehaviour
         [Range(0f, 1f)] public float gouacheRimGlow = 0.35f;
         [Tooltip("World size of one unit of the brush pattern, in metres. The pattern is pinned to the world, so it never swims when the camera moves. About one screen pixel at the game camera's distance reads best.")]
         [Range(0.002f, 0.1f)] public float gouacheBrushSize = 0.014f;
+        [Tooltip("How much each big brush stroke drifts in colour, so one tone of paint isn't one flat colour. Works on white snow too. Characters don't take it. 0 = off.")]
+        [Range(0f, 1f)] public float gouacheStrokeColour = 0f;
+        [Tooltip("Width of one colour stroke, in metres. Pinned to the world.")]
+        [Range(0.1f, 10f)] public float gouacheStrokeSize = 1.2f;
+        [Tooltip("How much objects take the stroke colours, compared with the floor. 0 keeps each object one colour.")]
+        [Range(0f, 1f)] public float gouacheStrokeOnObjects = 0.5f;
+        [Tooltip("Lit strokes drift between these two colours. Only the hue counts; brightness stays.")]
+        public Color gouacheStrokeLightA = new Color(1f, 0.78f, 0.95f);
+        public Color gouacheStrokeLightB = new Color(0.72f, 0.92f, 1f);
+        [Tooltip("Shaded strokes drift between these two colours. Only the hue counts; brightness stays.")]
+        public Color gouacheStrokeShadeA = new Color(0.85f, 0.55f, 1f);
+        public Color gouacheStrokeShadeB = new Color(0.5f, 0.62f, 1f);
 
         [Header("Gouache: Characters")]
         [Tooltip("Gouache values for materials painted as Character (Painted As = Character): usually cleaner than the background. The rough silhouette edges are never applied to characters.")]
@@ -346,6 +358,11 @@ public class WatercolorManager : MonoBehaviour
         Shader.SetGlobalVector("_WC_CharacterGouache", new Vector4(s.characterShadeSaturation, s.characterBrushGrain, s.characterDryBrush, s.characterShadeDepth));
         Shader.SetGlobalVector("_WC_CharacterShade", new Vector4(s.characterShadeColour.r, s.characterShadeColour.g, s.characterShadeColour.b, s.characterShadeHueTurn));
         Shader.SetGlobalVector("_WC_GouacheEdge", new Vector4(s.gouacheRoughEdge, s.gouacheBrushGrain, s.gouacheBrushSize, s.gouacheRimGlow));
+        Shader.SetGlobalVector("_WC_GouacheStroke", new Vector4(s.gouacheStrokeColour, s.gouacheStrokeSize, s.gouacheStrokeOnObjects, 0f));
+        Shader.SetGlobalVector("_WC_GouacheStrokeLightA", (Vector4)s.gouacheStrokeLightA);
+        Shader.SetGlobalVector("_WC_GouacheStrokeLightB", (Vector4)s.gouacheStrokeLightB);
+        Shader.SetGlobalVector("_WC_GouacheStrokeShadeA", (Vector4)s.gouacheStrokeShadeA);
+        Shader.SetGlobalVector("_WC_GouacheStrokeShadeB", (Vector4)s.gouacheStrokeShadeB);
         Shader.SetGlobalVector("_WC_Wash", new Vector4(s.washColour.r, s.washColour.g, s.washColour.b, s.washStrength));
         Shader.SetGlobalVector("_WC_WashReserve", new Vector4(s.washReserve, s.washFloorReserve, 0f, 0f));
         Shader.SetGlobalVector("_WC_Environment", new Vector4(s.fullSunIntensity, s.lightColourInfluence, s.ambientColourInfluence, 0f));
