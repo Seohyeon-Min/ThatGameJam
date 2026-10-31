@@ -21,7 +21,6 @@ public class RabbitActor : MonoBehaviour
 
     void Awake()
     {
-        animator.applyRootMotion = false;
         animator.Play(SleepStates[sleepVariant], 0, 0f);
     }
 

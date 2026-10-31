@@ -12,10 +12,9 @@ using UnityEditor.SceneManagement;
 public static class BuildStage2
 {
     const string RabbitFolder = "Assets/01_Arts/Models/Rabbits";
-    const string MatFolder = "Assets/01_Arts/Materials/Test";
+    const string PrefabFolder = "Assets/03_Prefabs/Stage2";
     // main's snowflake material (Snowfall), also used for the snow a branch sheds.
     const string SnowflakeMaterialPath = "Assets/01_Arts/Materials/Snow.mat";
-    static Material snow, wood;
 
     public static string Run()
     {
@@ -60,8 +59,8 @@ public static class BuildStage2
 
     public static void Configure(Stage stage)
     {
-        snow = Mat("RabbitStageSnow", new Color(0.95f, 0.97f, 1f));
-        wood = Mat("RabbitStageWood", new Color(0.28f, 0.19f, 0.12f));
+        if (Application.isPlaying || stage.gameObject.scene.path != "Assets/00_Scenes/Sam_Test.unity")
+            throw new InvalidOperationException("Open Sam_Test in Edit Mode.");
         GameObject root = Child(stage.gameObject, "RabbitStage", Vector3.zero);
         var snowbanks = new List<Transform>();
         // An inner bank separates the sleeping family from the left bypass; its ends are the entrance and merge.
@@ -110,9 +109,7 @@ public static class BuildStage2
         });
         SetupDemo(root, demo);
         CameraZone(root, family);
-        var sunlit = Primitive(root, PrimitiveType.Cylinder, "SunlitSpot", new Vector3(0f,3f,38.5f), new Vector3(1.6f,3f,1.6f),
-            AssetDatabase.LoadAssetAtPath<Material>(MatFolder+"/RestLight.mat"));
-        UnityEngine.Object.DestroyImmediate(sunlit.GetComponent<Collider>());
+        Prefab("Assets/03_Prefabs/SunlitSpot.prefab", root, "SunlitSpot", new Vector3(0f,0f,38.5f));
         var melt = root.AddComponent<Stage2SnowMelt>();
         Set(melt, so =>
         {
@@ -123,68 +120,38 @@ public static class BuildStage2
 
     static SnowBranch Branch(GameObject parent, string name, Vector3 position)
     {
-        GameObject root = Child(parent, name, position);
-        var treeModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/01_Arts/Mesh/tree02.fbx");
-        var tree = (GameObject)PrefabUtility.InstantiatePrefab(treeModel, root.transform);
-        tree.transform.localPosition = Vector3.zero;
-        tree.transform.localScale = Vector3.one * 0.65f;
-        GameObject pivot = Child(root, "BentBranch", position + Vector3.up * 0.85f);
-        pivot.transform.localRotation = Quaternion.Euler(0f, 0f, -80f);
-        var limb = Primitive(pivot, PrimitiveType.Cylinder, "Wood", Vector3.zero, new Vector3(0.2f,1.05f,0.2f), wood);
-        limb.transform.localPosition = Vector3.up * 1.05f;
-        limb.gameObject.layer = LayerMask.NameToLayer("Interactable");
-        var twig = Primitive(pivot, PrimitiveType.Cylinder, "Twig", Vector3.zero, new Vector3(0.1f,0.4f,0.1f), wood);
-        twig.transform.localPosition = new Vector3(0.2f,1.4f,0f);
-        twig.transform.localRotation = Quaternion.Euler(0f,0f,-35f);
-        UnityEngine.Object.DestroyImmediate(twig.GetComponent<Collider>());
-        var snowCap = Primitive(pivot, PrimitiveType.Sphere, "SnowLoad", Vector3.zero, new Vector3(0.48f,1.65f,0.55f), snow);
-        snowCap.transform.localPosition = new Vector3(-0.16f,1.25f,0f);
-        UnityEngine.Object.DestroyImmediate(snowCap.GetComponent<Collider>());
-        GameObject perchPoint = Child(pivot, "PerchPoint", Vector3.zero);
-        perchPoint.transform.localPosition = new Vector3(-0.22f,1.8f,0f);
-        perchPoint.layer = LayerMask.NameToLayer("Interactable");
-        var click = perchPoint.AddComponent<SphereCollider>();
-        click.radius = 0.55f;
-        click.isTrigger = true;
-        var perch = pivot.AddComponent<Perchable>();
-        Set(perch, so => so.FindProperty("perchPoint").objectReferenceValue = perchPoint.transform);
-        GameObject powderRoot = Child(root, "FallingSnow", perchPoint.transform.position);
-        var powder = powderRoot.AddComponent<ParticleSystem>();
-        powder.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        var main = powder.main; main.playOnAwake = false; main.loop = false; main.duration = 0.6f;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f,1.1f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f,0.8f); main.startSize = new ParticleSystem.MinMaxCurve(0.04f,0.12f);
-        main.startColor = Color.white; main.gravityModifier = 0.7f; main.maxParticles = 100;
-        var emission = powder.emission; emission.rateOverTime = 0; emission.SetBursts(new[]{new ParticleSystem.Burst(0f,36)});
-        var shape = powder.shape; shape.shapeType = ParticleSystemShapeType.Sphere; shape.radius = 0.45f;
-        powder.GetComponent<ParticleSystemRenderer>().sharedMaterial = ParticleMat();
-        var branch = root.AddComponent<SnowBranch>();
-        Set(branch, so =>
-        {
-            so.FindProperty("perch").objectReferenceValue = perch;
-            so.FindProperty("pivot").objectReferenceValue = pivot.transform;
-            so.FindProperty("snow").objectReferenceValue = snowCap.transform;
-            so.FindProperty("raisedEuler").vector3Value = new Vector3(0f,0f,-15f);
-            so.FindProperty("powder").objectReferenceValue = powder;
-        });
-        return branch;
+        return Prefab(PrefabFolder+"/SnowBranch.prefab", parent, name, position).GetComponent<SnowBranch>();
     }
 
     static RabbitActor Rabbit(GameObject parent, string name, bool baby, Vector3 position, float yaw, int variant, Vector3[] exit)
     {
-        GameObject root = Child(parent, name, position);
+        GameObject root = baby ? Prefab(PrefabFolder+"/BabyRabbit.prefab", parent, name, position) : Child(parent, name, position);
         root.transform.rotation = Quaternion.Euler(0f,yaw,0f);
+        if (baby) PrefabUtility.RecordPrefabInstancePropertyModifications(root.transform);
         string prefix = baby ? "BabyRabbit" : "Rabbit";
         string path = RabbitFolder+"/"+prefix+"-Animated.fbx";
-        GameObject model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), root.transform);
-        var animator = model.GetComponent<Animator>();
-        animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(RabbitFolder+"/"+prefix+".controller");
-        animator.applyRootMotion = false;
-        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        GameObject model;
+        Animator animator;
+        if (baby)
+        {
+            animator = root.GetComponentInChildren<Animator>();
+            model = animator.gameObject;
+        }
+        else
+        {
+            model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), root.transform);
+            animator = model.GetComponent<Animator>();
+            animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(RabbitFolder+"/"+prefix+".controller");
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        }
         string suffix = variant == 1 ? "_Flat" : variant == 2 ? "_Side" : "";
         var clips = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>().ToDictionary(c=>c.name);
         clips[prefix+"_Sleep"+suffix].SampleAnimation(model,0f);
-        var actor = root.AddComponent<RabbitActor>();
+        if (baby)
+            foreach (Transform pose in model.GetComponentsInChildren<Transform>())
+                PrefabUtility.RecordPrefabInstancePropertyModifications(pose);
+        var actor = baby ? root.GetComponent<RabbitActor>() : root.AddComponent<RabbitActor>();
         Transform[] exits = exit.Select((p,i)=>Child(parent,name+"_Exit_"+i,p).transform).ToArray();
         Set(actor, so=>
         {
@@ -239,11 +206,9 @@ public static class BuildStage2
 
     static void Bank(GameObject parent,string name,Vector3 position,Vector3 scale,List<Transform> banks)
     {
-        var bank=Primitive(parent,PrimitiveType.Sphere,name,position,scale,snow);
-        bank.layer=LayerMask.NameToLayer("Ground");
-        // SphereCollider uses the largest scale axis, unlike the visible ellipsoid.
-        UnityEngine.Object.DestroyImmediate(bank.GetComponent<Collider>());
-        bank.AddComponent<MeshCollider>().sharedMesh=bank.GetComponent<MeshFilter>().sharedMesh;
+        var bank=Prefab(PrefabFolder+"/Snowbank.prefab",parent,name,position);
+        bank.transform.localScale=scale;
+        PrefabUtility.RecordPrefabInstancePropertyModifications(bank.transform);
         banks.Add(bank.transform);
     }
     static BabyRoute Route(GameObject parent,string name,Vector3[] points)
@@ -253,21 +218,17 @@ public static class BuildStage2
         return root.AddComponent<BabyRoute>();
     }
     static Material ParticleMat()=>AssetDatabase.LoadAssetAtPath<Material>(SnowflakeMaterialPath);
-    static Material Mat(string name,Color color)
+    static GameObject Prefab(string path,GameObject parent,string name,Vector3 position)
     {
-        string path=MatFolder+"/"+name+".mat";
-        var mat=AssetDatabase.LoadAssetAtPath<Material>(path);
-        if(mat==null){mat=new Material(Shader.Find("Universal Render Pipeline/Lit"));AssetDatabase.CreateAsset(mat,path);}
-        mat.color=color;return mat;
+        var root=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path),parent.transform);
+        root.name=name;root.transform.position=position;
+        PrefabUtility.RecordPrefabInstancePropertyModifications(root);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(root.transform);
+        return root;
     }
     static GameObject Child(GameObject parent,string name,Vector3 position)
     {
         var root=new GameObject(name);root.transform.SetParent(parent.transform,false);root.transform.position=position;return root;
-    }
-    static GameObject Primitive(GameObject parent,PrimitiveType type,string name,Vector3 position,Vector3 scale,Material material)
-    {
-        var root=GameObject.CreatePrimitive(type);root.name=name;root.transform.SetParent(parent.transform,false);
-        root.transform.position=position;root.transform.localScale=scale;root.GetComponent<Renderer>().sharedMaterial=material;return root;
     }
     static void Set(UnityEngine.Object target,Action<SerializedObject> action)
     {var so=new SerializedObject(target);action(so);so.ApplyModifiedPropertiesWithoutUndo();}
