@@ -1,2 +1,16 @@
+# Unity YAML assets: use UnityYAMLMerge instead of a plain text merge on conflicts,
+# since a naive text merge can silently corrupt fileID/GUID structure that still looks
+# like valid YAML. Configure the driver locally once per machine:
+#   git config merge.unityyamlmerge.driver "'<EditorPath>/Editor/Data/Tools/UnityYAMLMerge.exe' merge -h -p --fallback none \"%O\" \"%A\" \"%B\" \"%A\""
+*.unity merge=unityyamlmerge
+*.prefab merge=unityyamlmerge
+*.asset merge=unityyamlmerge
+*.mat merge=unityyamlmerge
+*.anim merge=unityyamlmerge
+*.controller merge=unityyamlmerge
+*.physicsMaterial2D merge=unityyamlmerge
+*.physicMaterial merge=unityyamlmerge
+*.preset merge=unityyamlmerge
+
 Assets/Plugins/FMOD/**/*.bundle text eol=lf
 Assets/Plugins/FMOD/**/Info.plist text eol=lf

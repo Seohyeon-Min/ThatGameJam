@@ -10,8 +10,11 @@ public class SoundManager : MonoBehaviour
 
     [SerializeField] EventReference windEvent;
     [SerializeField] EventReference birdEvent;
+    [Tooltip("Test only: an event to play from the start of the game, such as music being tried out. Empty plays nothing.")]
+    [SerializeField] EventReference testAudioEvent;
 
     EventInstance windInstance;
+    EventInstance testAudioInstance;
 
     void Awake() => Instance = this;
 
@@ -19,6 +22,11 @@ public class SoundManager : MonoBehaviour
     {
         windInstance = RuntimeManager.CreateInstance(windEvent);
         windInstance.start();
+        if (!testAudioEvent.IsNull)
+        {
+            testAudioInstance = RuntimeManager.CreateInstance(testAudioEvent);
+            testAudioInstance.start();
+        }
     }
 
     void Update()
@@ -31,5 +39,10 @@ public class SoundManager : MonoBehaviour
     {
         windInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
         windInstance.release();
+        if (testAudioInstance.isValid())
+        {
+            testAudioInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+            testAudioInstance.release();
+        }
     }
 }

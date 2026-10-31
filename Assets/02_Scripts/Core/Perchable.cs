@@ -13,6 +13,9 @@ public class Perchable : MonoBehaviour
     [SerializeField] Transform perchPoint;
     // The bird also lands here by itself when the player leaves it idle (roadside branches). Not on devices, which the player solves.
     [SerializeField] bool idleSpot;
+    // Devices (the leaning log, a blocker) must stay visible and clickable even when nothing is perched on
+    // them, unlike decorative perches (roadside branches) that may fade like any other background tree.
+    [SerializeField] bool alwaysExempt;
     // While landing, the bird turns to face along the perch point's forward axis, whichever way is nearer its heading (roadside
     // branches: the axis runs across the branch, so its feet hold the branch). Off, it keeps the heading it flew in with (devices).
     [SerializeField] bool alignBird;
@@ -35,7 +38,12 @@ public class Perchable : MonoBehaviour
     Renderer[] wholeObjectRenderers;
     MaterialPropertyBlock cameraFadeBlock;
 
-    void OnEnable() => all.Add(this);
+    void OnEnable()
+    {
+        all.Add(this);
+        if (alwaysExempt)
+            SetCameraFadeExempt(true);
+    }
     void OnDisable() => all.Remove(this);
 
     public void NotifyPerched()
@@ -47,7 +55,8 @@ public class Perchable : MonoBehaviour
 
     public void Release()
     {
-        SetCameraFadeExempt(false);
+        if (!alwaysExempt)
+            SetCameraFadeExempt(false);
         Released?.Invoke();
     }
 

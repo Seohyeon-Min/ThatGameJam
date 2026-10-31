@@ -356,7 +356,9 @@ public class BirdController : MonoBehaviour
         facingYaw = Mathf.MoveTowardsAngle(facingYaw, desiredYaw, GameTuning.Current.birdTurnSpeed * Time.deltaTime);
         float turnRate = Mathf.DeltaAngle(previousYaw, facingYaw) / Mathf.Max(Time.deltaTime, 0.0001f);
         transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
-        float bankTarget = Mathf.Clamp(-turnRate * GameTuning.Current.birdBankSensitivity,
+        // Positive bankAngle banks right wing down on this rig (verified in Play Mode), and positive turnRate
+        // is a rightward turn (increasing yaw), so the sign here must match, not oppose, turnRate.
+        float bankTarget = Mathf.Clamp(turnRate * GameTuning.Current.birdBankSensitivity,
             -GameTuning.Current.birdMaxBankAngle, GameTuning.Current.birdMaxBankAngle);
         Bank(bankTarget);
     }

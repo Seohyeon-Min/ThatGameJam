@@ -15,6 +15,7 @@ public class Baby : CryListener
     static readonly int IdleState = Animator.StringToHash("Idle");
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
+    static readonly int JumpState = Animator.StringToHash("Jump");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -23,6 +24,9 @@ public class Baby : CryListener
     [SerializeField] AnimationClip getUpClip;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
+    // Stepping up onto a balance beam (a log) or down off the far end plays this once, covering that segment's
+    // own movement, before Walk/BalanceWalk resumes.
+    [SerializeField] AnimationClip jumpClip;
 
     public static Baby Instance { get; private set; }
 
@@ -73,8 +77,11 @@ public class Baby : CryListener
             return;
         }
         GameTuning tuning = GameTuning.Current;
-        float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
-        float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle;
+        // A slow-moving envelope on top of the shiver itself, so it isn't a constant metronomic hum: it
+        // eases from barely shivering up to a harder tremble and back, unpredictably, like a real chill.
+        float intensity = Mathf.Max(0f, 1f + Noise(130f, tuning.babyShiverIntensityFrequency) * 2f * tuning.babyShiverIntensityVariation);
+        float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle * intensity;
+        float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle * intensity;
         animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
     }
 
@@ -89,7 +96,7 @@ public class Baby : CryListener
             gazeTimeRemaining -= Time.deltaTime;
         bool active = gazeTarget != null && gazeTimeRemaining > 0f && State == BabyState.Walking && !onBalanceBeam;
         GameTuning tuning = GameTuning.Current;
-        gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, tuning.babyGazeBlendSpeed * Time.deltaTime);
+        gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, tuning.babyGazeBlendTime));
         if (gazeBlend <= 0.001f)
             return;
 
@@ -200,7 +207,7 @@ public class Baby : CryListener
     IEnumerator WakeAndWalk(bool byBird)
     {
         State = BabyState.Waking;
-        // Starts as the baby starts to get up, so it can show that; the baby walks only once both are over.
+        // Starts while the baby gets up, so it can show that; the baby walks only once both are over.
         Cutscene cutscene = GameFlow.Instance.CurrentStage.wakeCutscene;
         if (cutscene != null)
             cutscene.Play();
@@ -218,21 +225,35 @@ public class Baby : CryListener
 
         if (cutscene != null)
             yield return new WaitUntil(() => !cutscene.IsPlaying);
+        // Set whenever a BalanceBeamStart/End marker or a freshly-opened LeaningLog is reached: the step up onto
+        // (or down off) the beam is the *next* route segment, not the point just arrived at, so it's the next
+        // segment that plays as a jump instead of an ordinary walk (design doc request: the climb itself should
+        // be the jump, not a jump played in place after already having walked up to height).
+        bool jumpNextSegment = false;
 
         for (int i = 0; i < route.Count; i++)
         {
             State = BabyState.Walking;
-            yield return WalkTo(route[i].position);
+            if (jumpNextSegment)
+            {
+                jumpNextSegment = false;
+                yield return JumpTo(route[i].position);
+                animator.CrossFade(onBalanceBeam ? BalanceWalkState : WalkState, 0.25f);
+            }
+            else
+            {
+                yield return WalkTo(route[i].position);
+            }
 
             if (onBalanceBeam && route[i].TryGetComponent(out BalanceBeamEnd _))
             {
                 onBalanceBeam = false;
-                animator.CrossFade(WalkState, 0.25f);
+                jumpNextSegment = true;
             }
             else if (!onBalanceBeam && route[i].TryGetComponent(out BalanceBeamStart _))
             {
                 onBalanceBeam = true;
-                animator.CrossFade(BalanceWalkState, 0.25f);
+                jumpNextSegment = true;
             }
 
             if (!route[i].TryGetComponent(out StopPoint stop))
@@ -256,10 +277,11 @@ public class Baby : CryListener
                 yield return LookUp(tuning.babyLookUpDuration);
             }
             // A fallen log or similar: arms-out balance until the far end (BalanceBeamEnd) is reached.
+            // The climb onto it is the next segment (see jumpNextSegment above).
             if (blocker is LeaningLog)
             {
                 onBalanceBeam = true;
-                animator.CrossFade(BalanceWalkState, 0.25f);
+                jumpNextSegment = true;
             }
         }
 
@@ -315,6 +337,24 @@ public class Baby : CryListener
         animator.SetBool(LookAroundParam, true);
         yield return new WaitForSeconds(tuning.babyLookAroundDuration);
         animator.SetBool(LookAroundParam, false);
+    }
+
+    // Stepping up onto a balance beam or down off the far end: one in-place hop before Walk/BalanceWalk resumes.
+    // Stepping up onto a balance beam or down off the far end: covers the segment itself (height included) over
+    // the clip's own timing, instead of ordinary walk-speed interpolation finishing the climb before the jump
+    // animation plays. StandStill(): the walk-cycle animator bool should read false while this plays.
+    IEnumerator JumpTo(Vector3 target)
+    {
+        StandStill();
+        TurnToward(target - transform.position);
+        animator.CrossFade(JumpState, 0.1f);
+        Vector3 start = transform.position;
+        for (float time = 0f; time < jumpClip.length; time += Time.deltaTime)
+        {
+            transform.position = Vector3.Lerp(start, target, time / jumpClip.length);
+            yield return null;
+        }
+        transform.position = target;
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).

@@ -1,15 +1,23 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.Timeline;
 
 // A staged moment: plays this object's Timeline, with its own watercolor look if it has one, and tells the game when it's over.
 // Assign one to a Stage's Wake Cutscene and the baby waits for it after waking, before it walks.
 // The camera, animation and sound are on the Timeline. For a different post-processing, add a Volume under this object and switch
 // it with an Activation track. While one plays, the player can't move the bird or cry.
+// Animation tracks are for previewing in the Timeline window: in Play Mode they are unbound, and animators play what the game tells them.
 [RequireComponent(typeof(PlayableDirector))]
 public class Cutscene : MonoBehaviour
 {
+    // The baby's animations run at this rate, so a frame seen in its GetUp clip can be typed in as it is.
+    const float AnimationFramesPerSecond = 30f;
+
     static int playing;
 
+    [Tooltip("Frames to wait after Play before it really starts, at 30 per second like the baby's animations. Nothing is locked or changed until then.")]
+    [SerializeField, Min(0)] int startDelayFrames;
     [Tooltip("Applied while the cutscene plays, then the look from before comes back. Empty keeps the current look.")]
     [SerializeField] WatercolorLook look;
     [Tooltip("Seconds to blend into the look at the start and back out of it at the end.")]
@@ -20,6 +28,7 @@ public class Cutscene : MonoBehaviour
     WatercolorManager.Settings before;
     float blend;
     bool lookHeld;
+    bool started;
 
     public static bool AnyPlaying => playing > 0;
     public bool IsPlaying { get; private set; }
@@ -34,13 +43,24 @@ public class Cutscene : MonoBehaviour
         // Otherwise a Timeline set to Hold never reports its end.
         director.extrapolationMode = DirectorWrapMode.None;
         director.stopped += OnDirectorStopped;
+        UnbindAnimationTracks();
+    }
+
+    // Only for this play: the binding saved in the scene is untouched.
+    void UnbindAnimationTracks()
+    {
+        if (director.playableAsset is not TimelineAsset timeline)
+            return;
+        foreach (TrackAsset track in timeline.GetOutputTracks())
+            if (track is AnimationTrack)
+                director.SetGenericBinding(track, null);
     }
 
     void OnDestroy()
     {
         if (director != null)
             director.stopped -= OnDirectorStopped;
-        if (IsPlaying)
+        if (started)
             playing--;
     }
 
@@ -49,6 +69,14 @@ public class Cutscene : MonoBehaviour
         if (IsPlaying)
             return;
         IsPlaying = true;
+        StartCoroutine(StartAfterDelay());
+    }
+
+    IEnumerator StartAfterDelay()
+    {
+        if (startDelayFrames > 0)
+            yield return new WaitForSeconds(startDelayFrames / AnimationFramesPerSecond);
+        started = true;
         playing++;
 
         manager = FindAnyObjectByType<WatercolorManager>();
@@ -75,8 +103,13 @@ public class Cutscene : MonoBehaviour
     // Ends it now, as if the Timeline had reached its end.
     public void Stop()
     {
-        if (IsPlaying)
+        if (!IsPlaying)
+            return;
+        StopAllCoroutines();
+        if (started)
             director.Stop();
+        else
+            Finish();
     }
 
     void OnDirectorStopped(PlayableDirector stopped)
@@ -90,7 +123,9 @@ public class Cutscene : MonoBehaviour
         if (!IsPlaying)
             return;
         IsPlaying = false;
-        playing--;
+        if (started)
+            playing--;
+        started = false;
     }
 
     void Update()
