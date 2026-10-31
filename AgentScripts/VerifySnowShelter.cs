@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
-// Snow shelter in Main's intro: hold a virtual mouse on the walking baby, check the bird, shadow, snow and gaze, let go,
+// Snow shelter in Main's intro: hold a virtual mouse on the walking baby, check the bird, snow and gaze, let go,
 // then hold until she reaches the sunlit spot. Run in Play Mode right after entering it:
 // unity command script run --file AgentScripts/VerifySnowShelter.cs --entry VerifySnowShelter.Run
 public static class VerifySnowShelter
@@ -77,11 +77,10 @@ public static class VerifySnowShelter
             if (GameFlow.Instance.CurrentStage.name != "Intro") throw new Exception("Not in Intro");
             var shelter = UnityEngine.Object.FindAnyObjectByType<SnowShelter>();
             var so = new UnityEditor.SerializedObject(shelter);
-            var shadow = (Transform)so.FindProperty("shadowCaster").objectReferenceValue;
             var block = (Transform)so.FindProperty("snowBlock").objectReferenceValue;
             var snow = GameObject.Find("World/Snowfall").GetComponent<ParticleSystem>();
             await Task.Delay(500);
-            if (shadow.gameObject.activeSelf || block.gameObject.activeSelf) throw new Exception("Shelter visible before any click");
+            if (block.gameObject.activeSelf) throw new Exception("Snow block on before any click");
 
             // Asleep: a click on her is an ordinary click.
             await Press(true); await Press(false);
@@ -94,7 +93,7 @@ public static class VerifySnowShelter
             bird.Teleport(baby.transform.position + new Vector3(6f, 4f, -4f));
             await Press(true);
             if (!bird.IsSheltering) throw new Exception("Holding on the walking baby did not shelter");
-            if (shadow.gameObject.activeSelf || block.gameObject.activeSelf) throw new Exception("Shelter on before the bird reached her");
+            if (block.gameObject.activeSelf) throw new Exception("Snow block on before the bird reached her");
             await Hold(4f);
             Vector3 forward = Vector3.ProjectOnPlane(baby.transform.forward, Vector3.up).normalized;
             Vector3 spot = baby.transform.position + forward * GameTuning.Current.birdShelterAhead;
@@ -107,7 +106,6 @@ public static class VerifySnowShelter
             float birdMoved = Vector3.ProjectOnPlane(bird.transform.position - b0, Vector3.up).magnitude;
             float babyMoved = Vector3.ProjectOnPlane(baby.transform.position - g0, Vector3.up).magnitude;
             if (babyMoved > 0.3f && Mathf.Abs(birdMoved - babyMoved) > 0.35f * babyMoved) throw new Exception($"Pace differs: bird {birdMoved:0.00} baby {babyMoved:0.00}");
-            if (!shadow.gameObject.activeSelf || shadow.localScale.x < 0.5f) throw new Exception("No shadow while sheltering");
             if (!block.gameObject.activeSelf) throw new Exception("No snow block while sheltering");
             var (inside, beside) = await SnowAround(snow, baby.transform);
             if (beside == 0 || inside * 10 > beside) throw new Exception($"Snow still over her: {inside} near her vs {beside} in 4 columns beside");
@@ -119,7 +117,7 @@ public static class VerifySnowShelter
             await Press(false);
             if (bird.IsSheltering) throw new Exception("Still sheltering after release");
             await Task.Delay(600);
-            if (shadow.gameObject.activeSelf || block.gameObject.activeSelf) throw new Exception("Shadow or block left after release");
+            if (block.gameObject.activeSelf) throw new Exception("Snow block left after release");
             float stageAltitude = GameFlow.Instance.CurrentStage.birdAltitude;
             await Until(() => Mathf.Abs(bird.transform.position.y - stageAltitude) < 0.01f, 3f, "Did not climb back to the stage altitude");
             log.Append($"PASS release clears and climbs back to {stageAltitude}. ");
@@ -132,7 +130,7 @@ public static class VerifySnowShelter
             if (bird.IsSheltering) throw new Exception("Sheltering past the sunlit spot");
             await Press(false);
             await Task.Delay(600);
-            if (shadow.gameObject.activeSelf || block.gameObject.activeSelf) throw new Exception("Shadow or block left at the sunlit spot");
+            if (block.gameObject.activeSelf) throw new Exception("Snow block left at the sunlit spot");
             log.Append("PASS ends at the sunlit spot.");
             return log.ToString();
         }

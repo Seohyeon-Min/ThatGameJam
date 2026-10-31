@@ -23,29 +23,6 @@ public static class SetupSnowShelter
         SceneManager_Move(root, scene);
         var shelter = root.AddComponent<SnowShelter>();
 
-        // The bird's look, without its animator or scripts: shadow only, in the wings-out rest pose.
-        var shadow = new GameObject("ShelterShadow");
-        shadow.transform.SetParent(root.transform, false);
-        shadow.transform.localScale = Vector3.one * 1.3f;
-        Transform birdModel = GameObject.Find("Bird").GetComponentInChildren<Animator>().transform;
-        var copy = Object.Instantiate(birdModel.gameObject, shadow.transform);
-        copy.name = birdModel.name;
-        copy.transform.localPosition = Vector3.zero;
-        copy.transform.localRotation = Quaternion.identity;
-        copy.transform.localScale = birdModel.lossyScale;
-        foreach (var component in copy.GetComponentsInChildren<Component>(true).Where(c => c is Behaviour && !(c is Renderer)).ToArray())
-            Object.DestroyImmediate(component);
-        foreach (var renderer in copy.GetComponentsInChildren<Renderer>(true))
-        {
-            renderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
-            renderer.receiveShadows = false;
-        }
-        foreach (var t in copy.GetComponentsInChildren<Transform>(true))
-            t.gameObject.layer = 0;
-        foreach (var system in copy.GetComponentsInChildren<ParticleSystem>(true))
-            Object.DestroyImmediate(system.gameObject);
-        shadow.SetActive(false);
-
         var block = new GameObject("ShelterSnowBlock");
         block.transform.SetParent(root.transform, false);
         block.layer = LayerMask.NameToLayer("Ignore Raycast");
@@ -56,13 +33,7 @@ public static class SetupSnowShelter
         box.size = new Vector3(1.8f, 2.8f, 1.8f);
         block.SetActive(false);
 
-        var sun = Object.FindObjectsByType<Light>().First(l => l.type == LightType.Directional);
-        Set(shelter, so =>
-        {
-            so.FindProperty("sun").objectReferenceValue = sun;
-            so.FindProperty("shadowCaster").objectReferenceValue = shadow.transform;
-            so.FindProperty("snowBlock").objectReferenceValue = block.transform;
-        });
+        Set(shelter, so => so.FindProperty("snowBlock").objectReferenceValue = block.transform);
 
         var snowfall = GameObject.Find("World/Snowfall").GetComponent<ParticleSystem>();
         var trigger = snowfall.trigger;
@@ -76,7 +47,7 @@ public static class SetupSnowShelter
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        return "SnowShelter placed: Intro.snowShelter on, shadow copy of " + birdModel.name + ", snow block, Snowfall trigger kills inside it.";
+        return "SnowShelter placed: Intro.snowShelter on, snow block, Snowfall trigger kills inside it.";
     }
 
     static void SceneManager_Move(GameObject go, UnityEngine.SceneManagement.Scene scene) =>
