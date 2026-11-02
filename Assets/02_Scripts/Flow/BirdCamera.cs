@@ -4,8 +4,9 @@ using UnityEngine.InputSystem;
 
 // The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007). The bird also locks the zones (ADR 0014).
 // The bird flies over the area GameFlow opens to it, the road and the terrain beside it (ADR 0010, ADR 0013), and so does the point
-// the camera follows. While a device's camera zone is locked, the point stays inside that zone's area. The bird itself never leaves
-// the screen (ADR 0003 Q3); BirdController keeps it there (ADR 0015).
+// the camera follows. The point is at the bird's height, so the bird sits in the middle of the screen. While a device's camera zone
+// is locked, the point stays inside that zone's area. The bird itself never leaves the screen (ADR 0003 Q3); BirdController keeps it
+// there (ADR 0015). The wheel zooms, and the bird flies lower as the camera comes closer (BirdController.SetZoom).
 public class BirdCamera : MonoBehaviour
 {
     [SerializeField] CinemachineCamera followCamera;
@@ -21,9 +22,11 @@ public class BirdCamera : MonoBehaviour
     Vector3 baseFollowOffset;
     InputAction scrollAction;
     // 1 = the authored distance. Raised/lowered one cameraZoomStep per wheel tick, direction only (AGENTS.md: wheel
-    // magnitude isn't portable across browsers), then eased towards smoothly.
+    // magnitude isn't portable across browsers), then eased there from zoomFrom along GameTuning.motionCurve.
     float targetZoom = 1f;
     float zoom = 1f;
+    float zoomFrom = 1f;
+    float zoomTime = float.MaxValue;
     // Dev tool: while set, the camera stays on this point instead of following the bird.
     Vector3? lockedPoint;
 
@@ -71,14 +74,21 @@ public class BirdCamera : MonoBehaviour
 
     void LateUpdate()
     {
+        GameTuning tuning = GameTuning.Current;
         float scroll = scrollAction.ReadValue<Vector2>().y;
-        if (scroll != 0f)
+        float next = Mathf.Clamp(targetZoom - Mathf.Sign(scroll) * tuning.cameraZoomStep, tuning.cameraZoomMin, tuning.cameraZoomMax);
+        if (scroll != 0f && next != targetZoom)
         {
-            GameTuning tuning = GameTuning.Current;
-            targetZoom = Mathf.Clamp(targetZoom - Mathf.Sign(scroll) * tuning.cameraZoomStep, tuning.cameraZoomMin, tuning.cameraZoomMax);
+            targetZoom = next;
+            zoomFrom = zoom;
+            zoomTime = 0f;
         }
-        zoom = Mathf.MoveTowards(zoom, targetZoom, GameTuning.Current.cameraZoomSpeed * Time.deltaTime);
+        zoomTime += Time.deltaTime;
+        zoom = zoomTime >= tuning.cameraZoomDuration
+            ? targetZoom
+            : Mathf.LerpUnclamped(zoomFrom, targetZoom, tuning.motionCurve.Evaluate(zoomTime / tuning.cameraZoomDuration));
         follow.FollowOffset = baseFollowOffset * zoom;
+        BirdController.Instance.SetZoom(zoom, targetZoom);
 
         Vector3 bird = BirdController.Instance.transform.position;
         Bounds area = GameFlow.Instance.FlyArea;
@@ -92,7 +102,7 @@ public class BirdCamera : MonoBehaviour
         }
         if (lockedPoint.HasValue)
             point = lockedPoint.Value;
-        point.y = area.center.y;
+        point.y = bird.y;
         transform.position = point;
         BirdController.Instance.SetArea(area);
     }

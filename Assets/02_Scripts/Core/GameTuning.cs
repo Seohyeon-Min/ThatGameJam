@@ -77,6 +77,18 @@ public class GameTuning : ScriptableObject
     // Height above her feet it flies at while sheltering, lower than the stage's altitude; it climbs back on release.
     public float birdShelterHeight = 2.8f;
     public float birdShelterCatchUp = 0.5f;
+    // The wheel moves the bird with the zoom: at cameraZoomMax it flies this many times as high above the stage's ground as at
+    // zoom 1 (the stage's altitude), and at cameraZoomMin it flies this low (this far above any log, bank or water under it) and
+    // comes down where it can stand: terrain no steeper than birdLandMaxSlope degrees, so not the banks down to the water.
+    public float birdZoomedOutHeightScale = 1.5f;
+    public float birdLowFlightHeight = 0.6f;
+    public float birdLandMaxSlope = 25f;
+    // Seconds a change of height takes along motionCurve: taking off, coming down to the ground, a new stage's altitude.
+    public float birdClimbDuration = 1f;
+    public float birdWalkSpeed = 1.2f;
+    // Placeholder until a walk clip exists: while walking, the body hops this high (world units), this many times a second.
+    public float birdWalkHopHeight = 0.08f;
+    public float birdWalkHopRate = 4f;
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;
     // Bank degrees per degree/second of turn rate.
@@ -90,8 +102,12 @@ public class GameTuning : ScriptableObject
     public float cameraZoomStep = 0.1f;
     public float cameraZoomMin = 0.5f;
     public float cameraZoomMax = 1.25f;
-    // How fast the camera eases to the new zoom level, in zoom-fraction per second.
-    public float cameraZoomSpeed = 3f;
+    // Seconds one wheel tick's zoom takes, along motionCurve.
+    public float cameraZoomDuration = 0.6f;
+
+    [Header("Easing")]
+    // 0 to 1 over 0 to 1. The zoom, the bird's changes of height and its way up or down to a branch all follow it.
+    public AnimationCurve motionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     static GameTuning current;
 

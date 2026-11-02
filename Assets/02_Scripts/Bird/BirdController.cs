@@ -8,7 +8,9 @@ using UnityEngine.InputSystem;
 // right-click cries. Left idle in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
 // hopping the camera to any branch on screen. Sent past where the way is still closed
 // (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
-// Flies at the current map's fixed altitude inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015).
+// Flies inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015). Its height follows the wheel's zoom
+// (SetZoom): the stage's altitude at zoom 1, higher zoomed out, and low zoomed all the way in, where it comes down and walks
+// wherever it can stand (Landable). Its changes of height ease along GameTuning.motionCurve.
 // The transform is where the bird's feet are, so it stands on a perch point.
 public class BirdController : MonoBehaviour
 {
@@ -17,6 +19,13 @@ public class BirdController : MonoBehaviour
     static readonly int RefuseParam = Animator.StringToHash("Refuse");
     // In the sky, going back on screen: how much of the camera's speed it may lose.
     const float SkyMostFallBehind = 0.7f;
+    // Flying low, it comes down only where the ground this far ahead along its way is also landable, so it doesn't land at the
+    // water's edge only to take off again.
+    const float LandLookahead = 0.5f;
+    // Flying low, how far ahead it looks for logs and banks to rise over in time.
+    const float ClearLookahead = 3f;
+    // How high above what is under it it must be to move along (Fly).
+    const float SurfaceGap = 0.2f;
 
     [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
@@ -29,7 +38,7 @@ public class BirdController : MonoBehaviour
     [SerializeField, Range(0f, 0.3f)] float screenMargin = 0.08f;
     [SerializeField] UnityEvent onCry;
 
-    enum State { Flying, ToPerch, Landing, Perched }
+    enum State { Flying, ToPerch, Landing, Perched, Walking }
     // Who moves the bird. Sky and Scripted are for the intro (IntroSequence): Sky is clicks on the flying height, with no perches or
     // area, and Scripted is MoveScripted only.
     enum Control { Game, Sky, Scripted }
@@ -60,7 +69,24 @@ public class BirdController : MonoBehaviour
     float bodyPitch;
     // Horizontal target while flying. Y is unused; the bird's height follows altitude.
     Vector3 target;
+    // The height it flies at now: baseAltitude moved by the zoom (FlightAltitude).
     float altitude;
+    // A change of height: from climbFrom to where it should be (which may move meanwhile), climbTime seconds in.
+    float climbFrom;
+    float climbTime = float.MaxValue;
+    // The height it is heading for: its altitude, the ground to come down on, or above a log or bank (Clearance).
+    enum Aim { Altitude, Ground, Clear }
+    Aim aim;
+    float clearHeight;
+    // On the way to a branch: the start, and the point along the straight way there. The height eases along that way.
+    Vector3 approachFrom, approach;
+    // The stage's altitude (SetAltitude), the height at zoom 1.
+    float baseAltitude;
+    // BirdCamera's zoom, eased, and the zoom it is heading to. 1 = the authored distance.
+    float zoom = 1f;
+    float zoomHeading = 1f;
+    float hopTime;
+    Vector3 visualBasePosition;
     // Current horizontal speed, ramping toward GameTuning.birdSpeed (or down, braking into a landing).
     float currentSpeed;
     // True from the moment a perch is left until the Takeoff clip's FootRelease event fires: the body holds
@@ -97,11 +123,14 @@ public class BirdController : MonoBehaviour
     {
         Instance = this;
         target = transform.position;
-        altitude = transform.position.y;
+        altitude = baseAltitude = transform.position.y;
         baseScale = transform.localScale;
         facingYaw = transform.eulerAngles.y;
         if (visualRoot != null)
+        {
             visualBaseRotation = visualRoot.localRotation;
+            visualBasePosition = visualRoot.localPosition;
+        }
         clickMask = LayerMask.GetMask("Ground", "Interactable", "ClickPlane");
         groundMask = LayerMask.GetMask("Ground", "ClickPlane");
         interactableLayer = LayerMask.NameToLayer("Interactable");
@@ -144,6 +173,7 @@ public class BirdController : MonoBehaviour
         currentSpeed = 0f;
         transform.position = position;
         target = position;
+        StartClimb();
     }
 
     // Hooked to BirdAnimationEvents.onFootRelease (Bird_Takeoff, feet leave the branch): the body was holding
@@ -153,9 +183,16 @@ public class BirdController : MonoBehaviour
 
     public void SetAltitude(float y, bool instant)
     {
-        altitude = y;
-        if (instant && state == State.Flying)
-            transform.position = new Vector3(transform.position.x, y, transform.position.z);
+        baseAltitude = y;
+        altitude = control == Control.Game ? FlightAltitude() : y;
+        if (!instant)
+        {
+            StartClimb();
+            return;
+        }
+        climbTime = float.MaxValue;
+        if (state == State.Flying)
+            transform.position = new Vector3(transform.position.x, altitude, transform.position.z);
     }
 
     // Where it flies, in X and Z. It also stays on screen, and refuses at the area's far Z end.
@@ -164,8 +201,61 @@ public class BirdController : MonoBehaviour
         if (control != Control.Game)
             return;
         bounds = area;
-        if (state != State.Flying && !OnScreen(perch.PerchPoint.position))
+        if (perch != null && !OnScreen(perch.PerchPoint.position))
             LeavePerch();
+    }
+
+    // The eased zoom moves the flying height; the zoom it is heading to says whether to come down, so it starts down at once
+    // instead of first settling at the low flying height.
+    public void SetZoom(float eased, float heading)
+    {
+        zoom = eased;
+        zoomHeading = heading;
+    }
+
+    // Zoomed all the way in: down on the ground.
+    bool OnGroundZoom => zoomHeading <= GameTuning.Current.cameraZoomMin;
+
+    // From the zoom only, over the stage's ground (the area's centre height), so it doesn't bump over logs and water.
+    float FlightAltitude()
+    {
+        GameTuning tuning = GameTuning.Current;
+        float ground = bounds.center.y;
+        if (zoom >= 1f)
+            return baseAltitude + (baseAltitude - ground) * (tuning.birdZoomedOutHeightScale - 1f) * Mathf.InverseLerp(1f, tuning.cameraZoomMax, zoom);
+        return Mathf.Lerp(ground + tuning.birdLowFlightHeight, baseAltitude, Mathf.InverseLerp(tuning.cameraZoomMin, 1f, zoom));
+    }
+
+    // The terrain where it can stand, and its height: not the water (ClickPlane) or a log or bank on the terrain, and no steeper
+    // than birdLandMaxSlope, unlike the banks down to the water.
+    bool Landable(Vector3 point, out float ground)
+    {
+        bool hit = SurfaceAt(point, out RaycastHit h);
+        ground = hit ? h.point.y : point.y;
+        return hit && h.collider is TerrainCollider && Vector3.Angle(h.normal, Vector3.up) <= GameTuning.Current.birdLandMaxSlope;
+    }
+
+    float SurfaceHeight(Vector3 point) => SurfaceAt(point, out RaycastHit h) ? h.point.y : float.MinValue;
+
+    // The top of what a click there would hit below: the terrain, a log or bank on it, or the water (ClickPlane).
+    bool SurfaceAt(Vector3 point, out RaycastHit hit) =>
+        Physics.Raycast(new Vector3(point.x, 1000f, point.z), Vector3.down, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
+
+    static float Ease(float t) => GameTuning.Current.motionCurve.Evaluate(Mathf.Clamp01(t));
+
+    void StartClimb()
+    {
+        climbFrom = transform.position.y;
+        climbTime = 0f;
+    }
+
+    bool Climbed => climbTime >= GameTuning.Current.birdClimbDuration;
+
+    // The height on the way from climbFrom to goal.
+    float Climb(float goal)
+    {
+        climbTime += Time.deltaTime;
+        return Climbed ? goal : Mathf.LerpUnclamped(climbFrom, goal, Ease(climbTime / GameTuning.Current.birdClimbDuration));
     }
 
     // Intro: nothing moves the bird but MoveScripted.
@@ -226,6 +316,7 @@ public class BirdController : MonoBehaviour
             FlyInSky();
             return;
         }
+        altitude = FlightAltitude();
 
         Ray ray = Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>());
         bool hasHit = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
@@ -251,6 +342,7 @@ public class BirdController : MonoBehaviour
             // Let go, or the baby has reached the sunlit spot: hovers where it is.
             IsSheltering = false;
             target = transform.position;
+            StartClimb();
         }
 
         bool cried = cryAction.WasPressedThisFrame() && !Cutscene.AnyPlaying;
@@ -264,11 +356,13 @@ public class BirdController : MonoBehaviour
             case State.ToPerch: FlyToPerch(); break;
             case State.Landing: Land(); Bank(0f); break;
             case State.Perched: transform.position = perch.PerchPoint.position; Bank(0f); break;
+            case State.Walking: Walk(); break;
         }
         bool moved = transform.position != before;
         // Glides while it moves and hovers in place otherwise.
         animator.SetBool(MovingParam, moved);
-        animator.SetBool(PerchedParam, state == State.Landing || state == State.Perched);
+        animator.SetBool(PerchedParam, state is State.Landing or State.Perched or State.Walking);
+        Hop(state == State.Walking && moved);
 
         idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
         if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
@@ -387,7 +481,8 @@ public class BirdController : MonoBehaviour
             return;
         }
 
-        LeavePerch();
+        if (state != State.Walking)
+            LeavePerch();
         // The target itself is not clamped: the bird presses against the edge of its area,
         // and moves on as the area moves (the camera follows, or a gate opens).
         target = hit.point;
@@ -406,6 +501,7 @@ public class BirdController : MonoBehaviour
     void StartPerch(Perchable perchable)
     {
         LeavePerch();
+        approachFrom = approach = transform.position;
         perch = perchable;
         perch.Released += LeavePerch;
         state = State.ToPerch;
@@ -421,12 +517,18 @@ public class BirdController : MonoBehaviour
             // choice (a new click, Refuse, ...) doesn't raise it, so the camera-fade exemption is cleared here too.
             perch.SetCameraFadeExempt(false);
         }
-        bool takingOff = state == State.Perched || state == State.Landing;
+        bool takingOff = state is State.Perched or State.Landing or State.Walking;
         perch = null;
         refusePending = false;
         animator.ResetTrigger(RefuseParam);
-        if (state != State.Flying)
+        // Taking off from the ground, it keeps going where it was walking.
+        if (state is not (State.Flying or State.Walking))
             target = transform.position;
+        if (state != State.Flying)
+        {
+            aim = Aim.Altitude;
+            StartClimb();
+        }
         state = State.Flying;
         if (takingOff)
         {
@@ -436,16 +538,22 @@ public class BirdController : MonoBehaviour
         }
     }
 
+    // Held where it took off (LeavePerch) until OnTakeoffFootRelease fires, or this safety timeout runs out.
+    bool HoldingForTakeoff()
+    {
+        if (!liftingOff)
+            return false;
+        liftingOffTimer -= Time.deltaTime;
+        if (liftingOffTimer > 0f)
+            return true;
+        liftingOff = false;
+        return false;
+    }
+
     void Fly()
     {
-        // Held at the branch (LeavePerch) until OnTakeoffFootRelease fires, or this safety timeout runs out.
-        if (liftingOff)
-        {
-            liftingOffTimer -= Time.deltaTime;
-            if (liftingOffTimer > 0f)
-                return;
-            liftingOff = false;
-        }
+        if (HoldingForTakeoff())
+            return;
         if (IsSheltering)
         {
             Shelter();
@@ -454,15 +562,97 @@ public class BirdController : MonoBehaviour
 
         // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
+        var from = new Vector3(position.x, 0f, position.z);
+        Vector3 to = Limit(new Vector3(target.x, 0f, target.z));
         currentSpeed = Mathf.MoveTowards(currentSpeed, GameTuning.Current.birdSpeed, GameTuning.Current.birdAcceleration * Time.deltaTime);
-        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Limit(new Vector3(target.x, 0f, target.z)),
-            currentSpeed * Time.deltaTime);
-        float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
+        Vector3 flat = Vector3.MoveTowards(from, to, currentSpeed * Time.deltaTime);
+        // Zoomed all the way in, it comes down where it can stand. Flying low, it keeps above logs, banks and the water.
+        Vector3 heading = to - from;
+        float ground = 0f;
+        float clear = Clearance(flat, heading);
+        Aim next = OnGroundZoom && CanComeDown(flat, heading, out ground) ? Aim.Ground : clear > altitude + 0.05f ? Aim.Clear : Aim.Altitude;
+        // Over a log or bank the height to keep only rises, each time eased from where it is, until it is past.
+        bool higher = next == Aim.Clear && aim == Aim.Clear && clear > clearHeight + 0.01f;
+        if (next != aim || higher)
+        {
+            aim = next;
+            clearHeight = clear;
+            StartClimb();
+        }
+        float y = Climb(aim switch { Aim.Ground => ground, Aim.Clear => clearHeight, _ => altitude });
+        // Coming down onto ground that rises, it never sinks into it.
+        if (aim == Aim.Ground)
+            y = Mathf.Max(y, ground);
+        // It doesn't fly into a log or bank while still below its top, nor skim the ground taking off: it rises off it first.
+        // Coming down, the ground there is where it lands.
+        if (aim != Aim.Ground && SurfaceHeight(flat) > y - SurfaceGap)
+        {
+            flat = from;
+            currentSpeed = 0f;
+        }
         Face(flat - position);
         transform.position = new Vector3(flat.x, y, flat.z);
-        // Heading past the far end of its area, it has reached the line where the way is closed (ADR 0016).
+        RefuseAtClosedWay(flat);
+        if (state == State.Flying && aim == Aim.Ground && Climbed)
+        {
+            state = State.Walking;
+            currentSpeed = 0f;
+        }
+    }
+
+    bool CanComeDown(Vector3 flat, Vector3 heading, out float ground)
+    {
+        if (!Landable(flat, out ground))
+            return false;
+        if (heading.sqrMagnitude > 0.000001f)
+            for (float distance = 0.1f; distance <= LandLookahead + 0.001f; distance += 0.1f)
+                if (!Landable(flat + heading.normalized * distance, out _))
+                    return false;
+        return true;
+    }
+
+    // Flying low, it keeps birdLowFlightHeight above the highest of what is under it and up to ClearLookahead ahead.
+    float Clearance(Vector3 flat, Vector3 step)
+    {
+        float highest = SurfaceHeight(flat);
+        if (step.sqrMagnitude > 0.000001f)
+            for (float distance = 0.25f; distance <= ClearLookahead + 0.001f; distance += 0.25f)
+                highest = Mathf.Max(highest, SurfaceHeight(flat + step.normalized * distance));
+        return highest + GameTuning.Current.birdLowFlightHeight;
+    }
+
+    // On the ground, it walks to the target. Zoomed back out, or reaching what it can't stand on, it takes off (and Fly brings it
+    // down again past it).
+    void Walk()
+    {
+        Vector3 position = transform.position;
+        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Limit(new Vector3(target.x, 0f, target.z)),
+            GameTuning.Current.birdWalkSpeed * Time.deltaTime);
+        if (!OnGroundZoom || !Landable(flat, out float ground))
+        {
+            LeavePerch();
+            return;
+        }
+        Face(flat - position, false);
+        transform.position = new Vector3(flat.x, ground, flat.z);
+        RefuseAtClosedWay(flat);
+    }
+
+    // Heading past the far end of its area, it has reached the line where the way is closed (ADR 0016).
+    void RefuseAtClosedWay(Vector3 flat)
+    {
         if (target.z > bounds.max.z && flat.z >= bounds.max.z - 0.01f)
             Refuse();
+    }
+
+    // Placeholder until a walk clip exists: the body hops while it walks.
+    void Hop(bool hopping)
+    {
+        if (visualRoot == null)
+            return;
+        hopTime = hopping ? hopTime + Time.deltaTime : 0f;
+        float height = GameTuning.Current.birdWalkHopHeight * Mathf.Abs(Mathf.Sin(Mathf.PI * GameTuning.Current.birdWalkHopRate * hopTime));
+        visualRoot.localPosition = visualBasePosition + Vector3.up * (height / transform.lossyScale.y);
     }
 
     // Flies down to a spot a little ahead of and above the baby, then keeps over it at her pace, facing the way she walks.
@@ -498,9 +688,11 @@ public class BirdController : MonoBehaviour
 
     void FlyToPerch()
     {
+        if (HoldingForTakeoff())
+            return;
         Vector3 point = perch.PerchPoint.position;
         Vector3 position = transform.position;
-        float distance = Vector3.Distance(position, point);
+        float distance = Vector3.Distance(approach, point);
         if (distance <= 0.02f)
         {
             transform.position = point;
@@ -516,8 +708,13 @@ public class BirdController : MonoBehaviour
         float stoppingSpeed = Mathf.Sqrt(2f * GameTuning.Current.birdLandingDeceleration * distance);
         currentSpeed = Mathf.MoveTowards(currentSpeed, Mathf.Min(GameTuning.Current.birdSpeed, stoppingSpeed),
             GameTuning.Current.birdAcceleration * Time.deltaTime);
-        Face(point - position);
-        transform.position = Vector3.MoveTowards(position, point, currentSpeed * Time.deltaTime);
+        // Along the straight way there, with the height easing in and out along the way.
+        approach = Vector3.MoveTowards(approach, point, currentSpeed * Time.deltaTime);
+        float way = Vector3.Distance(approachFrom, point);
+        float progress = way > 0f ? 1f - Vector3.Distance(approach, point) / way : 1f;
+        Vector3 next = new(approach.x, Mathf.LerpUnclamped(approachFrom.y, point.y, Ease(progress)), approach.z);
+        Face(next - position);
+        transform.position = next;
     }
 
     void Land()
@@ -546,7 +743,8 @@ public class BirdController : MonoBehaviour
         return axis.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(axis) : transform.rotation;
     }
 
-    void Face(Vector3 direction)
+    // Banked into the turn in the air; level on the ground.
+    void Face(Vector3 direction, bool bank = true)
     {
         direction.y = 0f;
         // Turns at a limited rate instead of snapping to point straight at wherever the target just moved to;
@@ -560,7 +758,7 @@ public class BirdController : MonoBehaviour
         // is a rightward turn (increasing yaw), so the sign here must match, not oppose, turnRate.
         float bankTarget = Mathf.Clamp(turnRate * GameTuning.Current.birdBankSensitivity,
             -GameTuning.Current.birdMaxBankAngle, GameTuning.Current.birdMaxBankAngle);
-        Bank(bankTarget);
+        Bank(bank ? bankTarget : 0f);
     }
 
     // Rolls visualRoot only; the root's own rotation stays pure yaw (OnScreen/Limit don't care about rotation,
@@ -610,13 +808,13 @@ public class BirdController : MonoBehaviour
 
     bool InMargin(float viewport) => viewport >= screenMargin && viewport <= 1f - screenMargin;
 
-    // A flat point (Y unused) moved into where the area and what the camera shows at the flying height overlap (ADR 0015).
+    // A flat point (Y unused) moved into where the area and what the camera shows at the bird's height overlap (ADR 0015).
     // The screen shows a slanted four-sided patch of that height (quarter view), wider far from the camera. Clipped by the area it stays
     // convex. Done in the world: in screen coordinates a point behind the camera's near side would come out mirrored.
     Vector3 Limit(Vector3 point)
     {
         Camera view = Camera.main;
-        var height = new Plane(Vector3.up, new Vector3(0f, altitude, 0f));
+        var height = new Plane(Vector3.up, transform.position);
         float near = screenMargin, far = 1f - screenMargin;
         Vector2[] corners = { new(near, near), new(far, near), new(far, far), new(near, far) };
         screenPatch.Clear();
