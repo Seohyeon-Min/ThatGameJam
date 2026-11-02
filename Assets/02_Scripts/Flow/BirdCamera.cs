@@ -2,10 +2,11 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// The camera follows the bird (ADR 0005), not the baby: the two are separate beings (ADR 0007). The bird also locks the zones (ADR 0014).
-// The bird flies over the area GameFlow opens to it, the road and the terrain beside it (ADR 0010, ADR 0013), and so does the point
-// the camera follows. The point is at the bird's height, so the bird sits in the middle of the screen. While a device's camera zone
-// is locked, the point stays inside that zone's area. The bird itself never leaves the screen (ADR 0003 Q3); BirdController keeps it
+// The camera follows the bird (ADR 0005). The bird also locks the zones (ADR 0014). The bird flies over the area GameFlow opens to
+// it, the road and the terrain beside it (ADR 0010, ADR 0013), and so does the point the camera follows. Alone, the bird sits in the
+// middle of the screen. Near the baby, the point eases over to between the two so both are on screen, and holds still while that
+// framing stays good; when the bird flies off, the point eases back onto it. While a device's camera zone is locked, the point stays
+// inside that zone's area. The bird itself never leaves the screen (ADR 0003 Q3); BirdController keeps it
 // there (ADR 0015). The wheel zooms, and the bird flies lower as the camera comes closer (BirdController.SetZoom).
 public class BirdCamera : MonoBehaviour
 {
@@ -29,6 +30,13 @@ public class BirdCamera : MonoBehaviour
     float zoomTime = float.MaxValue;
     // Dev tool: while set, the camera stays on this point instead of following the bird.
     Vector3? lockedPoint;
+    // Framing the bird with the baby (GameTuning camera "together" values). The weight is 0 on the bird alone to 1 framing both,
+    // eased so the camera glides between them. The held point is where the framing stays while its subject moves within the dead zone.
+    bool together;
+    float togetherWeight;
+    Vector3 held;
+    // Set by Cut: the next frame frames at once instead of easing.
+    bool snap = true;
 
     public bool IsLocked => lockedPoint.HasValue;
 
@@ -65,9 +73,10 @@ public class BirdCamera : MonoBehaviour
             lockedPoint = point;
     }
 
-    // Puts the camera on the bird at once instead of sweeping there.
+    // Puts the camera where it frames at once instead of sweeping there.
     public void Cut()
     {
+        snap = true;
         LateUpdate();
         followCamera.PreviousStateIsValid = false;
     }
@@ -92,7 +101,7 @@ public class BirdCamera : MonoBehaviour
 
         Vector3 bird = BirdController.Instance.transform.position;
         Bounds area = GameFlow.Instance.FlyArea;
-        Vector3 point = ClampXZ(bird, area.min, area.max);
+        Vector3 point = ClampXZ(Framed(bird, tuning), area.min, area.max);
         for (int i = 0; i < zones.Length; i++)
         {
             CameraZone zone = zones[i];
@@ -101,10 +110,38 @@ public class BirdCamera : MonoBehaviour
             point = Vector3.Lerp(point, ClampXZ(point, zone.AreaMin, zone.AreaMax), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
         }
         if (lockedPoint.HasValue)
-            point = lockedPoint.Value;
-        point.y = bird.y;
+            point = new Vector3(lockedPoint.Value.x, bird.y, lockedPoint.Value.z);
         transform.position = point;
         BirdController.Instance.SetArea(area);
+    }
+
+    // The bird alone, or between the bird and the baby when they are close. Distances scale with the zoom, as the view does.
+    // The point never lags further than cameraTogetherMaxBirdScreen of the view from the bird, whatever the window's shape, so the
+    // bird can't get stuck at the screen's edge (BirdController.Limit) while the camera holds on the baby: flying on, it carries the
+    // camera along until it is far enough to end the framing. That limit shrinks with the weight, so leaving the framing, the camera closes in on the bird at a pace set
+    // by the ease time rather than by how far the bird has flown meanwhile.
+    Vector3 Framed(Vector3 bird, GameTuning tuning)
+    {
+        Vector3 baby = Baby.Instance.transform.position;
+        float distance = Vector2.Distance(new Vector2(bird.x, bird.z), new Vector2(baby.x, baby.z)) / zoom;
+        together = distance <= (together ? tuning.cameraTogetherExitDistance : tuning.cameraTogetherEnterDistance);
+        togetherWeight = snap
+            ? (together ? 1f : 0f)
+            : Mathf.MoveTowards(togetherWeight, together ? 1f : 0f, Time.deltaTime / tuning.cameraTogetherEaseTime);
+        float weight = Mathf.SmoothStep(0f, 1f, togetherWeight);
+        Vector3 subject = Vector3.Lerp(bird, Vector3.Lerp(bird, baby, tuning.cameraTogetherBabyShare), weight);
+        if (snap)
+            held = subject;
+        snap = false;
+        held = subject + Vector3.ClampMagnitude(held - subject, tuning.cameraTogetherDeadZone * zoom * weight);
+        // The camera looks at the point from distance d. A bird r from the point, in any direction (nearer the camera shows larger),
+        // is at most r / sqrt(d² - r²) off the line of sight in tangent terms. Keeping that within the fraction k of the shorter
+        // half view gives r <= d k / sqrt(1 + k²).
+        LensSettings lens = followCamera.Lens;
+        float k = tuning.cameraTogetherMaxBirdScreen * Mathf.Tan(lens.FieldOfView * 0.5f * Mathf.Deg2Rad) * Mathf.Min(1f, lens.Aspect);
+        float maxOffset = follow.FollowOffset.magnitude * k / Mathf.Sqrt(1f + k * k);
+        held = bird + Vector3.ClampMagnitude(held - bird, maxOffset * weight);
+        return held;
     }
 
     static Vector3 ClampXZ(Vector3 point, Vector3 min, Vector3 max) =>

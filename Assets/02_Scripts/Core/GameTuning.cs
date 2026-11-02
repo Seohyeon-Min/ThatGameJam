@@ -105,6 +105,22 @@ public class GameTuning : ScriptableObject
     // Seconds one wheel tick's zoom takes, along motionCurve.
     public float cameraZoomDuration = 0.6f;
 
+    [Header("Camera framing the bird with the baby")]
+    // Within this far (XZ, at zoom 1) of the baby, the camera eases over to frame both; past the exit distance it eases back to
+    // the bird alone. The gap between the two distances keeps it from flipping back and forth at one distance.
+    public float cameraTogetherEnterDistance = 7f;
+    public float cameraTogetherExitDistance = 10f;
+    // The bird stays within this fraction of half the screen's shorter side from the screen's centre while both are framed, so it
+    // stays inside the screen margin BirdController keeps it in, also in a narrow browser window.
+    public float cameraTogetherMaxBirdScreen = 0.8f;
+    // Seconds the camera takes to ease from the bird alone to both, or back.
+    public float cameraTogetherEaseTime = 2f;
+    // Where between the bird (0) and the baby (1) the framed point lies.
+    public float cameraTogetherBabyShare = 0.5f;
+    // While framing both, the camera holds still until the framed point has moved this far (at zoom 1), then follows just
+    // enough to keep it this close. Small moves of the bird don't move the camera.
+    public float cameraTogetherDeadZone = 1.5f;
+
     [Header("Easing")]
     // 0 to 1 over 0 to 1. The zoom, the bird's changes of height and its way up or down to a branch all follow it.
     public AnimationCurve motionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
