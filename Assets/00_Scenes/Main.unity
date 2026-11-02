@@ -31715,7 +31715,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2051639667}
+  m_Father: {fileID: 1728537429}
   m_LocalEulerAnglesHint: {x: -4.853, y: -222.465, z: 0.117}
 --- !u!114 &282415266
 MonoBehaviour:
@@ -88026,7 +88026,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 8e50e38ba7d06d24fa630691e9b6b322, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 081b5039281c50841a1b951ab3c624fc, type: 2}
 --- !u!4 &880556594
 Transform:
   m_ObjectHideFlags: 0
@@ -95289,39 +95289,60 @@ MonoBehaviour:
     fullSunIntensity: 1
     lightColourInfluence: 0
     ambientColourInfluence: 0
-    gouache: 1
-    gouacheShadeDepth: 1.054
-    gouacheShadeSaturation: 1.49
-    gouacheTerminator: 0.5
+    gouache: 0.235
+    gouacheShadeDepth: 0.937
+    gouacheShadeSaturation: 1.1
+    gouacheTerminator: 0.419
     gouacheTransitionWidth: 0.03
     gouacheTransitionColour: {r: 1, g: 0.8, b: 0.7, a: 1}
     gouacheTransitionTint: 0.212
     gouacheHighlight: 0.834
     gouacheHighlightColour: {r: 0.94, g: 0.97, b: 1, a: 1}
-    gouacheDryBrush: 0.007
-    gouacheRoughEdge: 5.6
-    gouacheBrushGrain: 0.196
-    gouacheRimGlow: 0.42
-    gouacheBrushSize: 0.015
-    gouacheStrokeColour: 0.16
-    gouacheStrokeSize: 0.1
-    gouacheStrokeOnObjects: 0.62
+    gouacheDryBrush: 0.251
+    gouacheRoughEdge: 1
+    gouacheBrushGrain: 0.15
+    gouacheRimGlow: 0.35
+    gouacheBrushSize: 0.002
+    gouacheStrokeColour: 0
+    gouacheStrokeSize: 1.2
+    gouacheStrokeOnObjects: 0.5
     gouacheStrokeLightA: {r: 1, g: 0.78, b: 0.95, a: 1}
     gouacheStrokeLightB: {r: 0.72, g: 0.92, b: 1, a: 1}
     gouacheStrokeShadeA: {r: 0.85, g: 0.55, b: 1, a: 1}
     gouacheStrokeShadeB: {r: 0.5, g: 0.62, b: 1, a: 1}
-    characterShadeSaturation: 1.58
+    characterShadeSaturation: 2.9
     characterBrushGrain: 0
     characterDryBrush: 0.04
-    characterShadeDepth: 0.7
-    characterShadeColour: {r: 0.6434936, g: 0.5331648, b: 0.86415094, a: 1}
-    characterShadeHueTurn: 0.43
-    characterClearTransition: 0.5
+    characterBrushSize: 0.003
+    characterShadeDepth: 0.47
+    characterShadeColour: {r: 0.72, g: 0.66, b: 0.92, a: 1}
+    characterShadeHueTurn: 0.5
+    characterClearTransition: 1
     characterSunPoolGlow: 0.6
-    washStrength: 0.58
-    washColour: {r: 0.5557583, g: 0.6173487, b: 0.6509434, a: 1}
-    washReserve: 0.16
-    washFloorReserve: 0.15
+    characterPastelStrokes: 0
+    characterPastelSize: 0.6
+    characterPastelLength: 12
+    characterPastelAngle: 35
+    characterPastelSpread: 0.35
+    characterPastelColour: {r: 1, g: 0.5, b: 0.55, a: 1}
+    characterPastelColourAmount: 0.5
+    characterPastelColourSize: 0.3
+    characterBrushDabs: 0
+    characterBrushDabSize: 3
+    characterBrushDabAmount: 0.6
+    characterBrushDabStrength: 0.9
+    characterBrushDabAngle: 30
+    characterBrushDabHue: 8
+    characterBrushDabValue: 0.1
+    characterBrushDabSaturation: 0.2
+    characterBrushDabStrongShare: 0.12
+    characterBrushDabWeak: 0.3
+    characterBrushDabLightInfluence: 1
+    characterBrushDabLightReach: 0.4
+    washStrength: 0.299
+    washColour: {r: 0.5588287, g: 0.6749983, b: 0.735849, a: 1}
+    washReserve: 0.54
+    washFloorReserve: 0.323
     formLight: {fileID: 1115203713}
     lightYellowPercent: 13.1
     lightYellowWidthPercent: 7.8
@@ -95330,16 +95351,16 @@ MonoBehaviour:
     lightPastelChips: 0.232
     pastelShadows: 1
     shadowSaturation: 0.13
-    shadowDarkening: 0.145
+    shadowDarkening: 0.057
     shadowHueFrom: 201
     shadowHueTo: 225
-    darkPigmentBluePercent: 78
-    shadowDepth: 1.5
+    darkPigmentBluePercent: 61
+    shadowDepth: 1.412
     receiveShadows: 1
     shadowEdgePigment: 0.421
     shadowRaggedness: 0.291
     shadowUnevenness: 0.795
-    sceneColour: 0.09
+    sceneColour: 0.185
     sceneColourSize: 22
     lightTintA: {r: 1, g: 0.95, b: 0.78, a: 1}
     lightTintB: {r: 1, g: 0.86, b: 0.88, a: 1}
@@ -95395,6 +95416,7 @@ MonoBehaviour:
   looks:
   - {fileID: 11400000, guid: d791963ee63cfd44093cf4d47e8298ca, type: 2}
   - {fileID: 11400000, guid: bece40bb9aafec94d86a1fd4d88566c4, type: 2}
+  - {fileID: 11400000, guid: cf830638b1d36aa459bba599662035fd, type: 2}
   blendSeconds: 2
 --- !u!1 &962538658 stripped
 GameObject:
@@ -101221,7 +101243,7 @@ MonoBehaviour:
   eyeSparkles:
   - {fileID: 285702247}
   - {fileID: 1975008740}
-  eyeSparkleFrame: 45
+  eyeSparkleFrame: 222
   lieDownClip: {fileID: -1042312109918624011, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
   jumpClip: {fileID: -3957281064412759843, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
 --- !u!136 &1018082307
@@ -109972,13 +109994,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1115203712}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.074508905, y: 0.91317946, z: -0.19410227, w: 0.35053685}
+  m_LocalRotation: {x: 0.043340743, y: 0.95581824, z: -0.18406156, w: 0.2250653}
   m_LocalPosition: {x: -49.44674, y: 3.95, z: 63.4159}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 308493343}
-  m_LocalEulerAnglesHint: {x: 24, y: 138, z: 0}
+  m_LocalEulerAnglesHint: {x: 21.8, y: 153.5, z: 0}
 --- !u!114 &1115203714
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -111816,7 +111838,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2051639667}
+  m_Father: {fileID: 1728537429}
   m_LocalEulerAnglesHint: {x: 10.401, y: -190.205, z: -0.783}
 --- !u!1001 &1129759884
 PrefabInstance:
@@ -180239,7 +180261,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 282415265}
+  - {fileID: 1129656075}
   m_Father: {fileID: 2051639667}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1728537430
@@ -180256,7 +180280,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Cutscene
   startDelayFrames: 30
   look: {fileID: 11400000, guid: a59daa4f15905b6449b1abe493fb2067, type: 2}
-  lookBlendSeconds: 1
 --- !u!320 &1728537431
 PlayableDirector:
   m_ObjectHideFlags: 0
@@ -194338,7 +194361,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1833789664
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207099,8 +207122,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1945438201}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5056581, y: -0.32027662, z: 0.20945047, w: 0.77321625}
-  m_LocalPosition: {x: 2.3307114, y: 29.893103, z: -10.514336}
+  m_LocalRotation: {x: 0.27984816, y: -0.3647052, z: 0.1159169, w: 0.8804763}
+  m_LocalPosition: {x: -39.44674, y: 12.45, z: 53.4159}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -217915,8 +217938,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 282415265}
-  - {fileID: 1129656075}
   - {fileID: 1728537429}
   - {fileID: 489713377}
   m_Father: {fileID: 0}
