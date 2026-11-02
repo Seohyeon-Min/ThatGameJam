@@ -10,6 +10,8 @@ public class GameFlow : MonoBehaviour
     [SerializeField] Stage[] stages;
     [SerializeField] BirdCamera birdCamera;
     [SerializeField] Season season;
+    [Tooltip("Plays when the game starts. Empty or turned off: the game just starts.")]
+    [SerializeField] IntroSequence intro;
 
     int current;
     // The last stage has ended; nothing more happens (the ending is not built yet).
@@ -45,6 +47,22 @@ public class GameFlow : MonoBehaviour
         BirdController.Instance.Teleport(first.birdStart.position);
         BirdController.Instance.SetAltitude(first.birdAltitude, true);
         BeginStage(0);
+        birdCamera.Cut();
+        if (intro != null && intro.isActiveAndEnabled)
+        {
+            // The baby sleeps on, however long the player stays up there.
+            Baby.Instance.HoldAsleep();
+            intro.Play();
+        }
+    }
+
+    // The intro has ended: the bird is at the first stage's start, and the baby can wake from here on.
+    public void FinishIntro()
+    {
+        Stage first = stages[0];
+        BirdController.Instance.Teleport(first.birdStart.position);
+        BirdController.Instance.SetAltitude(first.birdAltitude, true);
+        Baby.Instance.Sleep(first.route);
         birdCamera.Cut();
     }
 

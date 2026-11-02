@@ -44,6 +44,7 @@ public class Baby : CryListener
     // Crossing a balance beam (a LeaningLog blocker, or a route point marked BalanceBeamStart):
     // BalanceWalk plays instead of Walk, and the baby ignores curious pauses/cries until BalanceBeamEnd.
     bool onBalanceBeam;
+    bool gettingUp;
     float curiousPauseCooldown;
     // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
     float noiseSeed;
@@ -72,10 +73,10 @@ public class Baby : CryListener
     }
 
     // Cold tremor on the model only (never on transform, which drives movement/arrival checks elsewhere).
-    // Off once asleep/resting: curled up out of the wind by then.
+    // Off once asleep/resting: curled up out of the wind by then. Off while getting up too: the animation carries it alone.
     void Update()
     {
-        if (State == BabyState.Sleeping || State == BabyState.Resting)
+        if (State == BabyState.Sleeping || State == BabyState.Resting || gettingUp)
         {
             animator.transform.localRotation = modelBaseRotation;
             return;
@@ -157,6 +158,7 @@ public class Baby : CryListener
     public void RestAt(Transform spot)
     {
         StopAllCoroutines();
+        gettingUp = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         // Already lying: no lying-down animation after the move.
@@ -174,6 +176,7 @@ public class Baby : CryListener
     public void LieDownAt(Transform spot)
     {
         StopAllCoroutines();
+        gettingUp = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         CurrentBlocker = null;
@@ -197,10 +200,14 @@ public class Baby : CryListener
         ReachedRest?.Invoke();
     }
 
+    // Stays asleep with its wake timer stopped, until Sleep starts it.
+    public void HoldAsleep() => wakeTimer.ResetTimer();
+
     // Asleep where it is, ready to wake and walk the route. The next stage starts this way where the baby fell asleep (ADR 0010).
     public void Sleep(BabyRoute route)
     {
         StopAllCoroutines();
+        gettingUp = false;
         lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
@@ -230,7 +237,9 @@ public class Baby : CryListener
             cutscene.Play();
         GameTuning tuning = GameTuning.Current;
         animator.SetBool(AsleepParam, false);
+        gettingUp = true;
         yield return new WaitForSeconds(getUpClip.length);
+        gettingUp = false;
         if (byBird)
             yield return LookUp(tuning.babyLookUpDuration);
         else

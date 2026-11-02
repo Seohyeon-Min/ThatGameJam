@@ -15,6 +15,8 @@ public class BirdController : MonoBehaviour
     static readonly int PerchedParam = Animator.StringToHash("Perched");
     static readonly int MovingParam = Animator.StringToHash("Moving");
     static readonly int RefuseParam = Animator.StringToHash("Refuse");
+    // In the sky, going back on screen: how much of the camera's speed it may lose.
+    const float SkyMostFallBehind = 0.7f;
 
     [SerializeField] Animator animator;
     [SerializeField] ClickMarker clickMarker;
@@ -28,8 +30,16 @@ public class BirdController : MonoBehaviour
     [SerializeField] UnityEvent onCry;
 
     enum State { Flying, ToPerch, Landing, Perched }
+    // Who moves the bird. Sky and Scripted are for the intro (IntroSequence): Sky is clicks on the flying height, with no perches or
+    // area, and Scripted is MoveScripted only.
+    enum Control { Game, Sky, Scripted }
 
     public static BirdController Instance { get; private set; }
+
+    // While flying by clicks in the sky: how fast the camera is travelling, so the bird keeps its place on screen and is carried along.
+    public Vector3 SkyDrift { get; set; }
+    // The way the bird faces in the sky, flat. It doesn't turn from this.
+    public Vector3 SkyForward { get; set; } = Vector3.forward;
 
     public bool IsPerched => state == State.Perched;
     // Held over the walking baby, keeping the snow off her (SnowShelter).
@@ -45,6 +55,9 @@ public class BirdController : MonoBehaviour
     int groundMask;
     int interactableLayer;
     State state;
+    Control control;
+    // Placeholder for a dive animation: tips visualRoot forward, on top of the bank.
+    float bodyPitch;
     // Horizontal target while flying. Y is unused; the bird's height follows altitude.
     Vector3 target;
     float altitude;
@@ -148,14 +161,72 @@ public class BirdController : MonoBehaviour
     // Where it flies, in X and Z. It also stays on screen, and refuses at the area's far Z end.
     public void SetArea(Bounds area)
     {
+        if (control != Control.Game)
+            return;
         bounds = area;
         if (state != State.Flying && !OnScreen(perch.PerchPoint.position))
             LeavePerch();
     }
 
+    // Intro: nothing moves the bird but MoveScripted.
+    public void BeginScripted() => control = Control.Scripted;
+
+    // Intro: the player flies the bird by clicking, on the screen of a camera that may be travelling (SkyDrift).
+    public void BeginSkyFlight()
+    {
+        control = Control.Sky;
+        bounds = new Bounds(Vector3.zero, Vector3.positiveInfinity);
+        following = false;
+        currentSpeed = 0f;
+        target = transform.position;
+    }
+
+    // Back to the player's normal control. BirdCamera gives the area again.
+    public void EndIntro()
+    {
+        control = Control.Game;
+        SkyDrift = Vector3.zero;
+        bodyPitch = 0f;
+    }
+
+    public void MoveScripted(Vector3 position, float pitch = 0f)
+    {
+        bodyPitch = pitch;
+        Face(position - transform.position);
+        transform.position = position;
+        animator.SetBool(MovingParam, true);
+        animator.SetBool(PerchedParam, false);
+    }
+
+    // MoveScripted, but facing ahead as in FlyAhead.
+    public void MoveScriptedAhead(Vector3 position)
+    {
+        bodyPitch = 0f;
+        FaceAhead(position - transform.position);
+        transform.position = position;
+        animator.SetBool(MovingParam, true);
+        animator.SetBool(PerchedParam, false);
+    }
+
+    public void SnapFacing(Vector3 direction)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+            return;
+        facingYaw = Quaternion.LookRotation(direction).eulerAngles.y;
+        transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
+    }
 
     void Update()
     {
+        if (control == Control.Scripted)
+            return;
+        if (control == Control.Sky)
+        {
+            FlyInSky();
+            return;
+        }
+
         Ray ray = Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>());
         bool hasHit = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
         Perchable hovered = hasHit ? PerchableAt(hit) : null;
@@ -202,6 +273,66 @@ public class BirdController : MonoBehaviour
         idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
         if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
             PerchNearby(GameTuning.Current.birdIdlePerchRadius);
+    }
+
+    // Click and hold as in the game, but on the flying height: nothing is down here to hit, and the ground is far below the bird.
+    void FlyInSky()
+    {
+        Vector2 pointer = pointAction.ReadValue<Vector2>();
+        bool pressed = moveAction.WasPressedThisFrame() && !DevTools.Covers(pointer);
+        if (!moveAction.IsPressed())
+            following = false;
+        var height = new Plane(Vector3.up, new Vector3(0f, altitude, 0f));
+        Ray ray = Camera.main.ScreenPointToRay(pointer);
+        if ((pressed || following) && height.Raycast(ray, out float distance))
+        {
+            target = ray.GetPoint(distance);
+            if (pressed)
+            {
+                following = true;
+                clickMarker.Show(target);
+            }
+        }
+        else
+            target += SkyDrift * Time.deltaTime;
+
+        transform.position += SkyDrift * Time.deltaTime;
+        FlyAhead();
+        animator.SetBool(MovingParam, true);
+        animator.SetBool(PerchedParam, false);
+    }
+
+    // Moves toward the target on screen while always facing ahead: sideways by rolling, and backward only by falling behind the camera.
+    void FlyAhead()
+    {
+        Vector3 position = transform.position;
+        var flat = new Vector3(position.x, 0f, position.z);
+        Vector3 flatTarget = Limit(new Vector3(target.x, 0f, target.z));
+        float stoppingSpeed = Mathf.Sqrt(2f * GameTuning.Current.birdLandingDeceleration * Vector3.Distance(flat, flatTarget));
+        currentSpeed = Mathf.MoveTowards(currentSpeed, Mathf.Min(GameTuning.Current.birdSpeed, stoppingSpeed),
+            GameTuning.Current.birdAcceleration * Time.deltaTime);
+        Vector3 step = Vector3.MoveTowards(flat, flatTarget, currentSpeed * Time.deltaTime) - flat;
+
+        // It only ever slows down, and keeps some of the camera's speed: it never flies backward through the air.
+        float slowest = -SkyDrift.magnitude * SkyMostFallBehind * Time.deltaTime;
+        float along = Vector3.Dot(step, SkyForward);
+        if (along < slowest)
+            step += SkyForward * (slowest - along);
+
+        float y = Mathf.MoveTowards(position.y, altitude, GameTuning.Current.birdAltitudeSpeed * Time.deltaTime);
+        transform.position = new Vector3(position.x + step.x, y, position.z + step.z);
+        FaceAhead(step);
+    }
+
+    // Holds the heading ahead, with the wing on the side it is sliding toward held low.
+    void FaceAhead(Vector3 step)
+    {
+        step.y = 0f;
+        facingYaw = Mathf.MoveTowardsAngle(facingYaw, Quaternion.LookRotation(SkyForward).eulerAngles.y,
+            GameTuning.Current.birdTurnSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
+        float sideSpeed = Vector3.Dot(step, Vector3.Cross(Vector3.up, SkyForward)) / Mathf.Max(Time.deltaTime, 0.0001f);
+        Bank(Mathf.Clamp(sideSpeed / (GameTuning.Current.birdSpeed * 0.5f), -1f, 1f) * GameTuning.Current.birdMaxBankAngle);
     }
 
     // False if no branch is on screen (within maxDistance world units, when given).
@@ -438,7 +569,7 @@ public class BirdController : MonoBehaviour
     {
         bankAngle = Mathf.MoveTowards(bankAngle, targetAngle, GameTuning.Current.birdBankSpeed * Time.deltaTime);
         if (visualRoot != null)
-            visualRoot.localRotation = visualBaseRotation * Quaternion.Euler(0f, 0f, bankAngle);
+            visualRoot.localRotation = visualBaseRotation * Quaternion.Euler(bodyPitch, 0f, bankAngle);
     }
 
     void Cry()

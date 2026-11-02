@@ -11,7 +11,8 @@ Material:
   m_Shader: {fileID: 4800000, guid: 1e9b512877cd5804da930abaa62cc45b, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _ALPHATEST_ON
   m_InvalidKeywords:
   - _HASPATTERN_ON
   - _LEAVEPAPER_ON
@@ -40,12 +41,16 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaClip: 0
+    - _AlphaClip: 1
     - _Birch: 0
     - _BirchDarkness: 0.85
     - _BirchLength: 0.28
     - _BirchMarks: 2.5
     - _BirchThickness: 0.16
+    - _CameraFade: 0
+    - _CameraFadeDistance: 2
+    - _CameraFadeExempt: 0
+    - _CameraFadeRange: 1.5
     - _Character: 128
     - _Cull: 2
     - _Cutoff: 0.5
