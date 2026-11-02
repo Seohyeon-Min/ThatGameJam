@@ -268,9 +268,9 @@ GameFlow ──시작──▶ Stage ──▶ Baby (잠든 채 배치)
 - `Main` 의 `Stage3`. 빌더는 `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. 디렉터의 그림(갈림길 4개)을 출발-도착 선이 +Z 가 되게 돌려 놓았다. 출발 z 40.5(안개 경계), 도착 z 77.1(빛나는 공간).
 - `FogMaze`(`PathBlocker`): 소녀가 안개 경계의 `StopPoint` 에 오면 갈림길을 차례로 이끈다. 갈림길마다 토끼가 길을 알려 줬으면 맞는 길로 간다. 아니면 `fogForkWaitTime`(3 초) 서 있다가 50:50 으로 고른다. 막다른 길이면 벽 1 m 앞까지 갔다가 `fogWallPauseTime`(1 초) 서고 돌아온다. 자연 해결 타이머는 없다.
 - `FogFork`: 갈림길 하나. 맞는 길과 막다른 길의 점 목록, 토끼.
-- `FogRabbit`(`CryListener`, 프리팹 `Assets/03_Prefabs/Stage3/FogRabbit.prefab`): 새의 울음이 닿으면(6 m) 맞는 길로 뛰어가 사라진다. 소녀가 오기 전에 울어도 그 갈림길은 알려 준 것으로 친다.
-- 안개: `FogField` 하나가 맵 전체를 덮는다. `density` 0.5 로 옅다. `FogMaze` 의 체크박스 `birdClearsFog`(끔), `girlClearsFog`(켬)로 누가 안개를 걷는지 정한다.
-- 벽은 막다른 길 끝을 가로지르는 나무 3 그루다. 길 사이는 `MazeTrees`(길 중심에서 2.4 m 밖) 숲이다. 스테이지 뒤 숲(`TreesAhead`)은 z 80 부터로 옮겼다.
+- `FogRabbit`(`CryListener`, 프리팹 `Assets/03_Prefabs/Stage3/FogRabbit.prefab`): 새가 토끼에서 3.5 m 안(수평 거리, 새의 높이와 무관)에서 울면 맞는 길로 뛰어가 사라진다. 소녀가 오기 전에 울어도 그 갈림길은 알려 준 것으로 친다.
+- 안개: `FogField` 하나가 맵 전체를 덮는다. 7 장(0.2 ~ 2.6 m), `density` 0.22 로 옅다. `FogMaze` 의 체크박스 `birdClearsFog`(끔), `girlClearsFog`(켬)로 누가 안개를 걷는지 정한다.
+- 벽은 막다른 길 끝을 가로지르는 나무 5 그루다. 모든 길 양옆에 길 중심에서 1.9 m 떨어진 나무 줄이 있고, 그 뒤는 길 중심에서 3.4 m 밖의 듬성한 숲(`MazeTrees`)이다. 스테이지 뒤 숲(`TreesAhead`)은 z 80 부터로 옮겼다.
 
 **예전 설계 (2026-10-27)**
 

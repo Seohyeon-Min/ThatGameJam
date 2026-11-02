@@ -9,7 +9,8 @@ public class FogRabbit : CryListener
     static readonly int HopState = Animator.StringToHash("Hop");
 
     [SerializeField] Animator animator;
-    [SerializeField] float cryRadius = 6f;
+    // The bird has to cry about at the fork: flat distance, so its flying height does not matter.
+    [SerializeField] float answerRadius = 3.5f;
     [SerializeField] float hopSpeed = 2f;
     // Where it hops, in order. It disappears at the last one.
     [SerializeField] Transform[] runPoints;
@@ -17,14 +18,17 @@ public class FogRabbit : CryListener
     // The cry has reached it, so the girl knows the right way at this fork, also if it is already gone.
     public bool HasRun { get; private set; }
 
-    protected override float CryRadius => cryRadius;
+    // Every cry reaches OnCry, which checks the flat distance itself.
+    protected override float CryRadius => Mathf.Infinity;
 
     // The model's controller starts asleep, as the rabbit family uses it.
     void Awake() => animator.Play(SitIdleState, 0, 0f);
 
     protected override void OnCry(Vector3 origin)
     {
-        if (HasRun)
+        Vector3 offset = origin - transform.position;
+        offset.y = 0f;
+        if (HasRun || offset.sqrMagnitude > answerRadius * answerRadius)
             return;
         HasRun = true;
         StartCoroutine(Run());

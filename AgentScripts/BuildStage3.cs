@@ -21,11 +21,16 @@ public static class BuildStage3
         "Assets/03_Prefabs/Trees/Tree_1_Bare.prefab", "Assets/03_Prefabs/Trees/Tree_2_Bare.prefab", "Assets/03_Prefabs/Trees/Tree_3_Bare.prefab",
     };
 
-    // Light fog: the rabbits and the paths show through it.
-    const float FogDensity = 0.5f;
-    // Trees keep this far from the middle of a path.
-    const float PathClearance = 2.4f;
-    const float MazeTreeSpacing = 2f;
+    // Light fog: the rabbits and the paths show through it. Many thin layers up to about 2.6 m, so it reads as fog, not a ground sheet.
+    const float FogDensity = 0.22f;
+    const int FogLayers = 7;
+    const float FogLayerStep = 0.4f;
+    // Every path is lined on both sides with a row of trees this far from its middle, so the forks read clearly.
+    const float EdgeOffset = 1.9f;
+    const float EdgeStep = 1.5f;
+    // The forest between the paths keeps this far from the middle of a path, so the edge rows stand out.
+    const float PathClearance = 3.4f;
+    const float MazeTreeSpacing = 2.4f;
     // The girl turns back this far before a wall.
     const float WallStop = 1f;
     const float StageEndZ = 80f;
@@ -117,13 +122,13 @@ public static class BuildStage3
         var size = new Vector2(28f, 42f);
         GameObject root = Child(parent, "Fog", center);
         var material = AssetDatabase.LoadAssetAtPath<Material>(FogMaterialPath);
-        var layers = new Renderer[4];
+        var layers = new Renderer[FogLayers];
         for (int i = 0; i < layers.Length; i++)
         {
             GameObject layer = GameObject.CreatePrimitive(PrimitiveType.Quad);
             layer.name = $"FogLayer_{i}";
             layer.transform.SetParent(root.transform);
-            layer.transform.SetPositionAndRotation(center + Vector3.up * (0.15f + 0.35f * i), Quaternion.Euler(90f, 0f, 0f));
+            layer.transform.SetPositionAndRotation(center + Vector3.up * (0.2f + FogLayerStep * i), Quaternion.Euler(90f, 0f, 0f));
             layer.transform.localScale = new Vector3(size.x, size.y, 1f);
             UnityEngine.Object.DestroyImmediate(layer.GetComponent<Collider>());
             layers[i] = layer.GetComponent<Renderer>();
@@ -174,16 +179,16 @@ public static class BuildStage3
         return fork;
     }
 
-    // The wall closing a dead end: three trees across its end. Trees for now; maybe rocks later (ADR 0027).
+    // The wall closing a dead end: five trees close together across its end. Trees for now; maybe rocks later (ADR 0027).
     static void WallTrees(GameObject parent, Vector3 wall, Vector3 back, int index)
     {
         GameObject root = Child(parent, "Wall", wall);
         Vector3 across = Vector3.Cross(Vector3.up, back);
         GameObject[] prefabs = TreePrefabs();
-        for (int i = -1; i <= 1; i++)
+        for (int i = -2; i <= 2; i++)
         {
-            var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[(index + i + 3) % prefabs.Length], root.transform);
-            tree.transform.SetPositionAndRotation(wall + across * (1.3f * i) - back * (0.4f * Mathf.Abs(i)), Quaternion.Euler(0f, 90f * (index + i), 0f));
+            var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[(index + i + 6) % prefabs.Length], root.transform);
+            tree.transform.SetPositionAndRotation(wall + across * (0.9f * i) + back * (0.25f * Mathf.Abs(i)), Quaternion.Euler(0f, 90f * (index + i), 0f));
         }
     }
 
@@ -199,49 +204,77 @@ public static class BuildStage3
         return path[^1];
     }
 
-    // The forest between the paths: a jittered grid with every tree kept off the paths and away from the walls and the sunlit spot.
+    // The forest between the paths. Every path is lined on both sides with a row of trees; behind the rows a looser jittered grid
+    // fills the rest, kept off the paths and away from the walls and the sunlit spot.
     static int Trees(GameObject parent)
     {
         GameObject root = Child(parent, "MazeTrees", Vector3.zero);
-        var segments = new List<(Vector3, Vector3)>();
-        void AddPath(IList<Vector3> path)
+        // Where the girl walks: the dead ends only up to where she turns back.
+        var walked = new List<(Vector3, Vector3)>();
+        // What gets lined with trees: the dead ends all the way to their walls.
+        var lined = new List<(Vector3, Vector3)>();
+        void AddPath(List<(Vector3, Vector3)> list, IList<Vector3> path)
         {
             for (int i = 1; i < path.Count; i++)
-                segments.Add((path[i - 1], path[i]));
+                list.Add((path[i - 1], path[i]));
         }
-        AddPath(new[] { Entry, Edge, J1 });
-        foreach (Vector3[] path in RightWays)
-            AddPath(path);
+        foreach (var list in new[] { walked, lined })
+        {
+            AddPath(list, new[] { Entry, Edge, J1 });
+            foreach (Vector3[] path in RightWays)
+                AddPath(list, path);
+        }
         foreach (Vector3[] path in DeadEnds)
         {
             Vector3 wall = path[^1];
-            AddPath(path.Take(path.Length - 1).Append(wall + (path[^2] - wall).normalized * WallStop).ToArray());
+            AddPath(walked, path.Take(path.Length - 1).Append(wall + (path[^2] - wall).normalized * WallStop).ToArray());
+            AddPath(lined, path);
         }
         var walls = DeadEnds.Select(path => path[^1]).ToArray();
+        // The wall trees stand about 1.8 m to either side of a wall point.
+        var placed = new List<Vector3>(walls);
 
         GameObject[] prefabs = TreePrefabs();
         var random = new System.Random(27);
-        int count = 0;
+        bool Free(Vector3 position, float clearance, float gap) =>
+            !walked.Any(s => DistanceToSegment(position, s.Item1, s.Item2) < clearance)
+            && !walls.Any(w => Vector3.Distance(position, w) < 1.6f)
+            && Vector3.Distance(position, Goal) >= 4f
+            && !placed.Any(p => Vector3.Distance(position, p) < gap);
+        void Plant(Vector3 position)
+        {
+            int kind = random.Next(prefabs.Length);
+            var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[kind], root.transform);
+            tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
+            tree.transform.localScale = Vector3.one * Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
+            placed.Add(position);
+        }
+
+        foreach ((Vector3 a, Vector3 b) in lined)
+        {
+            Vector3 along = (b - a).normalized;
+            Vector3 side = Vector3.Cross(Vector3.up, along);
+            float length = Vector3.Distance(a, b);
+            for (float d = 0f; d <= length; d += EdgeStep)
+                foreach (float sign in new[] { -1f, 1f })
+                {
+                    Vector3 position = a + along * d + side * (sign * EdgeOffset) + Jitter(random, 0.15f);
+                    if (Free(position, EdgeOffset - 0.3f, 1f))
+                        Plant(position);
+                }
+        }
         for (float x = -14f; x <= 16f; x += MazeTreeSpacing)
             for (float z = 41f; z <= StageEndZ; z += MazeTreeSpacing)
             {
-                var position = new Vector3(x + Jitter(random), 0f, z + Jitter(random));
-                int kind = random.Next(prefabs.Length);
-                float yaw = (float)random.NextDouble() * 360f;
-                float scale = Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
-                if (segments.Any(s => DistanceToSegment(position, s.Item1, s.Item2) < PathClearance)
-                    || walls.Any(w => Vector3.Distance(position, w) < 1.6f)
-                    || Vector3.Distance(position, Goal) < 4f)
-                    continue;
-                var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[kind], root.transform);
-                tree.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
-                tree.transform.localScale = Vector3.one * scale;
-                count++;
+                Vector3 position = new Vector3(x, 0f, z) + Jitter(random, MazeTreeSpacing * 0.3f);
+                if (Free(position, PathClearance, 1.2f))
+                    Plant(position);
             }
-        return count;
+        return placed.Count - walls.Length;
     }
 
-    static float Jitter(System.Random random) => ((float)random.NextDouble() * 2f - 1f) * MazeTreeSpacing * 0.3f;
+    static Vector3 Jitter(System.Random random, float amount) =>
+        new(((float)random.NextDouble() * 2f - 1f) * amount, 0f, ((float)random.NextDouble() * 2f - 1f) * amount);
 
     static float DistanceToSegment(Vector3 point, Vector3 a, Vector3 b)
     {
