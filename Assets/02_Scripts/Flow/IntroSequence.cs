@@ -49,7 +49,6 @@ public class IntroSequence : MonoBehaviour
     {
         running = true;
         SetAlpha(whiteFade, 0f);
-        IntroMusic.Play();
         StartCoroutine(Run());
     }
 
@@ -76,7 +75,8 @@ public class IntroSequence : MonoBehaviour
         Vector2 click = Mouse.current.position.ReadValue();
         StartCoroutine(FadeOutTitle());
         StartCoroutine(MoveCamera());
-        IntroMusic.Next();
+        // The bird appears, flying up into view from below the screen.
+        IntroSfx.PlayHighPitch();
         yield return FlyIn(click);
 
         bird.BeginSkyFlight();
@@ -97,7 +97,7 @@ public class IntroSequence : MonoBehaviour
 
         running = false;
         diveCamera.gameObject.SetActive(true);
-        IntroMusic.Next();
+        IntroSfx.PlayDive();
         yield return Dive();
         yield return StartGame();
     }
@@ -212,7 +212,6 @@ public class IntroSequence : MonoBehaviour
         title.gameObject.SetActive(false);
         skyCamera.gameObject.SetActive(false);
         diveCamera.gameObject.SetActive(false);
-        IntroMusic.Next();
         BirdController.Instance.EndIntro();
         GameFlow.Instance.FinishIntro();
 

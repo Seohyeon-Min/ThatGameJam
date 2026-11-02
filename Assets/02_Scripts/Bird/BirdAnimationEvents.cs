@@ -1,3 +1,4 @@
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -15,4 +16,9 @@ public class BirdAnimationEvents : MonoBehaviour
     public void FootContact() => onFootContact?.Invoke();
     public void GripComplete() => onGripComplete?.Invoke();
     public void FootRelease() => onFootRelease?.Invoke();
+
+    // Bird_Flap: wing at the bottom of its downstroke (frame 4, 0.13 s) — estimated from the rotation curve,
+    // not eyeballed in the Animation window, so nudge the event there if the sync feels off once heard.
+    // Plays directly (no UnityEvent) since nothing else needs this one.
+    public void Flap() => RuntimeManager.PlayOneShot("event:/SFX/flap");
 }

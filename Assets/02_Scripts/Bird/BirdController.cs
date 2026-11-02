@@ -277,6 +277,7 @@ public class BirdController : MonoBehaviour
     }
 
     // Click and hold as in the game, but on the flying height: nothing is down here to hit, and the ground is far below the bird.
+    // Each new click plays the intro's Swoosh stinger.
     void FlyInSky()
     {
         Vector2 pointer = pointAction.ReadValue<Vector2>();
@@ -292,6 +293,7 @@ public class BirdController : MonoBehaviour
             {
                 following = true;
                 clickMarker.Show(target);
+                IntroSfx.PlaySwoosh();
             }
         }
         else

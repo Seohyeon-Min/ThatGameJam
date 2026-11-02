@@ -2,13 +2,13 @@
 <objects serializationModel="Studio.02.03.00">
 	<object class="Event" id="{ded9ade9-dfd6-4ad9-bfa4-66588e81fe1d}">
 		<property name="name">
-			<value>Intro_1</value>
+			<value>highpitch_1</value>
 		</property>
 		<property name="outputFormat">
 			<value>1</value>
 		</property>
 		<relationship name="folder">
-			<destination>{d9cbd87f-bee3-4c6e-8607-03931bade3a7}</destination>
+			<destination>{25fe05f1-e477-45fe-acdc-c8d3aee3b0ab}</destination>
 		</relationship>
 		<relationship name="mixer">
 			<destination>{2a3fbb21-5ab4-48da-af84-fee3fb3ff6cb}</destination>
@@ -70,9 +70,6 @@
 		<relationship name="modules">
 			<destination>{cc128d3b-bad9-48fb-bf18-c5e37bdd26a5}</destination>
 		</relationship>
-		<relationship name="markers">
-			<destination>{ea0d89eb-1aa6-4e05-abeb-aaed7b98136f}</destination>
-		</relationship>
 	</object>
 	<object class="EventMixerMaster" id="{f435e225-9960-477a-9674-454d6f4953ff}">
 		<relationship name="effectChain">
@@ -111,20 +108,6 @@
 		</relationship>
 		<relationship name="output">
 			<destination>{f435e225-9960-477a-9674-454d6f4953ff}</destination>
-		</relationship>
-	</object>
-	<object class="LoopRegion" id="{ea0d89eb-1aa6-4e05-abeb-aaed7b98136f}">
-		<property name="position">
-			<value>0</value>
-		</property>
-		<property name="length">
-			<value>5.9259374999999999</value>
-		</property>
-		<relationship name="timeline">
-			<destination>{5c417e2b-e7f7-4651-b591-236f0caa8daf}</destination>
-		</relationship>
-		<relationship name="markerTrack">
-			<destination>{ce788008-2537-47b6-af0a-9ba446707bf2}</destination>
 		</relationship>
 	</object>
 	<object class="MixerBusEffectChain" id="{f2b42642-ac36-47c6-9a87-d1e0816112f1}">
