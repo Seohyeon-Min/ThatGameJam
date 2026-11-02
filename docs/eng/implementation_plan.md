@@ -263,6 +263,17 @@ Current first version (`Sam_Test`, 2026-10-30): one mother, three kits, and two 
 
 ### 4.12 Stage 3 — Fog (§9.2 ~ §9.5)
 
+**Changed on 2026-11-01 by [ADR 0027](decisions/0027-fog-stage-becomes-a-fork-map-led-by-rabbits.md).** The current implementation is below. The rest of this section (breadcrumb trail, hidden obstacles, natural resolution) is the old design and lives on only in `Sam_Fog_Test`.
+
+- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. The director's sketch (4 forks) is turned so the start-to-goal line runs along +Z. Start z 40.5 (the fog edge), goal z 77.1 (the sunlit spot).
+- `FogMaze` (a `PathBlocker`): when the girl reaches the `StopPoint` at the fog edge, it leads her through the forks in turn. At each fork she takes the right way if the rabbit showed it. Otherwise she stands `fogForkWaitTime` (3 s) and picks 50:50. On a dead end she walks to 1 m before the wall, stands `fogWallPauseTime` (1 s), and comes back. No natural resolution timer.
+- `FogFork`: one fork. Point lists for the right way and the dead end, and the rabbit.
+- `FogRabbit` (a `CryListener`, prefab `Assets/03_Prefabs/Stage3/FogRabbit.prefab`): when the bird's cry reaches it (6 m), it hops down the right way and disappears. A cry before the girl arrives still counts as shown for that fork.
+- Fog: one `FogField` covers the whole map. `density` 0.5, so it is light. The `FogMaze` checkboxes `birdClearsFog` (off) and `girlClearsFog` (on) choose who clears it.
+- A wall is three trees across the end of a dead end. Between the paths is the `MazeTrees` forest (beyond 2.4 m from a path's middle). The forest past the stages (`TreesAhead`) now starts at z 80.
+
+**Old design (2026-10-27)**
+
 This is the hardest and riskiest part. A prototype built separately from the other work, first, is suggested (Section 6).
 
 **Fog data and rendering (`FogField`)**
@@ -427,6 +438,7 @@ Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3
 | 1. Shared framework | Done | `Assets/00_Scenes/Sam_Test.unity`. Work records 04, 05 |
 | 2. Fog prototype | Done | `Assets/00_Scenes/Sam_Fog_Test.unity`. Work record 06 |
 | 3. Stage 2 | First playable version; awaiting feedback | `Sam_Test/Stage2`: demo, sleeping family, two branches/bypass, natural resolution, local snow melt. The 1-3 rabbit procession is not yet implemented |
+| Stage 3 (fog, ADR 0027) | First playable, awaiting feedback | `Main/Stage3`. 4 forks, rabbits, light fog, clearing toggles. No 3-3 yet |
 | 4 to 6 | Not started | |
 
 Changes outside the plan:

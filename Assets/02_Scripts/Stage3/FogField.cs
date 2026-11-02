@@ -8,6 +8,8 @@ public class FogField : MonoBehaviour
     [SerializeField] int resolution = 128;
     // Stacked transparent quads using the ThatGameJam/Fog shader; each is sized and placed by the builder.
     [SerializeField] Renderer[] layers;
+    // Overall thickness. Below 1 the fog is light enough to see through (ADR 0027).
+    [SerializeField, Range(0f, 1f)] float density = 1f;
 
     static readonly int MaskId = Shader.PropertyToID("_FogMask");
     static readonly int AreaId = Shader.PropertyToID("_FogArea");
@@ -17,9 +19,8 @@ public class FogField : MonoBehaviour
     Texture2D mask;
     MaterialPropertyBlock block;
     bool dirty;
-    float density = 1f;
 
-    // Overall thickness multiplier, for the first waiting signal (the fog edge thins).
+    // Also lowered by the first waiting signal of a FogSection (the fog edge thins).
     public float Density
     {
         get => density;

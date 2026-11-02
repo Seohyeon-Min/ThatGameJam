@@ -50,6 +50,12 @@ public class GameTuning : ScriptableObject
     [Range(0f, 1f)] public float babyShiverIntensityVariation = 0.7f;
     public float babyShiverIntensityFrequency = 0.35f;
 
+    [Header("Fog maze (ADR 0027)")]
+    // At a fork the bird has not cried at, the girl stands this long before she picks a way at random.
+    public float fogForkWaitTime = 3f;
+    // At the wall of a dead end she stands this long before she turns back.
+    public float fogWallPauseTime = 1f;
+
     [Header("Bird")]
     public float birdSpeed = 6f;
     public float birdAltitudeSpeed = 3f;
