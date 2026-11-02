@@ -5,7 +5,8 @@ using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 // Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
-// right-click cries. Left idle in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
+// right-click cries, clicking the baby toggles sheltering her (following her pace) until clicked off again. Left idle
+// in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
 // hopping the camera to any branch on screen. Sent past where the way is still closed
 // (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
 // Flies at the current map's fixed altitude inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015).
@@ -42,7 +43,7 @@ public class BirdController : MonoBehaviour
     public Vector3 SkyForward { get; set; } = Vector3.forward;
 
     public bool IsPerched => state == State.Perched;
-    // Held over the walking baby, keeping the snow off her (SnowShelter).
+    // Toggled on by a click on the walking baby, keeping the snow off her (SnowShelter) until clicked off again.
     public bool IsSheltering { get; private set; }
     // Sheltering and over her (not held back at the edge of its area or the screen): its wings keep the snow off.
     public bool IsCoveringBaby => IsSheltering && shelterReached
@@ -239,16 +240,16 @@ public class BirdController : MonoBehaviour
         if (Cutscene.AnyPlaying)
             following = false;
         else if (pressed && CanShelter() && Baby.Instance.GetComponent<Collider>().Raycast(ray, out _, Mathf.Infinity))
-            StartShelter();
+            ToggleShelter();
         else if (pressed && hasHit)
             Click(hit, hovered);
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
             target = hit.point;
-        if (IsSheltering && (!moveAction.IsPressed() || !CanShelter()))
+        if (IsSheltering && !CanShelter())
         {
-            // Let go, or the baby has reached the sunlit spot: hovers where it is.
+            // The baby has reached the sunlit spot, or stopped walking: hovers where it is.
             IsSheltering = false;
             target = transform.position;
         }
@@ -368,6 +369,18 @@ public class BirdController : MonoBehaviour
     static bool CanShelter() => GameFlow.Instance.CurrentStage.snowShelter
         && Baby.Instance.State is BabyState.Walking or BabyState.Reacting or BabyState.Waiting;
 
+    // A click on the baby toggles sheltering on; a second click there (or anywhere else, via Click) turns it off again.
+    void ToggleShelter()
+    {
+        if (IsSheltering)
+        {
+            IsSheltering = false;
+            target = transform.position;
+        }
+        else
+            StartShelter();
+    }
+
     void StartShelter()
     {
         LeavePerch();
@@ -379,6 +392,8 @@ public class BirdController : MonoBehaviour
 
     void Click(RaycastHit hit, Perchable hovered)
     {
+        // An explicit move/perch click elsewhere always breaks off sheltering.
+        IsSheltering = false;
         following = hovered == null;
         if (hovered != null)
         {
