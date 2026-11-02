@@ -26,18 +26,23 @@ public static class BuildStage3
     const int FogLayers = 7;
     const float FogLayerStep = 0.4f;
     // Every path is lined on both sides with a row of trees this far from its middle, so the forks read clearly.
-    const float EdgeOffset = 1.9f;
+    const float EdgeOffset = 2.2f;
     const float EdgeStep = 1.5f;
     // The forest between the paths keeps this far from the middle of a path, so the edge rows stand out.
-    const float PathClearance = 3.4f;
-    const float MazeTreeSpacing = 2.4f;
+    const float PathClearance = 3.8f;
+    const float MazeTreeSpacing = 3.2f;
     // The girl turns back this far before a wall.
     const float WallStop = 1f;
-    const float StageEndZ = 80f;
+    const float StageEndZ = 88f;
 
+    // The sketch's corners below are stretched from the fog edge by these, so the paths lie further apart and read more clearly.
+    // The goal stays inside the terrain, which ends at z 91.6.
+    const float StretchX = 1.4f;
+    const float StretchZ = 1.22f;
+
+    static readonly Vector3 Entry = new(0f, 0f, 38.5f);  // stage 2's sunlit spot, where the girl wakes
+    static readonly Vector3 Edge = new(0f, 0f, 40.5f);   // the fog edge
     // Path corners (x, z), from the sketch.
-    static readonly Vector3 Entry = P(0f, 38.5f);  // stage 2's sunlit spot, where the girl wakes
-    static readonly Vector3 Edge = P(0f, 40.5f);   // the fog edge
     static readonly Vector3 J1 = P(-0.35f, 50.23f), J1a = P(-2.64f, 52.26f), J2 = P(-2.47f, 59.87f), J3 = P(7.23f, 64.52f),
         J4 = P(2.19f, 69.05f), Goal = P(0f, 77.09f);
     static readonly Vector3[][] DeadEnds =
@@ -55,7 +60,7 @@ public static class BuildStage3
         new[] { J4, Goal },
     };
 
-    static Vector3 P(float x, float z) => new(x, 0f, z);
+    static Vector3 P(float x, float z) => new(x * StretchX, 0f, Edge.z + (z - Edge.z) * StretchZ);
 
     public static string Run()
     {
@@ -118,8 +123,8 @@ public static class BuildStage3
 
     static FogField Fog(GameObject parent)
     {
-        var center = new Vector3(1.5f, 0f, 59.5f);
-        var size = new Vector2(28f, 42f);
+        var center = new Vector3(2.5f, 0f, 63.5f);
+        var size = new Vector2(36f, 50f);
         GameObject root = Child(parent, "Fog", center);
         var material = AssetDatabase.LoadAssetAtPath<Material>(FogMaterialPath);
         var layers = new Renderer[FogLayers];
@@ -263,7 +268,23 @@ public static class BuildStage3
                         Plant(position);
                 }
         }
-        for (float x = -14f; x <= 16f; x += MazeTreeSpacing)
+        // Forks 3 and 4 get a wedge of trees between their two ways, so the split shows (user feedback).
+        foreach (int fork in new[] { 2, 3 })
+        {
+            Vector3 origin = RightWays[fork][0];
+            Vector3 toRight = (RightWays[fork][1] - origin).normalized;
+            Vector3 toDead = (DeadEnds[fork][1] - origin).normalized;
+            Vector3 bisector = (toRight + toDead).normalized;
+            Vector3 across = Vector3.Cross(Vector3.up, bisector);
+            for (float d = 1f; d <= 7f; d += 1.1f)
+                foreach (float sideways in new[] { 0f, -0.9f, 0.9f })
+                {
+                    Vector3 position = origin + bisector * d + across * sideways;
+                    if (Free(position, EdgeOffset - 0.3f, 0.9f))
+                        Plant(position);
+                }
+        }
+        for (float x = -17f; x <= 19f; x += MazeTreeSpacing)
             for (float z = 41f; z <= StageEndZ; z += MazeTreeSpacing)
             {
                 Vector3 position = new Vector3(x, 0f, z) + Jitter(random, MazeTreeSpacing * 0.3f);
@@ -320,8 +341,8 @@ public static class BuildStage3
             SerializedProperty areas = so.FindProperty("areas");
             areas.arraySize = 2;
             areas.GetArrayElementAtIndex(0).FindPropertyRelative("min").vector2Value = new Vector2(-60.48f, 41f);
-            areas.GetArrayElementAtIndex(0).FindPropertyRelative("max").vector2Value = new Vector2(-15f, StageEndZ);
-            areas.GetArrayElementAtIndex(1).FindPropertyRelative("min").vector2Value = new Vector2(17f, 41f);
+            areas.GetArrayElementAtIndex(0).FindPropertyRelative("max").vector2Value = new Vector2(-19f, StageEndZ);
+            areas.GetArrayElementAtIndex(1).FindPropertyRelative("min").vector2Value = new Vector2(21f, 41f);
             areas.GetArrayElementAtIndex(1).FindPropertyRelative("max").vector2Value = new Vector2(32.4f, StageEndZ);
         });
         generator.Generate();

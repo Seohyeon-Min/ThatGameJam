@@ -265,12 +265,12 @@ Current first version (`Sam_Test`, 2026-10-30): one mother, three kits, and two 
 
 **Changed on 2026-11-01 by [ADR 0027](decisions/0027-fog-stage-becomes-a-fork-map-led-by-rabbits.md).** The current implementation is below. The rest of this section (breadcrumb trail, hidden obstacles, natural resolution) is the old design and lives on only in `Sam_Fog_Test`.
 
-- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. The director's sketch (4 forks) is turned so the start-to-goal line runs along +Z. Start z 40.5 (the fog edge), goal z 77.1 (the sunlit spot).
+- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. The director's sketch (4 forks) is turned so the start-to-goal line runs along +Z. The sketch is stretched 1.4 times across and 1.22 times along. Start z 40.5 (the fog edge), goal z 85.1 (the sunlit spot). The terrain ends at z 91.6, so it is no longer.
 - `FogMaze` (a `PathBlocker`): when the girl reaches the `StopPoint` at the fog edge, it leads her through the forks in turn. At each fork she takes the right way if the rabbit showed it. Otherwise she stands `fogForkWaitTime` (3 s) and picks 50:50. On a dead end she walks to 1 m before the wall, stands `fogWallPauseTime` (1 s), and comes back. No natural resolution timer.
 - `FogFork`: one fork. Point lists for the right way and the dead end, and the rabbit.
 - `FogRabbit` (a `CryListener`, prefab `Assets/03_Prefabs/Stage3/FogRabbit.prefab`): when the bird cries within 3.5 m of it (flat distance, whatever the bird's height), it hops down the right way and disappears. A cry before the girl arrives still counts as shown for that fork.
 - Fog: one `FogField` covers the whole map. 7 layers (0.2 to 2.6 m) at `density` 0.22, so it is light. The `FogMaze` checkboxes `birdClearsFog` (off) and `girlClearsFog` (on) choose who clears it.
-- A wall is five trees across the end of a dead end. Every path is lined on both sides by a row of trees 1.9 m from its middle; behind the rows is a looser forest (`MazeTrees`, beyond 3.4 m from a path's middle). The forest past the stages (`TreesAhead`) now starts at z 80.
+- A wall is five trees across the end of a dead end. Every path is lined on both sides by a row of trees 2.2 m from its middle; behind the rows is a looser forest (`MazeTrees`, beyond 3.8 m from a path's middle, 3.2 m apart). Forks 3 and 4 have trees filling the V between their two ways. The forest past the stages (`TreesAhead`) now starts at z 88, so it is empty for now.
 
 **Old design (2026-10-27)**
 
