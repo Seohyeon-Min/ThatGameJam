@@ -2,32 +2,32 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
+using UnityEngine.Rendering;
 using UnityEngine.Timeline;
 
 // A staged moment: plays this object's Timeline, with its own watercolor look if it has one, and tells the game when it's over.
 // Assign one to a Stage's Wake Cutscene and the baby waits for it after waking, before it walks.
-// The camera, animation and sound are on the Timeline. For a different post-processing, add a Volume under this object and switch
-// it with an Activation track. While one plays, the player can't move the bird or cry.
+// The camera, animation and sound are on the Timeline. The look's Volume Profile switches with the look.
+// While one plays, the player can't move the bird or cry.
 // Animation tracks are for previewing in the Timeline window: in Play Mode they are unbound, and animators play what the game tells them.
 [RequireComponent(typeof(PlayableDirector))]
 public class Cutscene : MonoBehaviour
 {
     // The baby's animations run at this rate, so a frame seen in its GetUp clip can be typed in as it is.
-    const float AnimationFramesPerSecond = 30f;
+    public const float AnimationFramesPerSecond = 30f;
 
     static int playing;
 
     [Tooltip("Frames to wait after Play before it really starts, at 30 per second like the baby's animations. Nothing is locked or changed until then.")]
     [SerializeField, Min(0)] int startDelayFrames;
-    [Tooltip("Applied while the cutscene plays, then the look from before comes back. Empty keeps the current look.")]
+    [Tooltip("Applied at once when the cutscene starts, with its Volume Profile if it has one, and what was there before comes back at once when it ends. Empty keeps the current look.")]
     [SerializeField] WatercolorLook look;
-    [Tooltip("Seconds to blend into the look at the start and back out of it at the end.")]
-    [SerializeField, Min(0f)] float lookBlendSeconds = 1f;
 
     PlayableDirector director;
     WatercolorManager manager;
     WatercolorManager.Settings before;
-    float blend;
+    Volume volume;
+    VolumeProfile profileBefore;
     bool lookHeld;
     bool started;
 
@@ -85,7 +85,8 @@ public class Cutscene : MonoBehaviour
         {
             before = JsonUtility.FromJson<WatercolorManager.Settings>(JsonUtility.ToJson(manager.settings));
             lookHeld = true;
-            blend = 0f;
+            manager.Apply(look.settings, 1f);
+            SwitchVolume();
         }
 
         if (director.playableAsset != null)
@@ -127,6 +128,27 @@ public class Cutscene : MonoBehaviour
         if (started)
             playing--;
         started = false;
+        if (lookHeld)
+        {
+            lookHeld = false;
+            manager.Apply(before, 1f);
+            if (volume != null)
+                volume.sharedProfile = profileBefore;
+            volume = null;
+        }
+    }
+
+    void SwitchVolume()
+    {
+        if (look.volumeProfile == null)
+            return;
+        // Not just any Volume: during a season's crossfade there is a second one, and it isn't the scene's.
+        WatercolorSeasonLooks seasonLooks = FindAnyObjectByType<WatercolorSeasonLooks>();
+        volume = seasonLooks != null && seasonLooks.SceneVolume != null ? seasonLooks.SceneVolume : FindAnyObjectByType<Volume>();
+        if (volume == null)
+            return;
+        profileBefore = volume.sharedProfile;
+        volume.sharedProfile = look.volumeProfile;
     }
 
     void Update()
@@ -134,13 +156,5 @@ public class Cutscene : MonoBehaviour
         // Debug only: Debug.isDebugBuild is also true in the Editor.
         if (IsPlaying && Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             Stop();
-
-        if (!lookHeld)
-            return;
-        float step = lookBlendSeconds > 0f ? Time.deltaTime / lookBlendSeconds : 1f;
-        blend = Mathf.Clamp01(blend + (IsPlaying ? step : -step));
-        manager.Blend(before, look.settings, Mathf.SmoothStep(0f, 1f, blend));
-        if (!IsPlaying && blend <= 0f)
-            lookHeld = false;
     }
 }

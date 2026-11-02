@@ -161,14 +161,61 @@ public class WatercolorManager : MonoBehaviour
         [Range(0.5f, 3f)] public float characterShadeSaturation = 1.6f;
         [Range(0f, 0.5f)] public float characterBrushGrain = 0f;
         [Range(0f, 0.5f)] public float characterDryBrush = 0.04f;
+        [Tooltip("Size of the brush pattern on characters, in metres (like Gouache Brush Size, for characters). Smaller makes the jagged edge between light and shade finer.")]
+        [Range(0.0005f, 0.1f)] public float characterBrushSize = 0.003f;
         [Tooltip("How much darker the characters' form-shadow tone is (like Gouache Shade Depth, for characters).")]
         [Range(0f, 2f)] public float characterShadeDepth = 0.7f;
         [Tooltip("Colour the characters' shade turns toward (e.g. lavender for cream clothes), keeping it clear rather than brown.")]
         public Color characterShadeColour = new Color(0.72f, 0.66f, 0.92f);
         [Tooltip("How far the characters' shade hue turns toward Character Shade Colour. 0 = own hue.")]
         [Range(0f, 1f)] public float characterShadeHueTurn = 0.5f;
+        [Tooltip("Keeps the characters' in-between colours clear: the Base Wash and the transition between light and shade no longer turn cream grey or yellow olive. 0 = plain mix.")]
+        [Range(0f, 1f)] public float characterClearTransition = 1f;
         [Tooltip("How much the baby brightens inside a LightBeam's pool of light, in the same lumpy shape. 0 = not at all.")]
         [Range(0f, 1f)] public float characterSunPoolGlow = 0.6f;
+
+        [Header("Gouache: Character Pastel Strokes")]
+        [Tooltip("Fine rubbed pastel strokes on materials painted as Character, for close-ups: light and shade break into streaks instead of a clean line. They stick to the body and fade out by themselves once too small to see on screen. Turn it on in a cutscene's look.")]
+        public bool characterPastelStrokes = false;
+        [Tooltip("Width of one streak, in % of the model's longest side.")]
+        [Range(0.05f, 2f)] public float characterPastelSize = 0.6f;
+        [Tooltip("Length of a streak, as a multiple of its width.")]
+        [Range(2f, 30f)] public float characterPastelLength = 12f;
+        [Tooltip("Direction of the streaks, in degrees. They bend a little from place to place.")]
+        [Range(0f, 180f)] public float characterPastelAngle = 35f;
+        [Tooltip("How far light and shade break into each other as streaks. 0 = the clean line stays.")]
+        [Range(0f, 1f)] public float characterPastelSpread = 0.35f;
+        [Tooltip("Second colour rubbed over the paint, in streaks. Only the hue and some saturation count; brightness stays.")]
+        public Color characterPastelColour = new Color(1f, 0.5f, 0.55f);
+        [Range(0f, 1f)] public float characterPastelColourAmount = 0.5f;
+        [Tooltip("Width of the second colour's streaks, in % of the model's longest side. Separate from Character Pastel Size, which is the streaks where light and shade break.")]
+        [Range(0.05f, 2f)] public float characterPastelColourSize = 0.3f;
+
+        [Header("Gouache: Character Brush Dabs")]
+        [Tooltip("Small flat brush dabs laid over everything else on materials painted as Character, for close-ups, as if painting the character by hand: each dab is the colour already there, shifted a little. They gather where the form turns and at the silhouette, stick to the body, and fade out once too small on screen. Turn it on in a cutscene's look.")]
+        public bool characterBrushDabs = false;
+        [Tooltip("Length of a dab, in % of the model's longest side.")]
+        [Range(0.5f, 10f)] public float characterBrushDabSize = 3f;
+        [Tooltip("How many dabs. Where the form turns they reach this share; on the flat, about a quarter of it.")]
+        [Range(0f, 1f)] public float characterBrushDabAmount = 0.6f;
+        [Tooltip("How opaque a dab is.")]
+        [Range(0f, 1f)] public float characterBrushDabStrength = 0.9f;
+        [Tooltip("Main direction of the dabs, in degrees. Each dab turns up to 35 degrees from it.")]
+        [Range(0f, 180f)] public float characterBrushDabAngle = 30f;
+        [Tooltip("How far a dab's hue moves from the colour under it, either way, in degrees.")]
+        [Range(0f, 60f)] public float characterBrushDabHue = 8f;
+        [Tooltip("How far a dab's brightness moves from the colour under it, either way. 0.1 = up to 10%.")]
+        [Range(0f, 0.5f)] public float characterBrushDabValue = 0.1f;
+        [Tooltip("How far a dab's saturation moves from the colour under it, either way. 0.2 = up to 20%.")]
+        [Range(0f, 1f)] public float characterBrushDabSaturation = 0.2f;
+        [Tooltip("Share of the dabs that are strong and stand out, with the full colour shift and opacity. The rest are weak.")]
+        [Range(0f, 1f)] public float characterBrushDabStrongShare = 0.12f;
+        [Tooltip("How much of the colour shift and opacity the weak dabs have. 0 = only the strong dabs show.")]
+        [Range(0f, 1f)] public float characterBrushDabWeak = 0.3f;
+        [Tooltip("How much light clears the dabs, fading them smoothly where the light falls most directly. 0 = light doesn't matter, 1 = no dabs at all in the brightest place.")]
+        [Range(0f, 1f)] public float characterBrushDabLightInfluence = 1f;
+        [Tooltip("How far from the brightest place the fade reaches. Higher clears more of the lit side.")]
+        [Range(0.01f, 1f)] public float characterBrushDabLightReach = 0.4f;
 
         [Header("Base Wash")]
         [Tooltip("A first wash laid over the whole paper (sky, ground, water and every object), like the slate blue of an overcast snowy day. Everything is painted on top of it, so the scene gets darker without getting murky. 0 = off.")]
@@ -292,6 +339,9 @@ public class WatercolorManager : MonoBehaviour
         [Range(0.01f, 3f)] public float paperSoftnessPercent = 0.25f;
     }
 
+    [Tooltip("Cast shadows no longer fall on materials painted as Character (Painted As = Character: the baby), including its own on itself. The shadow it casts on the ground stays. Not part of a look, so it holds through every season.")]
+    public bool noCastShadowsOnCharacters;
+
     public Settings settings = new Settings();
 
     // The scene's manager (or defaults when there is none). WatercolorBaker reads the blotch sizes from here.
@@ -304,15 +354,29 @@ public class WatercolorManager : MonoBehaviour
         }
     }
 
-    void OnEnable() => Push(settings);
+    void OnEnable()
+    {
+        Push(settings);
+        PushCharacterShadows(noCastShadowsOnCharacters);
+    }
+
     void OnValidate()
     {
         if (isActiveAndEnabled)
+        {
             Push(settings);
+            PushCharacterShadows(noCastShadowsOnCharacters);
+        }
     }
 
     // Back to defaults when the scene's manager goes away, so materials never fall to zeroed globals.
-    void OnDisable() => Push(new Settings());
+    void OnDisable()
+    {
+        Push(new Settings());
+        PushCharacterShadows(false);
+    }
+
+    static void PushCharacterShadows(bool off) => Shader.SetGlobalFloat("_WC_CharacterNoCastShadows", off ? 1f : 0f);
 
     // Sets this manager's values to a blend of two looks (t 0 = a, 1 = b): numbers and colours blend, everything else
     // (switches) flips halfway. The Form Light stays this manager's own. Used by WatercolorSeasonLooks.
@@ -353,10 +417,22 @@ public class WatercolorManager : MonoBehaviour
         // sRGB value as it is, like the other colours the shaders mix in sRGB.
         Shader.SetGlobalVector("_WC_Gouache", new Vector4(s.gouache, s.gouacheShadeDepth, s.gouacheHighlight, s.gouacheDryBrush));
         Shader.SetGlobalVector("_WC_GouacheHighlight", (Vector4)s.gouacheHighlightColour);
-        Shader.SetGlobalVector("_WC_GouacheSteps", new Vector4(s.gouacheTerminator, s.gouacheTransitionWidth, s.gouacheShadeSaturation, 0f));
+        Shader.SetGlobalVector("_WC_GouacheSteps", new Vector4(s.gouacheTerminator, s.gouacheTransitionWidth, s.gouacheShadeSaturation, s.characterClearTransition));
         Shader.SetGlobalVector("_WC_GouacheTransition", new Vector4(s.gouacheTransitionColour.r, s.gouacheTransitionColour.g, s.gouacheTransitionColour.b, s.gouacheTransitionTint));
         Shader.SetGlobalVector("_WC_CharacterGouache", new Vector4(s.characterShadeSaturation, s.characterBrushGrain, s.characterDryBrush, s.characterShadeDepth));
         Shader.SetGlobalVector("_WC_CharacterShade", new Vector4(s.characterShadeColour.r, s.characterShadeColour.g, s.characterShadeColour.b, s.characterShadeHueTurn));
+        Shader.SetGlobalFloat("_WC_CharacterBrushSize", s.characterBrushSize);
+        Shader.SetGlobalVector("_WC_CharacterDabs", new Vector4(s.characterBrushDabs ? 1f : 0f, s.characterBrushDabSize / 100f * BrushDabCells, s.characterBrushDabAmount, s.characterBrushDabStrength));
+        Shader.SetGlobalVector("_WC_CharacterDabTurn", new Vector4(Mathf.Cos(s.characterBrushDabAngle * Mathf.Deg2Rad), Mathf.Sin(s.characterBrushDabAngle * Mathf.Deg2Rad), s.characterBrushDabLightReach, 0f));
+        Shader.SetGlobalVector("_WC_CharacterDabVary", new Vector4(s.characterBrushDabHue / 360f, s.characterBrushDabValue, s.characterBrushDabSaturation, s.characterBrushDabLightInfluence));
+        Shader.SetGlobalVector("_WC_CharacterDabStrong", new Vector4(s.characterBrushDabStrongShare, s.characterBrushDabWeak, 0f, 0f));
+        // Made the first time a look turns the dabs on, so a game that never uses them doesn't pay for it.
+        if (s.characterBrushDabs)
+            Shader.SetGlobalTexture("_WC_BrushDabs", BrushDabsTexture());
+        Shader.SetGlobalVector("_WC_CharacterPastel", new Vector4(s.characterPastelStrokes ? 1f : 0f, s.characterPastelSize / 100f, s.characterPastelLength, s.characterPastelSpread));
+        Shader.SetGlobalVector("_WC_CharacterPastelTurn", new Vector4(Mathf.Cos(s.characterPastelAngle * Mathf.Deg2Rad), Mathf.Sin(s.characterPastelAngle * Mathf.Deg2Rad), s.characterPastelColourSize / 100f, 0f));
+        // sRGB value as it is, like the other colours the shaders mix in sRGB.
+        Shader.SetGlobalVector("_WC_CharacterPastelColour", new Vector4(s.characterPastelColour.r, s.characterPastelColour.g, s.characterPastelColour.b, s.characterPastelColourAmount));
         Shader.SetGlobalVector("_WC_GouacheEdge", new Vector4(s.gouacheRoughEdge, s.gouacheBrushGrain, s.gouacheBrushSize, s.gouacheRimGlow));
         Shader.SetGlobalVector("_WC_GouacheStroke", new Vector4(s.gouacheStrokeColour, s.gouacheStrokeSize, s.gouacheStrokeOnObjects, 0f));
         Shader.SetGlobalVector("_WC_GouacheStrokeLightA", (Vector4)s.gouacheStrokeLightA);
@@ -454,6 +530,69 @@ public class WatercolorManager : MonoBehaviour
     const float PencilLaneWidth = 3f;
     // Likewise the layout is measured in this fixed stroke length (3% of 1080p), not the set length.
     const float PencilLayoutLength = 32f;
+    // The shader divides the tile by this too, to know how large a dab is on screen.
+    const int BrushDabCells = 12;
+    static Texture2D s_BrushDabs;
+
+    // A tile of flat brush dabs, stamped one over another: square-ended, with bristle stripes along them and each bristle ending at
+    // its own length, so the ends fray. r how much a pixel is covered, g a value of the dab's own that shifts its colour, b when the
+    // dab appears as the amount rises, a the bristle's brightness.
+    static Texture2D BrushDabsTexture()
+    {
+        if (s_BrushDabs != null)
+            return s_BrushDabs;
+        const int size = 512;
+        const int bristles = 24;
+        var pixels = new Color32[size * size];
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = new Color32(0, 0, 255, 0);
+        var random = new System.Random(7);
+        float Range(float from, float to) => from + (float)random.NextDouble() * (to - from);
+        float cell = size / (float)BrushDabCells;
+        var reach = new float[bristles];
+        var shade = new float[bristles];
+        for (int pass = 0; pass < 2; pass++)
+        for (int y = 0; y < BrushDabCells; y++)
+        for (int x = 0; x < BrushDabCells; x++)
+        {
+            float length = cell * Range(0.9f, 1.3f);
+            float width = length * Range(0.3f, 0.5f);
+            float angle = Range(-35f, 35f) * Mathf.Deg2Rad;
+            float slant = Range(-0.5f, 0.5f);
+            float cos = Mathf.Cos(angle), sin = Mathf.Sin(angle);
+            float centreX = (x + Range(0f, 1f)) * cell, centreY = (y + Range(0f, 1f)) * cell;
+            byte pick = (byte)random.Next(256), order = (byte)random.Next(256);
+            for (int b = 0; b < bristles; b++)
+            {
+                reach[b] = Range(0.7f, 1f);
+                shade[b] = Range(0f, 1f);
+            }
+            int extent = Mathf.CeilToInt(length + width);
+            for (int py = -extent; py <= extent; py++)
+            for (int px = -extent; px <= extent; px++)
+            {
+                float u = cos * px + sin * py, v = -sin * px + cos * py;
+                if (Mathf.Abs(v) > width * 0.5f)
+                    continue;
+                int bristle = Mathf.Min((int)((v / width + 0.5f) * bristles), bristles - 1);
+                // The slant cuts the end at an angle; the shade leaves a few bristles dry, showing what is under them.
+                if (Mathf.Abs(u + slant * v) > length * 0.5f * reach[bristle] || shade[bristle] < 0.12f)
+                    continue;
+                int index = ((Mathf.RoundToInt(centreY) + py) % size + size) % size * size + ((Mathf.RoundToInt(centreX) + px) % size + size) % size;
+                pixels[index] = new Color32(255, pick, order, (byte)(shade[bristle] * 255f));
+            }
+        }
+        s_BrushDabs = new Texture2D(size, size, TextureFormat.RGBA32, false, true)
+        {
+            name = "WatercolorBrushDabs",
+            wrapMode = TextureWrapMode.Repeat,
+            hideFlags = HideFlags.HideAndDontSave,
+        };
+        s_BrushDabs.SetPixels32(pixels);
+        s_BrushDabs.Apply(false, true);
+        return s_BrushDabs;
+    }
+
     static Texture2D s_PencilStrokes;
     static (float, float, float, float, float) s_PencilKey = (-1f, 0f, 0f, 0f, 0f);
 

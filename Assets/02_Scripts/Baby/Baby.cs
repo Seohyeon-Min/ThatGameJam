@@ -23,6 +23,10 @@ public class Baby : CryListener
     [SerializeField] Animator animator;
     // The baby starts walking when this has played.
     [SerializeField] AnimationClip getUpClip;
+    [Tooltip("Played on the eyes during the GetUp clip.")]
+    [SerializeField] ParticleSystem[] eyeSparkles;
+    [Tooltip("The frame of the GetUp clip they play on: when the flowers appear in the eyes.")]
+    [SerializeField, Min(0)] int eyeSparkleFrame;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
     // Stepping up onto a balance beam (a log) or down off the far end plays this once, covering that segment's
@@ -228,6 +232,14 @@ public class Baby : CryListener
             cryPending = true;
     }
 
+    // A glint on each eye when the flowers appear in the GetUp clip.
+    IEnumerator SparkleEyes()
+    {
+        yield return new WaitForSeconds(eyeSparkleFrame / getUpClip.frameRate);
+        foreach (ParticleSystem sparkle in eyeSparkles)
+            sparkle.Play();
+    }
+
     IEnumerator WakeAndWalk(bool byBird)
     {
         State = BabyState.Waking;
@@ -238,6 +250,7 @@ public class Baby : CryListener
         GameTuning tuning = GameTuning.Current;
         animator.SetBool(AsleepParam, false);
         gettingUp = true;
+        StartCoroutine(SparkleEyes());
         yield return new WaitForSeconds(getUpClip.length);
         gettingUp = false;
         if (byBird)

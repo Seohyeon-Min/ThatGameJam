@@ -26,6 +26,9 @@ public class BirdCamera : MonoBehaviour
     float zoom = 1f;
     // Dev tool: while set, the camera stays on this point instead of following the bird.
     Vector3? lockedPoint;
+    // While set, the camera stays on this point while the bird lands and sits, and follows again once the bird flies off.
+    Vector3? heldPoint;
+    bool heldBirdPerching;
 
     public bool IsLocked => lockedPoint.HasValue;
 
@@ -62,6 +65,21 @@ public class BirdCamera : MonoBehaviour
             lockedPoint = point;
     }
 
+    // The opening shot: the bird lands on a tree in the frame around this point instead of the camera centring on it.
+    public void HoldWhileBirdPerches(Vector3 point)
+    {
+        heldPoint = point;
+        heldBirdPerching = false;
+    }
+
+    void UpdateHold()
+    {
+        if (BirdController.Instance.IsPerchedOrLanding)
+            heldBirdPerching = true;
+        else if (heldBirdPerching)
+            heldPoint = null;
+    }
+
     // Puts the camera on the bird at once instead of sweeping there.
     public void Cut()
     {
@@ -89,6 +107,11 @@ public class BirdCamera : MonoBehaviour
             zone.TrackBird(bird);
             zoneWeights[i] = Mathf.MoveTowards(zoneWeights[i], zone.IsLocked ? 1f : 0f, Time.deltaTime / zoneEaseTime);
             point = Vector3.Lerp(point, ClampXZ(point, zone.AreaMin, zone.AreaMax), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
+        }
+        if (heldPoint.HasValue)
+        {
+            UpdateHold();
+            point = heldPoint ?? point;
         }
         if (lockedPoint.HasValue)
             point = lockedPoint.Value;

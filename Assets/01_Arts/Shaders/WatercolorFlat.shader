@@ -44,6 +44,10 @@ Shader "ThatGameJam/WatercolorFlat"
         [Toggle] _LeavePaper ("Leave Paper White On The Lit Side", Float) = 1
         [Header(Character)]
         [Enum(Background, 0, Character, 128)] _Character ("Painted As", Float) = 0
+        [Toggle] _Skin ("Skin (Character only: uses the three values below for its shade)", Float) = 0
+        _SkinShadeColour ("Skin Shade Colour", Color) = (1, 0.5, 0.25, 1)
+        _SkinShadeTurn ("Skin Shade Hue Turn", Range(0, 1)) = 0.7
+        _SkinShadeDepth ("Skin Shade Depth", Range(0, 2)) = 0.5
 
         [Header(Birch Bark)]
         [Toggle] _Birch ("Birch Bark Marks", Float) = 0
@@ -93,6 +97,10 @@ Shader "ThatGameJam/WatercolorFlat"
             half _LeavePaper;
             half _Birch;
             half _Character;
+            half _Skin;
+            half4 _SkinShadeColour;
+            half _SkinShadeTurn;
+            half _SkinShadeDepth;
             half _BirchMarks;
             half _BirchDarkness;
             half4 _BirchColour;
@@ -122,6 +130,8 @@ Shader "ThatGameJam/WatercolorFlat"
         half _WC_CoolShift;
         half _WC_ShadowDepth;
         half _WC_ReceiveShadows;
+        half _WC_CharacterNoCastShadows; // 1 = 캐릭터 머티리얼은 드리운 그림자를 받지 않는다
+        float _WC_CharacterBrushSize;    // 캐릭터의 붓 무늬 한 칸(m)
         half _WC_PaperThreshold;
         half _WC_PaperSoftness;   // 화면 높이 비율
         half4 _WC_Environment;    // x 맑은 날 기준 빛 세기, y 빛 색 반영, z 주변광 색 반영
@@ -266,11 +276,11 @@ Shader "ThatGameJam/WatercolorFlat"
         // 가는 평행 결이 들어가 끝이 갈라진다. 좌표는 카메라가 보는 평면(월드 고정)이라 카메라가 움직여도 붓질이
         // 미끄러지지 않는다. 크기는 월드 단위(Gouache Brush Size). dir 은 그 평면에서의 붓질 방향.
         // 0~1, 평균 0.5.
-        half DryBrush(float3 positionWS, float2 dir)
+        half DryBrush(float3 positionWS, float2 dir, float brushSize)
         {
-            // 크기는 월드 고정(_WC_GouacheEdge.z = 무늬 한 칸의 미터). 거리로 크기를 맞추면 카메라가 조금만 움직여도
+            // 크기는 월드 고정(brushSize = 무늬 한 칸의 미터). 거리로 크기를 맞추면 카메라가 조금만 움직여도
             // 배율이 바뀌어 무늬 전체가 미끄러진다.
-            float2 plane = float2(dot(positionWS, UNITY_MATRIX_V[0].xyz), dot(positionWS, UNITY_MATRIX_V[1].xyz)) / max(_WC_GouacheEdge.z, 1e-4);
+            float2 plane = float2(dot(positionWS, UNITY_MATRIX_V[0].xyz), dot(positionWS, UNITY_MATRIX_V[1].xyz)) / max(brushSize, 1e-4);
             float2 across = float2(-dir.y, dir.x);
             float u = dot(plane, dir), v = dot(plane, across);
             // 평붓 붓질: 붓 폭(9칸)마다 한 줄, 줄마다 길이가 다른 납작한 붓질이 엇갈려 놓인다. 붓질 안은 한 값이고
@@ -285,6 +295,54 @@ Shader "ThatGameJam/WatercolorFlat"
             half bristle = SceneNoise(float2(u / 40.0, v / 1.3) + 19.1);
             half tip = smoothstep(0.0, 0.12, frac(along)) * smoothstep(1.0, 0.88, frac(along));
             return lerp(bristle, stroke * 0.6 + bristle * 0.4, tip);
+        }
+
+        float4 _WC_CharacterPastel;      // 캐릭터 파스텔 결: x 켜짐, y 결 폭(모델 크기 비율), z 길이 배수, w 빛과 그늘이 결로 번지는 정도
+        float4 _WC_CharacterPastelTurn;  // 결 방향: x cos, y sin. z 둘째 색 결 폭(모델 크기 비율)
+        half4 _WC_CharacterPastelColour; // 문질러 얹는 둘째 색: rgb 색(sRGB), a 세기
+
+        float PastelHash(float2 p)
+        {
+            float3 p3 = frac(p.xyx * 0.1031);
+            p3 += dot(p3, p3.yzx + 33.33);
+            return frac((p3.x + p3.y) * p3.z);
+        }
+
+        // SceneNoise 의 해시는 결처럼 칸이 작아 좌표가 커지면 주기가 드러나 격자 무늬가 생긴다.
+        float PastelNoise(float2 p)
+        {
+            float2 i = floor(p);
+            float2 f = frac(p);
+            f = f * f * (3.0 - 2.0 * f);
+            return lerp(lerp(PastelHash(i), PastelHash(i + float2(1, 0)), f.x),
+                lerp(PastelHash(i + float2(0, 1)), PastelHash(i + float2(1, 1)), f.x), f.y);
+        }
+
+        // 파스텔 결 한 면: 길게 늘린 잡음 두 겹. 굵은 결을 짧고 가는 결이 끊는다. 결 방향은 큰 잡음으로 자리마다 조금 휜다.
+        half PastelPlane(float2 p, float width)
+        {
+            float length = _WC_CharacterPastel.z;
+            float2 q = float2(_WC_CharacterPastelTurn.x * p.x + _WC_CharacterPastelTurn.y * p.y,
+                _WC_CharacterPastelTurn.x * p.y - _WC_CharacterPastelTurn.y * p.x) / max(width, 1e-4);
+            q.y += (PastelNoise(q / (length * 3.0) + 11.3) - 0.5) * length * 1.4;
+            half streak = PastelNoise(float2(q.x / length, q.y));
+            half broken = PastelNoise(float2(q.x / (length * 0.3), q.y * 2.1) + 37.7);
+            return streak * 0.65 + broken * 0.35;
+        }
+
+        // 파스텔 결(캐릭터 전용): 0~1, 평균 0.5. 굽기로 넣은 모델 좌표를 쓰므로 몸에 붙어 움직인다. 면이 향하는 쪽에 맞춰
+        // 세 평면을 섞어서 어느 방향의 면에서도 결이 점이 되지 않는다. visible 은 결이 화면에서 보일 만큼 굵은 정도로,
+        // 멀어져 한 화소보다 가늘어지면 0 이 되어 반짝이지 않는다.
+        half PastelGrain(float3 rest, float width, out half visible)
+        {
+            float3 dx = ddx(rest), dy = ddy(rest);
+            visible = smoothstep(1.0, 2.5, width / max(max(length(dx), length(dy)), 1e-6));
+            float3 weights = abs(normalize(cross(dx, dy) + 1e-6));
+            weights *= weights;
+            weights *= weights;
+            weights /= weights.x + weights.y + weights.z;
+            half grain = PastelPlane(rest.yz, width) * weights.x + PastelPlane(rest.zx + 3.7, width) * weights.y + PastelPlane(rest.xy + 7.1, width) * weights.z;
+            return saturate((grain - 0.5) * 2.0 + 0.5);
         }
 
         void AlphaClip(float2 uv)
@@ -471,6 +529,32 @@ Shader "ThatGameJam/WatercolorFlat"
                 return output;
             }
 
+            TEXTURE2D(_WC_BrushDabs);    // 붓 자국 무늬: r 덮는 정도(붓털과 갈라진 끝 포함), g 자국마다 다른 값, b 자국의 등장 순서, a 붓털 밝기
+            float4 _WC_CharacterDabs;    // 캐릭터 붓 자국: x 켜짐, y 무늬 한 장의 크기(모델 크기 비율), z 양, w 세기
+            float4 _WC_CharacterDabTurn; // 붓 자국 방향: x cos, y sin. z 빛이 자국을 지우는 범위
+            half4 _WC_CharacterDabVary;  // 자국마다 달라지는 범위: x 색상(한 바퀴 = 1), y 명도, z 채도. w 빛이 자국을 지우는 세기
+            half4 _WC_CharacterDabStrong; // 강한 자국: x 강한 자국의 비율, y 약한 자국의 세기(강한 자국을 1 로)
+
+            // 붓 자국 한 겹을 지금 색 위에 얹는다. 캐릭터를 그 색으로 직접 칠하는 것처럼, 자국 색은 그 자리의 색에서 색상과 명도, 채도만
+            // 자국마다 조금씩 옮긴 것이다. chance 는 이 자리에 자국이 나올 비율이다. 자국의 등장 순서와 비교한다.
+            half3 BrushDabLayer(half3 color, float2 uv, half chance, half amount)
+            {
+                half2 cover = SAMPLE_TEXTURE2D(_WC_BrushDabs, sampler_LinearRepeat, uv).ra;
+                half2 dab = SAMPLE_TEXTURE2D(_WC_BrushDabs, sampler_PointRepeat, uv).gb;
+                half paint = smoothstep(0.35, 0.5, cover.x) * step(dab.y, chance);
+                if (paint <= 0)
+                    return color;
+                // 한 값에서 서로 다른 세 값을 얻는다(-1~1).
+                half3 vary = frac(dab.x * half3(1.0, 7.13, 13.71)) * 2.0 - 1.0;
+                // 대부분은 밑색에 가깝고 희미한 약한 자국이고, 몇 개만 색 차이와 진하기가 온전한 강한 자국이다.
+                half weight = frac(dab.x * 23.17) < _WC_CharacterDabStrong.x ? 1.0 : _WC_CharacterDabStrong.y;
+                half3 own = RgbToHsv(saturate(color));
+                half hue = frac(own.x + vary.x * _WC_CharacterDabVary.x * weight);
+                half value = saturate(own.z * (1.0 + vary.y * _WC_CharacterDabVary.y * weight + (cover.y - 0.5) * 0.08 * weight));
+                half saturation = saturate(own.y * (1.0 + vary.z * _WC_CharacterDabVary.z * weight));
+                return lerp(color, HsvToRgb(half3(hue, saturation, value)), paint * amount * weight);
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -583,7 +667,7 @@ Shader "ThatGameJam/WatercolorFlat"
 
                 // 드리운 그림자. 경계를 잡음으로 흔들어(붓 자국) 그림자 맵의 매끈한 선이 보이지 않게 한다.
                 // Receive Cast Shadows 를 끈 머티리얼(예: 나무끼리)은 드리운 그림자를 받지 않는다.
-                half shadowAtten = lerp(1.0, mainLight.shadowAttenuation, _WC_ReceiveShadows * facing * _ReceiveCastShadows);
+                half shadowAtten = lerp(1.0, mainLight.shadowAttenuation, _WC_ReceiveShadows * facing * _ReceiveCastShadows * (1.0 - step(0.5, _Character) * _WC_CharacterNoCastShadows));
                 half cast = saturate((shadowAtten - 0.5) * (1.0 + 2.0 * _WC_ShadowRagged) + 0.5 + (pattern.r - 0.5) * _WC_ShadowRagged);
                 // 해 세기(환경): 주 광원의 세기가 맑은 날 기준보다 약하면(흐린 날) 그림자가 옅어지고
                 // 흰 종이와 크림 띠가 줄어든다. 기준 이상이면 지금 그대로다. 빛 색은 세기와 분리해 따로 쓴다.
@@ -686,6 +770,10 @@ Shader "ThatGameJam/WatercolorFlat"
                 // 구아슈(불투명 물감): 형태 그림자(어둠)와 빛 두 단계, 그 경계에 전환색 한 줄. 색상·채도는 본색 그대로이고
                 // 명도만 다르다(전환색만 살짝 물든다). 단계 경계는 마른 붓처럼 끊긴다. 드리운 그림자도 어둠 단계로 칠한다.
                 // 바닥은 면 방향을 쓰지 않아 빛 단계에 드리운 그림자만 받는다(그 경계에도 전환색).
+                half gouacheLit = 1.0; // 구아슈 명암에서 빛 쪽인 정도(전환색과 어둠은 0)
+                // 피부는 머티리얼의 그늘 색(살 속을 지난 빛처럼 주황)을 쓰고, 그 색이 회색으로 빠지지 않게 항상 맑게 칠한다.
+                half4 characterShade = _Skin > 0.5 ? half4(LinearToSRGB(_SkinShadeColour.rgb), _SkinShadeTurn) : _WC_CharacterShade;
+                half clearAmount = _Skin > 0.5 ? 1.0 : _WC_GouacheSteps.w;
                 if (_WC_Gouache.x > 0)
                 {
                     // 붓질 방향: 물체는 빛의 등고선을 따라(명암이 바뀌는 방향에 수직) 감고, 바닥은 자리마다 다르게 쓴다.
@@ -694,17 +782,24 @@ Shader "ThatGameJam/WatercolorFlat"
                     float2 contour = gradientLength > 1e-4 ? float2(-lightGradient.y, lightGradient.x) / gradientLength : float2(1.0, 0.0);
                     half floorAngle = (SceneNoise(input.positionWS.xz / 3.0 + 5.7) - 0.5) * 1.4;
                     float2 floorDir = float2(cos(floorAngle), sin(floorAngle));
-                    float2 brushDir = normalize(lerp(floorDir, contour, objectOnly * saturate(gradientLength * 400.0)));
-                    half brush = DryBrush(input.positionWS, brushDir);
+                    // 캐릭터는 붓 무늬가 작아서 방향이 휘면 동심원 간섭무늬가 생긴다. 등고선을 따르지 않는다.
+                    float2 brushDir = normalize(lerp(floorDir, contour, objectOnly * saturate(gradientLength * 400.0) * (1.0 - step(0.5, _Character))));
+                    half brush = DryBrush(input.positionWS, brushDir, _Character > 0.5 ? _WC_CharacterBrushSize : _WC_GouacheEdge.z);
                     // 먼 곳은 붓질이 뭉개진다(안개가 짙어지는 거리를 따라 붓 자국이 줄어든다).
                     half nearBrush = 1.0 - saturate((length(input.positionWS - GetCameraPositionWS()) - _WC_Haze.y) / max(_WC_Haze.z, 0.1)) * 0.8;
                     // 캐릭터와 배경은 매니저의 값을 따로 쓴다(캐릭터는 보통 더 깔끔하게).
                     half isCharacter = step(0.5, _Character);
                     half dryAmount = lerp(_WC_Gouache.w, _WC_CharacterGouache.z, isCharacter);
                     half dry = (brush - 0.5) * 2.0 * dryAmount * nearBrush;
+                    // 파스텔 결(클로즈업의 캐릭터): 빛과 그늘의 경계를 결의 밀도로 풀어 버린다.
+                    half pastelGrain = 0.5, pastelVisible = 0.0;
+                    bool pastelOn = isCharacter > 0.5 && _WC_CharacterPastel.x > 0.5 && _HasPattern > 0.5;
+                    if (pastelOn)
+                        pastelGrain = PastelGrain(input.patternUV, _WC_CharacterPastel.y, pastelVisible);
+                    half pastelBreak = (pastelGrain - 0.5) * _WC_CharacterPastel.w * pastelVisible;
 
                     // 형태: 명암 경계(Terminator) 위는 빛, 아래는 어둠, 경계 양쪽 Width 만큼이 전환색.
-                    half t = ndotlRaw + (pattern.r - 0.5) * 0.1 + dry;
+                    half t = ndotlRaw + (pattern.r - 0.5) * 0.1 + dry + pastelBreak;
                     half e = _WC_GouacheSteps.x, w = _WC_GouacheSteps.y;
                     half formLevel = 0.5 * smoothstep(e - w - 0.01, e - w + 0.01, t) + 0.5 * smoothstep(e + w - 0.01, e + w + 0.01, t);
                     formLevel = lerp(1.0, formLevel, objectOnly);
@@ -712,10 +807,11 @@ Shader "ThatGameJam/WatercolorFlat"
                     half shadowEdgeBand = saturate((1.0 - abs(saturate(shadowAtten) * 2.0 - 1.0)) * 3.0);
                     // 그림자 경계는 단단하게: 그림자 맵의 부드러운 경계를 좁게 자르고, 붓질로만 갈라지게 한다.
                     half castSharp = saturate((cast - 0.5) * 3.0 + 0.5);
-                    half castDry = saturate(castSharp + dry * 1.5 * shadowEdgeBand);
+                    half castDry = saturate(castSharp + (dry + pastelBreak) * 1.5 * shadowEdgeBand);
                     half castW = _WC_GouacheSteps.y * 2.0;
                     half castLevel = 0.5 * smoothstep(0.5 - castW - 0.02, 0.5 - castW + 0.02, castDry) + 0.5 * smoothstep(0.5 + castW - 0.02, 0.5 + castW + 0.02, castDry);
                     half level = min(formLevel, castLevel);
+                    gouacheLit = saturate((level - 0.5) * 2.0);
 
                     half3 lightTone = HsvToRgb(half3(solidHsv.x, solidHsv.y, lerp(solidHsv.z, 1.0, 0.2 * sun)));
                     // 형태 그림자 톤: 같은 색상으로 명도를 낮추고 채도를 올린다(Gouache Shade Saturation). 채도가 낮은 색
@@ -725,21 +821,34 @@ Shader "ThatGameJam/WatercolorFlat"
                     // 캐릭터 그늘: 정한 그늘 색 쪽으로 간다(크림색 옷 그늘을 라벤더로 등). 깊이도 캐릭터 값을 쓴다.
                     // 채도가 높은 색은 색상환의 가까운 쪽으로 색상만 돌리고, 채도가 낮은 색(크림, 흰색)은 색상환을 돌면
                     // 중간의 분홍·자주를 지나 쨍해지므로 같은 밝기의 그늘 색과 섞는다.
-                    half shadeDepth = lerp(_WC_Gouache.y, _WC_CharacterGouache.w, isCharacter);
+                    half shadeDepth = lerp(_WC_Gouache.y, _Skin > 0.5 ? _SkinShadeDepth : _WC_CharacterGouache.w, isCharacter);
                     half shadeValue = solidHsv.z * (1.0 - saturate(shadeDepth * 0.45));
                     half3 darkTone = HsvToRgb(half3(solidHsv.x, shadeSat, shadeValue));
-                    if (isCharacter > 0.5 && _WC_CharacterShade.a > 0)
+                    if (isCharacter > 0.5 && characterShade.a > 0)
                     {
-                        half3 tintHsv = RgbToHsv(_WC_CharacterShade.rgb);
+                        half3 tintHsv = RgbToHsv(characterShade.rgb);
                         half toTint = tintHsv.x - solidHsv.x;
                         toTint -= round(toTint);
-                        half3 turned = HsvToRgb(half3(frac(solidHsv.x + toTint * _WC_CharacterShade.a), shadeSat, shadeValue));
-                        half3 mixed = lerp(darkTone, HsvToRgb(half3(tintHsv.x, tintHsv.y, shadeValue)), _WC_CharacterShade.a);
+                        half3 turned = HsvToRgb(half3(frac(solidHsv.x + toTint * characterShade.a), shadeSat, shadeValue));
+                        half3 mixed = lerp(darkTone, HsvToRgb(half3(tintHsv.x, tintHsv.y, shadeValue)), characterShade.a);
                         darkTone = lerp(mixed, turned, smoothstep(0.25, 0.45, solidHsv.y));
                     }
                     // 바닥(흰 눈)의 어둠은 회청색 그림자 그대로(같은 물감을 더 쌓은 색).
                     darkTone = lerp(Accumulate(lightTone, shadowAmount), darkTone, objectOnly);
-                    half3 midTone = lerp(darkTone, lightTone, 0.5) * lerp(1.0, _WC_GouacheTransition.rgb, _WC_GouacheTransition.a);
+                    half3 midTone = lerp(darkTone, lightTone, 0.5);
+                    // 캐릭터 전환색: 빛과 그늘의 색상이 멀면(크림과 보라) RGB 로 섞을 때 서로 지워져 회색이 된다. HSV 로 채도를 지킨다.
+                    // 채도가 낮은 색은 색상환을 돌면 쨍해지므로 그늘 색상을 그대로 쓰고, 채도가 높은 색만 빛과 그늘 사이 색상으로 간다.
+                    if (isCharacter > 0.5 && clearAmount > 0)
+                    {
+                        half3 lightHsv = RgbToHsv(lightTone);
+                        half3 darkHsv = RgbToHsv(darkTone);
+                        half toLight = lightHsv.x - darkHsv.x;
+                        toLight -= round(toLight);
+                        half midHue = frac(darkHsv.x + toLight * 0.5 * smoothstep(0.25, 0.45, solidHsv.y));
+                        half3 clearMid = HsvToRgb(half3(midHue, lerp(darkHsv.y, lightHsv.y, 0.5), lerp(darkHsv.z, lightHsv.z, 0.5)));
+                        midTone = lerp(midTone, clearMid, clearAmount);
+                    }
+                    midTone *= lerp(1.0, _WC_GouacheTransition.rgb, _WC_GouacheTransition.a);
                     half3 gouache = level < 0.5 ? lerp(darkTone, midTone, level * 2.0) : lerp(midTone, lightTone, level * 2.0 - 1.0);
                     // 붓 자국 색 흔들림: 같은 밝기 안에서도 붓 자국마다 색이 다르다. 곱해서 물들이므로 흰 눈에도 든다.
                     if (_WC_GouacheStroke.x > 0 && isCharacter < 0.5)
@@ -752,6 +861,18 @@ Shader "ThatGameJam/WatercolorFlat"
                         half3 strokeTint = lerp(strokeShade, strokeLight, level);
                         strokeTint /= max(dot(strokeTint, half3(0.3, 0.59, 0.11)), 0.01);
                         gouache = saturate(gouache * lerp(half3(1, 1, 1), strokeTint, strokeAmount));
+                    }
+                    // 파스텔 결의 둘째 색: 밝기는 그대로 두고 일부 결만 색상과 채도를 옮겨, 밑색이 결 사이로 비친다.
+                    if (pastelOn && _WC_CharacterPastelColour.a > 0)
+                    {
+                        half rubbedVisible;
+                        half rubbedGrain = PastelGrain(input.patternUV + 19.3, _WC_CharacterPastelTurn.z, rubbedVisible);
+                        half3 painted = RgbToHsv(saturate(gouache));
+                        half3 rubbed = RgbToHsv(_WC_CharacterPastelColour.rgb);
+                        half toRubbed = rubbed.x - painted.x;
+                        toRubbed -= round(toRubbed);
+                        half3 rubbedColour = HsvToRgb(half3(frac(painted.x + toRubbed * 0.6), max(painted.y, lerp(painted.y, rubbed.y, 0.5)), painted.z));
+                        gouache = lerp(gouache, rubbedColour, smoothstep(0.5, 0.62, rubbedGrain) * _WC_CharacterPastelColour.a * rubbedVisible);
                     }
                     // 빛 쪽 실루엣에 빛이 번진 듯 밝은 테두리(역광에 줄기 가장자리가 빛나는 것처럼). 같은 색을 밝힌다.
                     half rimGlow = pow(1.0 - saturate(dot(normalWS, viewWS)), 4.0) * saturate(dot(normalWS, formLightDir) * 0.5 + 0.6) * objectOnly * castSharp;
@@ -811,8 +932,26 @@ Shader "ThatGameJam/WatercolorFlat"
                 {
                     half reserveEdge = lerp(_WC_PaperThreshold, 1.0, _WC_WashReserve.x);
                     half reserved = smoothstep(reserveEdge - paperSoft, reserveEdge + paperSoft, ndotl) * cast * sun * objectOnly * _LeavePaper;
+                    // 구아슈 캐릭터: 바탕칠이 경계를 따로 만들면 그늘이 한 겹 더 생긴다. 빛 쪽 전부를 남겨 명암 경계와 맞춘다.
+                    if (_Character > 0.5)
+                        // 피부는 바탕칠을 받지 않는다. 그늘이 갈색으로 죽지 않고, 밝기는 Skin Shade Depth 로만 정해진다.
+                        reserved = lerp(reserved, _Skin > 0.5 ? 1.0 : gouacheLit * sun * _LeavePaper, _WC_Gouache.x);
                     reserved = max(reserved, _Floor * pattern.g * cast * _WC_WashReserve.y);
+                    half3 unwashed = color;
                     color *= lerp(1.0, _WC_Wash.rgb, _WC_Wash.a * (1.0 - reserved));
+                    // 캐릭터: 청회색 바탕칠을 크림색에 곱하면 회색이, 노란색에 곱하면 올리브색이 된다. 밝기만 받고 색은 지킨다.
+                    // 채도가 낮은 색(크림, 흰색)은 그늘 색 쪽으로, 채도가 높은 색은 원래 색상 그대로 어두워진다.
+                    if (_Character > 0.5 && clearAmount > 0)
+                    {
+                        half3 before = RgbToHsv(saturate(unwashed));
+                        half3 tint = RgbToHsv(characterShade.rgb);
+                        half pale = 1.0 - smoothstep(0.25, 0.45, solidHsv.y);
+                        half toTint = tint.x - before.x;
+                        toTint -= round(toTint);
+                        half clearSat = max(before.y, lerp(before.y, tint.y, 0.5 * pale));
+                        half3 clearWash = HsvToRgb(half3(frac(before.x + toTint * pale), clearSat, RgbToHsv(saturate(color)).z));
+                        color = lerp(color, clearWash, clearAmount * _WC_Gouache.x * (1.0 - reserved) * saturate(_WC_Wash.a * 2.0));
+                    }
                 }
 
                 // 구아슈 하이라이트: 가장 밝은 곳에 밝은 물감을 바탕칠 위로 덧칠한다. 그래서 바탕칠이 진해도 또렷하게 밝다.
@@ -825,7 +964,7 @@ Shader "ThatGameJam/WatercolorFlat"
                     half floorAngle = (SceneNoise(input.positionWS.xz / 3.0 + 5.7) - 0.5) * 1.4;
                     float2 floorDir = float2(cos(floorAngle), sin(floorAngle));
                     float2 brushDir = normalize(lerp(floorDir, contour, objectOnly * saturate(gradientLength * 400.0)));
-                    half brush = DryBrush(input.positionWS + 3.7, brushDir);
+                    half brush = DryBrush(input.positionWS + 3.7, brushDir, _WC_GouacheEdge.z);
                     half dry = (brush - 0.5) * 2.0 * _WC_Gouache.w;
                     half hiEdge = lerp(_WC_PaperThreshold, 1.0, 0.45);
                     // 물체는 빛과 형태 그림자 두 단계뿐이라 덧칠 하이라이트를 쓰지 않는다. 바닥(바탕칠 위 밝은 눈)만.
@@ -869,6 +1008,31 @@ Shader "ThatGameJam/WatercolorFlat"
                     float sunField = SunPoolField(sunGround, sunR, _WC_SunPoolShape.x, _WC_SunPoolShape.y, _WC_SunPoolSlant.z);
                     half sunLit = smoothstep(_WC_SunPoolShape.z - _WC_SunPoolShape.w, _WC_SunPoolShape.z + _WC_SunPoolShape.w, sunField) * SunPoolRimFade(sunR);
                     color = 1.0 - (1.0 - saturate(color)) * (1.0 - _WC_SunPoolColor.rgb * _WC_SunPoolGlow * sunLit);
+                }
+
+                // 붓 자국(클로즈업의 캐릭터): 다 칠한 색 위에 얹는다. 명암이 꺾이는 곳과 실루엣에 많고, 정면으로 보이는 면에는 적다.
+                // 자국은 몸에 붙어 움직이고, 면이 향하는 쪽의 평면 하나로 읽어 두 겹으로 겹치지 않는다. 화면에서 작아지면 사라진다.
+                if (_Character > 0.5 && _WC_CharacterDabs.x > 0.5 && _HasPattern > 0.5 && _WC_Gouache.x > 0)
+                {
+                    float3 rest = input.patternUV;
+                    float3 restDx = ddx(rest), restDy = ddy(rest);
+                    half dabPixels = _WC_CharacterDabs.y / 12.0 / max(max(length(restDx), length(restDy)), 1e-6);
+                    half dabVisible = smoothstep(3.0, 8.0, dabPixels);
+                    if (dabVisible > 0)
+                    {
+                        float3 restFacing = abs(cross(restDx, restDy));
+                        float2 dabPlane = restFacing.x > restFacing.y && restFacing.x > restFacing.z ? rest.yz : (restFacing.y > restFacing.z ? rest.zx + 3.7 : rest.xy + 7.1);
+                        dabPlane = float2(_WC_CharacterDabTurn.x * dabPlane.x + _WC_CharacterDabTurn.y * dabPlane.y, _WC_CharacterDabTurn.x * dabPlane.y - _WC_CharacterDabTurn.y * dabPlane.x) / _WC_CharacterDabs.y;
+                        half dabTurn = saturate(1.0 - abs(ndotlRaw - _WC_GouacheSteps.x) / 0.25);
+                        half dabRim = 1.0 - saturate(dot(normalWS, viewWS));
+                        half dabChance = _WC_CharacterDabs.z * (0.25 + 0.75 * max(dabTurn, dabRim * dabRim));
+                        // 빛이 가장 정면으로 닿는 곳일수록 자국이 옅어진다. 자국을 빼지 않고 진하기를 낮춰 부드럽게 번진다.
+                        half dabReach = _WC_CharacterDabTurn.z;
+                        half dabLit = smoothstep(1.0 - dabReach, 1.0 - dabReach * 0.3, ndotlRaw * cast);
+                        half dabAmount = _WC_CharacterDabs.w * dabVisible * _WC_Gouache.x * (1.0 - _WC_CharacterDabVary.w * dabLit);
+                        color = BrushDabLayer(color, dabPlane, dabChance, dabAmount);
+                        color = BrushDabLayer(color, dabPlane * 1.9 + 0.37, dabChance * 0.6, dabAmount);
+                    }
                 }
 
                 // 거리 안개: 멀수록 공기 색으로 바랜다. 지평선 쪽(시선이 수평)은 아래 색, 올려다보는 쪽은 위 색.

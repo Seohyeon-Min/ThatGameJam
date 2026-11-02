@@ -6,8 +6,8 @@ using UnityEngine.UI;
 
 // The game's opening, above the clouds. The title shows until the first click; the bird flies in from below the screen to that click.
 // The sky camera then travels to its end point without turning while the player flies the bird by clicking, as in the game.
-// Near the end the bird curves in, slowing, and goes straight into circling over the hole in the clouds. A click on the baby sends it diving, and the game
-// starts behind a white fade. Everything here is saved in the scene: this only turns it on and off.
+// Near the end the bird curves in, slowing, and goes straight into circling over the hole in the clouds. A click on the baby sends it up a little and then diving,
+// and the game starts behind a white fade. Everything here is saved in the scene: this only turns it on and off.
 public class IntroSequence : MonoBehaviour
 {
     [Header("Camera")]
@@ -24,7 +24,8 @@ public class IntroSequence : MonoBehaviour
     [SerializeField, Min(0.01f)] float titleFadeSeconds = 0.6f;
     [Tooltip("White, over the whole screen.")]
     [SerializeField] Graphic whiteFade;
-    [SerializeField, Min(0.01f)] float fadeInSeconds = 1f;
+    [Tooltip("Seconds from the moment the bird starts dropping until the screen is fully white. The game starts then, so the dive is cut short if it would run longer.")]
+    [SerializeField, Min(0.01f)] float whiteSeconds = 1.8f;
     [SerializeField, Min(0f)] float fadeHoldSeconds = 0.2f;
     [SerializeField, Min(0.01f)] float fadeOutSeconds = 1.2f;
 
@@ -39,15 +40,40 @@ public class IntroSequence : MonoBehaviour
     [Tooltip("How far around the baby a click counts, as a fraction of the screen's height.")]
     [SerializeField, Range(0.01f, 0.5f)] float babyClickRadius = 0.1f;
     [SerializeField, Min(0.1f)] float diveSeconds = 4f;
+    [Tooltip("How fast the bird keeps circling as it dives. 1 = as fast as on the circle, 0 = only straight toward the spot.")]
+    [SerializeField, Min(0f)] float diveTurnRate = 1f;
+    [Tooltip("Seconds after the bird starts dropping (the lowest point of Dive Path) that the camera goes after it.")]
+    [SerializeField, Min(0f)] float diveCameraBeat = 0.7f;
+    [Tooltip("Seconds Dive Field Of View runs behind the rest of the dive.")]
+    [SerializeField, Min(0f)] float diveFieldOfViewBeat = 0.175f;
+    [Tooltip("How far along the way down the bird is, across the dive. 0 = circle height, 1 = the stage's start, below 0 = above the circle: the climb before it drops. Steeper is faster.")]
+    [SerializeField] AnimationCurve divePath = new AnimationCurve(new Keyframe(0f, 0f, 0f, -3f), new Keyframe(0.18f, -0.3f), new Keyframe(0.5f, 0.75f, 1.6f, 1.6f), new Keyframe(1f, 1f, 0.2f, 0f));
+    [Tooltip("Vertical FOV across the dive, as a fraction of the sky camera's. Over 1 widens it, pushing the far things away, while the bird climbs. Under 1 zooms in, which pulls the ground closer.")]
+    [SerializeField] AnimationCurve diveFieldOfView = new AnimationCurve(new Keyframe(0f, 1f, 0f, 3f), new Keyframe(0.18f, 1.4f, 0f, 0f), new Keyframe(1f, 0.5f, -1f, 0f));
     [Tooltip("Placeholder for the dive animation: how far the body tips over during the dive, in degrees. Negative tips it the other way.")]
     [SerializeField] float diveBodyPitch = 45f;
+    [Tooltip("Dive Body Pitch across the dive, as a fraction. Below 0 lifts the nose for the climb.")]
+    [SerializeField] AnimationCurve divePitch = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.1f, -0.4f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f));
 
+    [Header("Game Start")]
+    [Tooltip("The tree the bird drops onto as the white clears: the object, or one of its branches to choose where. It must be on screen in the game camera's opening frame. Empty: the bird just starts at the stage's start.")]
+    [SerializeField] GameObject startTree;
+    [Tooltip("How far above its perch on that tree the bird starts, behind the white. It drops at once, and lands as the white clears.")]
+    [SerializeField, Min(0f)] float dropHeight = 2f;
+
+    CloudGenerator[] clouds;
+    Vector3[] cloudCentres;
+    float[] cloudReaches;
     float cameraSecondsLeft = float.MaxValue;
     bool running;
+    // Where on the circle the bird is, which the dive goes on from.
+    float circleAngle;
 
     public void Play()
     {
         running = true;
+        // The canvas may be off in the scene, to see past the title while working on it.
+        title.GetComponentInParent<Canvas>(true).gameObject.SetActive(true);
         SetAlpha(whiteFade, 0f);
         StartCoroutine(Run());
     }
@@ -94,7 +120,6 @@ public class IntroSequence : MonoBehaviour
         yield return CircleUntilBabyClicked(angle);
 
         running = false;
-        diveCamera.gameObject.SetActive(true);
         yield return Dive();
         yield return StartGame();
     }
@@ -110,11 +135,47 @@ public class IntroSequence : MonoBehaviour
         title.gameObject.SetActive(false);
     }
 
+    // Measures each cloud once, so what it takes to clear the screen is known without looking at all its puffs every frame.
+    void FindClouds()
+    {
+        clouds = FindObjectsByType<CloudGenerator>(FindObjectsSortMode.None);
+        cloudCentres = new Vector3[clouds.Length];
+        cloudReaches = new float[clouds.Length];
+        for (int i = 0; i < clouds.Length; i++)
+        {
+            Renderer[] puffs = clouds[i].GetComponentsInChildren<Renderer>();
+            if (puffs.Length == 0)
+                continue;
+            Bounds bounds = puffs[0].bounds;
+            foreach (Renderer puff in puffs)
+                bounds.Encapsulate(puff.bounds);
+            cloudCentres[i] = bounds.center;
+            cloudReaches[i] = bounds.extents.magnitude;
+        }
+    }
+
+    // A cloud is turned off once all of it has left the screen on the side the camera is travelling away from. The camera never comes back.
+    void HideCloudsBehindCamera()
+    {
+        Camera view = Camera.main;
+        Vector3 forward = BirdController.Instance.SkyForward;
+        for (int i = 0; i < clouds.Length; i++)
+        {
+            if (!clouds[i].gameObject.activeSelf)
+                continue;
+            Vector3 front = view.WorldToViewportPoint(cloudCentres[i] + forward * cloudReaches[i]);
+            if (front.z <= 0f || front.y < 0f)
+                clouds[i].gameObject.SetActive(false);
+        }
+    }
+
     IEnumerator MoveCamera()
     {
+        FindClouds();
         Transform moved = skyCamera.transform;
         for (float t = 0f; t < flightSeconds; t += Time.deltaTime)
         {
+            HideCloudsBehindCamera();
             Vector3 before = moved.position;
             moved.position = Vector3.Lerp(cameraStart.position, cameraEnd.position, Mathf.SmoothStep(0f, 1f, t / flightSeconds));
             if (Time.deltaTime > 0f)
@@ -165,9 +226,7 @@ public class IntroSequence : MonoBehaviour
         Vector3 endTangent = new Vector3(-Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * (orbitSpeed * approachSeconds);
         for (float t = 0f; t < approachSeconds; t += Time.deltaTime)
         {
-            float u = t / approachSeconds, u2 = u * u, u3 = u2 * u;
-            bird.MoveScripted((2f * u3 - 3f * u2 + 1f) * from + (u3 - 2f * u2 + u) * startTangent
-                + (-2f * u3 + 3f * u2) * to + (u3 - u2) * endTangent);
+            bird.MoveScripted(Curve(from, startTangent, to, endTangent, t / approachSeconds));
             yield return null;
         }
         reachedAngle(angle);
@@ -176,28 +235,64 @@ public class IntroSequence : MonoBehaviour
     IEnumerator CircleUntilBabyClicked(float angle)
     {
         BirdController bird = BirdController.Instance;
+        circleAngle = angle;
         while (!ClickedOnBaby())
         {
-            angle += orbitSpeed / orbitRadius * Time.deltaTime;
-            bird.MoveScripted(OnCircle(angle));
+            circleAngle += orbitSpeed / orbitRadius * Time.deltaTime;
+            bird.MoveScripted(OnCircle(circleAngle));
             yield return null;
         }
     }
 
+    // Starts along the start tangent and ends along the end tangent. u is 0 to 1; a tangent is the velocity times the seconds the curve takes.
+    static Vector3 Curve(Vector3 from, Vector3 startTangent, Vector3 to, Vector3 endTangent, float u)
+    {
+        float u2 = u * u, u3 = u2 * u;
+        return (2f * u3 - 3f * u2 + 1f) * from + (u3 - 2f * u2 + u) * startTangent + (-2f * u3 + 3f * u2) * to + (u3 - u2) * endTangent;
+    }
+
     Vector3 OnCircle(float angle) => orbitCentre.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * orbitRadius;
 
+    // The moment the bird stops climbing and starts to drop, as a fraction of the dive.
+    float DropStart()
+    {
+        Keyframe top = divePath[0];
+        foreach (Keyframe key in divePath.keys)
+            if (key.value < top.value)
+                top = key;
+        return top.time;
+    }
+
+    // The bird climbs a little, then swoops down, still circling on a tightening spiral; the camera goes after it a beat into the drop, zooming in.
     IEnumerator Dive()
     {
         BirdController bird = BirdController.Instance;
-        Vector3 from = bird.transform.position;
+        Vector3 from = orbitCentre.position;
         Stage first = GameFlow.Instance.CurrentStage;
         Vector3 to = first.birdStart.position;
         to.y = first.birdAltitude;
+        float skyFieldOfView = skyCamera.Lens.FieldOfView;
+        float dropStartsAt = DropStart() * diveSeconds;
+        float cameraStartsAt = dropStartsAt + diveCameraBeat;
         for (float t = 0f; t < diveSeconds; t += Time.deltaTime)
         {
             float progress = t / diveSeconds;
-            bird.MoveScripted(Vector3.Lerp(from, to, progress * progress), diveBodyPitch * Mathf.Sin(progress * Mathf.PI));
-            SetAlpha(whiteFade, Mathf.InverseLerp(diveSeconds - fadeInSeconds, diveSeconds, t));
+            if (t >= cameraStartsAt && !diveCamera.gameObject.activeSelf)
+                diveCamera.gameObject.SetActive(true);
+            circleAngle += orbitSpeed / orbitRadius * diveTurnRate * Time.deltaTime;
+            Vector3 spiral = new Vector3(Mathf.Cos(circleAngle), 0f, Mathf.Sin(circleAngle)) * (orbitRadius * (1f - progress));
+            float descent = divePath.Evaluate(progress);
+            // Lerp stops at from: during the climb only the height goes past it.
+            Vector3 path = Vector3.Lerp(from, to, descent);
+            path.y = Mathf.LerpUnclamped(from.y, to.y, descent);
+            bird.MoveScripted(path + spiral, diveBodyPitch * divePitch.Evaluate(progress));
+            // On both cameras, so the blend between them doesn't change the zoom.
+            skyCamera.Lens.FieldOfView = diveCamera.Lens.FieldOfView = skyFieldOfView * diveFieldOfView.Evaluate(Mathf.Max(t - diveFieldOfViewBeat, 0f) / diveSeconds);
+            // Faint at first, so the drop can still be seen.
+            float white = Mathf.InverseLerp(dropStartsAt, dropStartsAt + whiteSeconds, t);
+            SetAlpha(whiteFade, white * white);
+            if (white >= 1f)
+                yield break;
             yield return null;
         }
     }
@@ -209,8 +304,16 @@ public class IntroSequence : MonoBehaviour
         title.gameObject.SetActive(false);
         skyCamera.gameObject.SetActive(false);
         diveCamera.gameObject.SetActive(false);
-        BirdController.Instance.EndIntro();
-        GameFlow.Instance.FinishIntro();
+        // The clouds are only for up here, wherever in the scene they were placed.
+        foreach (CloudGenerator cloud in FindObjectsByType<CloudGenerator>(FindObjectsSortMode.None))
+            cloud.gameObject.SetActive(false);
+        BirdController bird = BirdController.Instance;
+        Perchable perch = startTree != null ? startTree.GetComponentInChildren<Perchable>() : null;
+        if (perch != null)
+            bird.HoldStill();
+        else
+            bird.EndIntro();
+        GameFlow.Instance.FinishIntro(perch, dropHeight);
 
         // The brain starts its blend to the game camera in this frame's LateUpdate.
         yield return null;
@@ -218,12 +321,20 @@ public class IntroSequence : MonoBehaviour
         if (brain != null)
             brain.ActiveBlend = null;
 
+        // Right away: the landing is seen as the white clears.
+        if (perch != null)
+        {
+            bird.EndIntro();
+            bird.PerchOn(perch);
+        }
+
         yield return new WaitForSeconds(fadeHoldSeconds);
         for (float t = 0f; t < fadeOutSeconds; t += Time.deltaTime)
         {
             SetAlpha(whiteFade, 1f - t / fadeOutSeconds);
             yield return null;
         }
+        SetAlpha(whiteFade, 0f);
         gameObject.SetActive(false);
     }
 

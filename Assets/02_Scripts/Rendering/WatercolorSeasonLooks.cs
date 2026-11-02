@@ -28,6 +28,8 @@ public class WatercolorSeasonLooks : MonoBehaviour
     float blend = 1f;
     int wipeCheckFrom;
 
+    public Volume SceneVolume => volume;
+
     void Start()
     {
         manager = FindAnyObjectByType<WatercolorManager>();

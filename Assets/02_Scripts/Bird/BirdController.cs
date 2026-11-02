@@ -42,6 +42,8 @@ public class BirdController : MonoBehaviour
     public Vector3 SkyForward { get; set; } = Vector3.forward;
 
     public bool IsPerched => state == State.Perched;
+    // Sitting on a perch or on the way to one.
+    public bool IsPerchedOrLanding => state != State.Flying;
     // Held over the walking baby, keeping the snow off her (SnowShelter).
     public bool IsSheltering { get; private set; }
     // Sheltering and over her (not held back at the edge of its area or the screen): its wings keep the snow off.
@@ -81,6 +83,7 @@ public class BirdController : MonoBehaviour
     float idleTime;
     bool following;
     Perchable perch;
+    bool clicksLocked;
     float landTime;
     // The turn while landing, from the heading it arrived with.
     Quaternion landFrom, landTo;
@@ -164,8 +167,16 @@ public class BirdController : MonoBehaviour
         if (control != Control.Game)
             return;
         bounds = area;
-        if (state != State.Flying && !OnScreen(perch.PerchPoint.position))
+        // Not during PerchOn: the camera may not have reached its new place yet.
+        if (state != State.Flying && !clicksLocked && !OnScreen(perch.PerchPoint.position))
             LeavePerch();
+    }
+
+    // Flies to the perch and lands, and the player's clicks don't count until it has landed.
+    public void PerchOn(Perchable perchable)
+    {
+        StartPerch(perchable);
+        clicksLocked = true;
     }
 
     // Intro: nothing moves the bird but MoveScripted.
@@ -195,6 +206,17 @@ public class BirdController : MonoBehaviour
         Face(position - transform.position);
         transform.position = position;
         animator.SetBool(MovingParam, true);
+        animator.SetBool(PerchedParam, false);
+    }
+
+    // Hovers level where it is, until the script moves it again or EndIntro.
+    public void HoldStill()
+    {
+        bodyPitch = 0f;
+        bankAngle = 0f;
+        if (visualRoot != null)
+            visualRoot.localRotation = visualBaseRotation;
+        animator.SetBool(MovingParam, false);
         animator.SetBool(PerchedParam, false);
     }
 
@@ -235,7 +257,7 @@ public class BirdController : MonoBehaviour
             hasHit = Physics.Raycast(ray, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
         ShowPerchCursor(hovered != null);
 
-        bool pressed = moveAction.WasPressedThisFrame() && !DevTools.Covers(pointAction.ReadValue<Vector2>());
+        bool pressed = moveAction.WasPressedThisFrame() && !clicksLocked && !DevTools.Covers(pointAction.ReadValue<Vector2>());
         if (Cutscene.AnyPlaying)
             following = false;
         else if (pressed && CanShelter() && Baby.Instance.GetComponent<Collider>().Raycast(ray, out _, Mathf.Infinity))
@@ -408,6 +430,8 @@ public class BirdController : MonoBehaviour
         LeavePerch();
         perch = perchable;
         perch.Released += LeavePerch;
+        // From the moment it heads there, not only once it stands there: the tree it is landing in stays solid.
+        perch.SetCameraFadeExempt(true);
         state = State.ToPerch;
     }
 
@@ -423,6 +447,7 @@ public class BirdController : MonoBehaviour
         }
         bool takingOff = state == State.Perched || state == State.Landing;
         perch = null;
+        clicksLocked = false;
         refusePending = false;
         animator.ResetTrigger(RefuseParam);
         if (state != State.Flying)
@@ -528,6 +553,7 @@ public class BirdController : MonoBehaviour
         if (landTime < GameTuning.Current.birdPerchDuration)
             return;
         state = State.Perched;
+        clicksLocked = false;
         perch.NotifyPerched();
         if (refusePending)
         {

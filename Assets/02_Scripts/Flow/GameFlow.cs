@@ -56,12 +56,22 @@ public class GameFlow : MonoBehaviour
         }
     }
 
-    // The intro has ended: the bird is at the first stage's start, and the baby can wake from here on.
-    public void FinishIntro()
+    // The intro has ended, and the baby can wake from here on. The bird is at the first stage's start, or above the tree it will
+    // drop onto, with the camera framed as if it were at the start.
+    public void FinishIntro(Perchable landOn, float landFromHeight)
     {
         Stage first = stages[0];
-        BirdController.Instance.Teleport(first.birdStart.position);
-        BirdController.Instance.SetAltitude(first.birdAltitude, true);
+        if (landOn != null)
+        {
+            BirdController.Instance.Teleport(landOn.PerchPoint.position + Vector3.up * landFromHeight);
+            BirdController.Instance.SetAltitude(first.birdAltitude, false);
+            birdCamera.HoldWhileBirdPerches(first.birdStart.position);
+        }
+        else
+        {
+            BirdController.Instance.Teleport(first.birdStart.position);
+            BirdController.Instance.SetAltitude(first.birdAltitude, true);
+        }
         Baby.Instance.Sleep(first.route);
         birdCamera.Cut();
     }

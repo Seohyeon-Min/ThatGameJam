@@ -1,0 +1,145 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c087c8013d88d214c8f8bc1fbf104a16, type: 3}
+  m_Name: Look_GirlGetUp
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorLook
+  volumeProfile: {fileID: 11400000, guid: 8e50e38ba7d06d24fa630691e9b6b322, type: 2}
+  settings:
+    pigmentThickness: 1.22
+    boundaryPigment: 0.53
+    boundaryWidthPercent: 0.25
+    outlinePigment: 0.742
+    outlineWidthPercent: 0.4
+    blotches: 0.367
+    backruns: 0.223
+    blotchSaturation: 1.11
+    blotchSizePercent: 5
+    backrunSizePercent: 3.7
+    chaosHueRange: 2.6
+    chaosChunkSizePercent: 39.1
+    chaosSplitChance: 0.828
+    chaosDropSizeMinPercent: 15.4
+    chaosDropSizeMaxPercent: 28.8
+    pencilStrength: 0.391
+    pencilDarkness: 1.372
+    strokeLengthPercent: 4.03
+    strokeSizeInfluence: 0.557
+    strokeWidth: 1.82
+    strokeWidthVariation: 0.184
+    strokeDensity: 1.87
+    strokeAlignment: 0.87
+    strokeAngle: -5.9
+    strokeAngleJitter: 20.7
+    pencilShadowFocus: 0.862
+    pencilShadowFadePercent: 4
+    pencilPatchSizePercent: 19.2
+    pencilPatchChance: 0.739
+    fullSunIntensity: 1
+    lightColourInfluence: 0
+    ambientColourInfluence: 0
+    gouache: 1
+    gouacheShadeDepth: 1.054
+    gouacheShadeSaturation: 1.49
+    gouacheTerminator: 0.5
+    gouacheTransitionWidth: 0.03
+    gouacheTransitionColour: {r: 1, g: 0.8, b: 0.7, a: 1}
+    gouacheTransitionTint: 0.212
+    gouacheHighlight: 0.834
+    gouacheHighlightColour: {r: 0.94, g: 0.97, b: 1, a: 1}
+    gouacheDryBrush: 0.007
+    gouacheRoughEdge: 5.6
+    gouacheBrushGrain: 0.196
+    gouacheRimGlow: 0.42
+    gouacheBrushSize: 0.015
+    gouacheStrokeColour: 0.16
+    gouacheStrokeSize: 0.1
+    gouacheStrokeOnObjects: 0.62
+    gouacheStrokeLightA: {r: 1, g: 0.78, b: 0.95, a: 1}
+    gouacheStrokeLightB: {r: 0.72, g: 0.92, b: 1, a: 1}
+    gouacheStrokeShadeA: {r: 0.85, g: 0.55, b: 1, a: 1}
+    gouacheStrokeShadeB: {r: 0.5, g: 0.62, b: 1, a: 1}
+    characterShadeSaturation: 1.39
+    characterBrushGrain: 0.057
+    characterDryBrush: 0.009
+    characterBrushSize: 0.0005
+    characterShadeDepth: 0.76
+    characterShadeColour: {r: 0.6434936, g: 0.5331648, b: 0.86415094, a: 1}
+    characterShadeHueTurn: 0.43
+    characterClearTransition: 0.5
+    characterSunPoolGlow: 0.6
+    characterPastelStrokes: 0
+    characterPastelSize: 0.1
+    characterPastelLength: 2
+    characterPastelAngle: 0
+    characterPastelSpread: 0.11
+    characterPastelColour: {r: 1, g: 0.5, b: 0.55, a: 1}
+    characterPastelColourAmount: 0.266
+    characterPastelColourSize: 0.05
+    characterBrushDabs: 1
+    characterBrushDabSize: 3.23
+    characterBrushDabAmount: 1
+    characterBrushDabStrength: 0.81
+    characterBrushDabAngle: 0
+    characterBrushDabHue: 5.6
+    characterBrushDabValue: 0.108
+    characterBrushDabSaturation: 0.268
+    characterBrushDabStrongShare: 0.082
+    characterBrushDabWeak: 0.447
+    characterBrushDabLightInfluence: 1
+    characterBrushDabLightReach: 0.436
+    washStrength: 0.58
+    washColour: {r: 0.5557583, g: 0.6173487, b: 0.6509434, a: 1}
+    washReserve: 0.16
+    washFloorReserve: 0.15
+    formLight: {fileID: 0}
+    lightYellowPercent: 13.1
+    lightYellowWidthPercent: 7.8
+    lightCream: {r: 1, g: 0.96, b: 0.86, a: 1}
+    lightFade: 0.02
+    lightPastelChips: 0.232
+    pastelShadows: 1
+    shadowSaturation: 0.13
+    shadowDarkening: 0.145
+    shadowHueFrom: 201
+    shadowHueTo: 225
+    darkPigmentBluePercent: 78
+    shadowDepth: 1.5
+    receiveShadows: 1
+    shadowEdgePigment: 0.421
+    shadowRaggedness: 0.291
+    shadowUnevenness: 0.795
+    sceneColour: 0.09
+    sceneColourSize: 22
+    lightTintA: {r: 1, g: 0.95, b: 0.78, a: 1}
+    lightTintB: {r: 1, g: 0.86, b: 0.88, a: 1}
+    shadeTintA: {r: 0.72, g: 0.82, b: 1, a: 1}
+    shadeTintB: {r: 0.84, g: 0.76, b: 1, a: 1}
+    bounce: 0.537
+    skyBounce: {r: 0.4339623, g: 0.4339623, b: 0.4339623, a: 1}
+    groundBounce: {r: 1, g: 1, b: 1, a: 1}
+    edgeAccent: 0
+    edgeAccentColour: {r: 1, g: 0.47965217, b: 0.17924517, a: 1}
+    haze: 0.849
+    hazeStart: 8.8
+    hazeRange: 43
+    hazeLow: {r: 0.9146174, g: 0.9019608, b: 1, a: 1}
+    hazeHigh: {r: 0.7830188, g: 0.983543, b: 1, a: 1}
+    floorBlotchSizePercent: 19.6
+    instanceHueRange: 0
+    instanceBrightnessRange: 4
+    instanceSaturationRange: 5
+    saturation: 26.1
+    brightness: 1.5
+    contrast: -11.1
+    tonemappingPercent: 5.8
+    paperThreshold: 0.631
+    paperSoftnessPercent: 0.11
