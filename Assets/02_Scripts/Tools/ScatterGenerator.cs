@@ -26,7 +26,16 @@ public abstract class ScatterGenerator : MonoBehaviour
         public Vector2 max;
         [Tooltip("Added to Density in this area only, per square metre: more in a later stage. 0 = the same as everywhere. Min Spacing still caps it")]
         public float extraDensity;
+        [Tooltip("Each one here fades to white by an amount between these (0 = its own colour, 1 = white), more of them near Whitest. Both 0: no fading")]
+        public Vector2 whiten;
+        [Tooltip("Each one here turns its hue by up to this either way, in turns of the colour wheel (0.05 = 18 degrees). 0: its own hue")]
+        [Range(0f, WatercolorTint.MostHueShift)] public float hueRange;
+        [Tooltip("Hidden until the season reaches this level, then shown as it rises (0 = always). Intro 0, Stage1 1, Stage2 2, Stage3 3")]
+        public int fromSeason;
     }
+
+    // Above 1, more of the amounts land near the whitest end of an area's range.
+    const float WhiteBias = 2.5f;
 
     [SerializeField] protected GameObject[] prefabs = { };
     [SerializeField] protected Area[] areas = { };
@@ -51,11 +60,50 @@ public abstract class ScatterGenerator : MonoBehaviour
     // What Generate made, so Clear removes only these.
     [FormerlySerializedAs("flowers")]
     [SerializeField, HideInInspector] List<GameObject> made = new();
+    // One child per area holding what was made there, so an area can stay hidden until its season (fromSeason).
+    [SerializeField, HideInInspector] List<GameObject> groups = new();
+
+    Season season;
+    int pendingLevel = -1;
 
     public int MadeCount => made.Count;
 
     // The share of spots kept at this world point, 0 to 1. All by default.
     protected virtual float Keep(Vector3 point) => 1f;
+
+    void Start()
+    {
+        season = FindAnyObjectByType<Season>();
+        if (season == null)
+            return;
+        ShowForSeason(season.Level);
+        season.OnSeasonChanged.AddListener(OnSeasonChanged);
+    }
+
+    void OnDestroy()
+    {
+        if (season != null)
+            season.OnSeasonChanged.RemoveListener(OnSeasonChanged);
+    }
+
+    // Not at once: WatercolorSeasonLooks photographs the old look in this same event, and these must come out after it, so they appear
+    // inside the spring ring as it spreads (as TreeGenerator's leaves do).
+    void OnSeasonChanged(int level) => pendingLevel = level;
+
+    void LateUpdate()
+    {
+        if (pendingLevel < 0)
+            return;
+        ShowForSeason(pendingLevel);
+        pendingLevel = -1;
+    }
+
+    void ShowForSeason(int level)
+    {
+        for (int i = 0; i < groups.Count && i < areas.Length; i++)
+            if (groups[i] != null)
+                groups[i].SetActive(level >= areas[i].fromSeason);
+    }
 
 #if UNITY_EDITOR
     // Replaces this generator's objects with new ones, as one undo step.
@@ -84,9 +132,10 @@ public abstract class ScatterGenerator : MonoBehaviour
         var patchOffset = new Vector2(random.Next(10000), random.Next(10000));
         var spots = new Dictionary<Vector2Int, List<Vector2>>();
         var placed = new List<GameObject>();
-        foreach (Area given in areas)
+        List<GameObject> areaGroups = MakeGroups("Generate " + kind);
+        for (int a = 0; a < areas.Length; a++)
         {
-            Area area = Resolve(given);
+            Area area = Resolve(areas[a]);
             Vector2 size = area.max - area.min;
             int wanted = Mathf.RoundToInt(Mathf.Abs(size.x * size.y) * Mathf.Max(0f, density + area.extraDensity));
             if (placed.Count + wanted > MaxObjects)
@@ -109,7 +158,12 @@ public abstract class ScatterGenerator : MonoBehaviour
                 int which = random.Next(prefabs.Length);
                 float yaw = (float)random.NextDouble() * 360f;
                 float scale = Mathf.Lerp(scaleRange.x, scaleRange.y, (float)random.NextDouble());
+                float white = 1f - Mathf.Pow(1f - (float)random.NextDouble(), WhiteBias);
+                float hue = (float)random.NextDouble() * 2f - 1f;
                 if (!found)
+                    continue;
+                // Where areas overlap, the earlier one in the list fills it alone, so the overlap isn't twice as dense.
+                if (InEarlierArea(local, a))
                     continue;
 
                 // Outside the patches most are dropped, not moved, so the bare ground stays bare.
@@ -126,9 +180,18 @@ public abstract class ScatterGenerator : MonoBehaviour
 
                 Remember(spots, local);
                 Quaternion lean = Quaternion.FromToRotation(Vector3.up, Vector3.Slerp(Vector3.up, normal, followSlope));
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[which], transform);
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[which], areaGroups[a].transform);
                 instance.transform.SetPositionAndRotation(world, lean * Quaternion.Euler(0f, yaw, 0f));
                 instance.transform.localScale = Vector3.one * scale;
+                if (area.whiten != Vector2.zero || area.hueRange > 0f)
+                {
+                    // From the less white end to the whitest, whichever way round they were typed.
+                    float least = Mathf.Min(area.whiten.x, area.whiten.y), most = Mathf.Max(area.whiten.x, area.whiten.y);
+                    var tint = instance.AddComponent<WatercolorTint>();
+                    tint.whiten = Mathf.Lerp(least, most, white);
+                    tint.hueShift = hue * area.hueRange;
+                    WatercolorPaintedModel.ApplyUserValue(instance);
+                }
                 Undo.RegisterCreatedObjectUndo(instance, $"Generate {kind}");
                 placed.Add(instance);
             }
@@ -136,7 +199,54 @@ public abstract class ScatterGenerator : MonoBehaviour
         // After the objects: registering a created object flushes a pending change to the list.
         Undo.RecordObject(this, $"Generate {kind}");
         made.AddRange(placed);
+        groups = areaGroups;
         Undo.SetCurrentGroupName($"Generate {kind}");
+        Undo.CollapseUndoOperations(group);
+    }
+
+    // One empty child per area, named after it, to hold what is made there.
+    List<GameObject> MakeGroups(string undoName)
+    {
+        var holders = new List<GameObject>();
+        for (int a = 0; a < areas.Length; a++)
+        {
+            string label = areas[a].stage != null ? areas[a].stage.name : $"Area {a}";
+            var holder = new GameObject(areas[a].fromSeason > 0 ? $"{label} (from season {areas[a].fromSeason})" : label);
+            Undo.RegisterCreatedObjectUndo(holder, undoName);
+            holder.transform.SetParent(transform, false);
+            holders.Add(holder);
+        }
+        return holders;
+    }
+
+    // Puts what this generator already made into one child per area, by which area each stands in (the earlier one where they overlap),
+    // without making anything again. For objects made before areas had their own children, or after From Season changed.
+    public void SortIntoAreas()
+    {
+        int group = Undo.GetCurrentGroup();
+        var oldGroups = new List<GameObject>(groups);
+        List<GameObject> areaGroups = MakeGroups("Sort Into Areas");
+        foreach (GameObject thing in made)
+        {
+            if (thing == null)
+                continue;
+            Vector3 local = transform.InverseTransformPoint(thing.transform.position);
+            for (int a = 0; a < areas.Length; a++)
+            {
+                Area area = Resolve(areas[a]);
+                Vector2 min = Vector2.Min(area.min, area.max), max = Vector2.Max(area.min, area.max);
+                if (local.x < min.x || local.x > max.x || local.z < min.y || local.z > max.y)
+                    continue;
+                Undo.SetTransformParent(thing.transform, areaGroups[a].transform, "Sort Into Areas");
+                break;
+            }
+        }
+        foreach (GameObject old in oldGroups)
+            if (old != null && old.transform.childCount == 0)
+                Undo.DestroyObjectImmediate(old);
+        Undo.RecordObject(this, "Sort Into Areas");
+        groups = areaGroups;
+        Undo.SetCurrentGroupName("Sort Into Areas");
         Undo.CollapseUndoOperations(group);
     }
 
@@ -169,19 +279,60 @@ public abstract class ScatterGenerator : MonoBehaviour
             }
     }
 
+    // A stage gap opened at joinZ (WorldGap): what this made at or past it moves along with the ground, and so do the areas.
+    public void ShiftBeyond(float joinZ, float size)
+    {
+        WorldGap.ShiftAll(made, joinZ, size);
+        ShiftAreasBeyond(joinZ, size);
+    }
+
+    // Typed areas: each edge at or past the join moves, so an area past it moves and one across it grows by the gap. Stage areas follow
+    // their stage already.
+    public void ShiftAreasBeyond(float joinZ, float size)
+    {
+        float local = transform.InverseTransformVector(Vector3.forward * size).z;
+        Undo.RecordObject(this, "Open Stage Gap");
+        for (int i = 0; i < areas.Length; i++)
+        {
+            if (areas[i].stage != null)
+                continue;
+            if (transform.TransformPoint(new Vector3(0f, 0f, areas[i].min.y)).z >= joinZ)
+                areas[i].min.y += local;
+            if (transform.TransformPoint(new Vector3(0f, 0f, areas[i].max.y)).z >= joinZ)
+                areas[i].max.y += local;
+        }
+    }
+
     // Removes only the objects this generator made.
     public void Clear()
     {
         // The list changes before the objects go: destroying with Undo flushes the recorded change.
         GameObject[] old = made.ToArray();
+        GameObject[] oldGroups = groups.ToArray();
         Undo.SetCurrentGroupName($"Clear {GetType().Name}");
         Undo.RecordObject(this, $"Clear {GetType().Name}");
         made.Clear();
+        groups.Clear();
         foreach (GameObject instance in old)
             if (instance != null)
                 Undo.DestroyObjectImmediate(instance);
+        foreach (GameObject holder in oldGroups)
+            if (holder != null)
+                Undo.DestroyObjectImmediate(holder);
     }
 #endif
+
+    bool InEarlierArea(Vector2 local, int index)
+    {
+        for (int i = 0; i < index; i++)
+        {
+            Area earlier = Resolve(areas[i]);
+            Vector2 min = Vector2.Min(earlier.min, earlier.max), max = Vector2.Max(earlier.min, earlier.max);
+            if (local.x >= min.x && local.x <= max.x && local.y >= min.y && local.y <= max.y)
+                return true;
+        }
+        return false;
+    }
 
     // A stage's area as Min and Max in this object's local space; otherwise the area as typed.
     Area Resolve(Area area)

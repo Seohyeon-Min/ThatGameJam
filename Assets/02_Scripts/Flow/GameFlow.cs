@@ -21,7 +21,8 @@ public class GameFlow : MonoBehaviour
     // The authored stage order (StageEditor's spacing tool cascades along this, not scene hierarchy order).
     public IReadOnlyList<Stage> Stages => stages;
 
-    // Where the bird may fly: every stage's area up to the current one, and in the current stage only up to its sunlit spot (ADR 0012).
+    // Where the bird may fly: every stage's area up to the current one, and ahead no further than the current stage's area ends, a little
+    // past its sunlit spot so the bird can wait around the light (the director's call, over ADR 0012's stop at the spot itself).
     // The stages' areas follow each other along +Z.
     public Bounds FlyArea
     {
@@ -31,7 +32,7 @@ public class GameFlow : MonoBehaviour
             for (int i = 1; i <= current; i++)
                 area.Encapsulate(stages[i].area);
             Vector3 max = area.max;
-            max.z = Mathf.Min(max.z, CurrentStage.BirdForwardLimit);
+            max.z = CurrentStage.area.max.z;
             area.SetMinMax(area.min, max);
             return area;
         }

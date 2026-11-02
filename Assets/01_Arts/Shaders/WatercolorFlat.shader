@@ -618,6 +618,15 @@ Shader "ThatGameJam/WatercolorFlat"
                     instanceHsv.y = saturate(instanceHsv.y * (1.0 + instance.z * _WC_InstanceColour.z));
                     albedo = HsvToRgb(instanceHsv);
                 }
+                // 인스턴스마다 색 돌리기와 하얗게 바램(WatercolorTint): 풀 한 포기마다 색상이 조금 다르고, 눈 덮인 풀처럼 흰색 쪽으로 옅어진다.
+                half hueShift = InstanceHueShift();
+                if (hueShift != 0)
+                {
+                    half3 tintHsv = RgbToHsv(albedo);
+                    tintHsv.x = frac(tintHsv.x + hueShift);
+                    albedo = HsvToRgb(tintHsv);
+                }
+                albedo = lerp(albedo, 1.0, InstanceWhiten());
 
                 // 색 카오스: 같은 색 안에 떨어뜨린 다른 색 물방울. 굽기 때 정한 덩어리와 물방울 모양대로 색상을 돌린다.
                 // 채도가 거의 없는 색(회색, 흰색)은 색상이 의미가 없어서 거의 바뀌지 않는다(빛 쪽 파스텔 조각은 따로 보인다).

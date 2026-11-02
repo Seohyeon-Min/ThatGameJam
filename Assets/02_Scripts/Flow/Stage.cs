@@ -16,11 +16,8 @@ public class Stage : MonoBehaviour
     // Holding the click on the walking baby makes the bird fly over her and keep the snow off (SnowShelter, the intro only).
     public bool snowShelter;
     // World-space area of the stage's road and the terrain beside it, in X and Z. The bird flies over this and the earlier stages' areas
-    // (ADR 0010, ADR 0013).
+    // (ADR 0010, ADR 0013), ahead as far as this one's far end: make it reach a little past the sunlit spot, where the bird waits.
     public Bounds area = new(Vector3.zero, new Vector3(6f, 1f, 30f));
-
-    // How far along +Z the bird may fly while this is the current stage: its sunlit spot, the last point of the route (ADR 0012).
-    public float BirdForwardLimit => route[route.Count - 1].position.z;
 
     void OnDrawGizmos()
     {
@@ -39,17 +36,49 @@ public class Stage : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    // Moves this stage's whole content (everything parented under it: route, start points, tree generators)
-    // and its flight area along +Z by deltaZ, without touching the shared terrain or any other stage - the
-    // road widens or narrows at this one join, and every other stage's own internal spacing is untouched
-    // (StageEditor's inspector button). Positive deltaZ pushes the stage further from whatever comes before it.
-    // cascadeToLaterStages also applies the same shift to every stage after this one (by GameFlow's authored
-    // order, not Transform order), so a stage further down the road keeps its own existing gaps; without it,
-    // only the gap right before this stage changes, same as moving a single stage on its own would.
+    // Where this stage begins along the road: where its baby starts, which is where the stage before it ended.
+    public float JoinZ => babyStart != null ? babyStart.position.z : area.min.z;
+
+    // Opens a gap of deltaZ right before this stage (a negative deltaZ closes one), as one undo step (StageEditor's inspector button).
+    // This stage's whole content (everything parented under it) and its flight area move along +Z, and the world opens with it at the
+    // join (WorldGap): the terrain grows there, and the streams, trees and flowers past the join move with the ground.
+    // cascadeToLaterStages also moves every stage after this one (by GameFlow's authored order, not Transform order), so each keeps
+    // its own gaps. Without it the later stages stay, and the world closes the gap again where the next stage begins.
     public void AdjustSpacing(float deltaZ, bool cascadeToLaterStages)
     {
         if (Mathf.Approximately(deltaZ, 0f))
             return;
+        int group = Undo.GetCurrentGroup();
+        GameFlow flow = FindAnyObjectByType<GameFlow>();
+        var later = new System.Collections.Generic.List<Stage>();
+        if (flow != null)
+        {
+            bool past = false;
+            foreach (Stage stage in flow.Stages)
+            {
+                if (past)
+                    later.Add(stage);
+                past |= stage == this;
+            }
+        }
+        else
+            Debug.LogWarning("Stage.AdjustSpacing: no GameFlow in the scene to find later stages through; only this stage moved.", this);
+
+        // The world first, at the joins as they are before anything moves. The far join first, so the near one doesn't move it.
+        if (!cascadeToLaterStages && later.Count > 0)
+            WorldGap.Open(later[0].JoinZ, -deltaZ);
+        WorldGap.Open(JoinZ, deltaZ);
+
+        Move(deltaZ);
+        if (cascadeToLaterStages)
+            foreach (Stage stage in later)
+                stage.Move(deltaZ);
+        Undo.SetCurrentGroupName("Adjust Stage Spacing");
+        Undo.CollapseUndoOperations(group);
+    }
+
+    void Move(float deltaZ)
+    {
         Undo.RecordObject(transform, "Adjust Stage Spacing");
         transform.position += new Vector3(0f, 0f, deltaZ);
         Undo.RecordObject(this, "Adjust Stage Spacing");
@@ -57,21 +86,6 @@ public class Stage : MonoBehaviour
         shifted.center += new Vector3(0f, 0f, deltaZ);
         area = shifted;
         EditorUtility.SetDirty(this);
-
-        if (!cascadeToLaterStages)
-            return;
-        GameFlow flow = FindAnyObjectByType<GameFlow>();
-        if (flow == null)
-        {
-            Debug.LogWarning("Stage.AdjustSpacing: no GameFlow in the scene to find later stages through; only this stage moved.", this);
-            return;
-        }
-        int index = -1;
-        for (int i = 0; i < flow.Stages.Count; i++)
-            if (flow.Stages[i] == this)
-                index = i;
-        for (int i = index + 1; i < flow.Stages.Count; i++)
-            flow.Stages[i].AdjustSpacing(deltaZ, false);
     }
 #endif
 }

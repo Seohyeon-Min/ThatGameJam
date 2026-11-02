@@ -14,6 +14,12 @@ public class ScatterGeneratorEditor : Editor
         var buttons = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 6 } };
         buttons.Add(new Button(() => ForEach(g => g.Generate())) { text = "Generate", style = { flexGrow = 1 } });
         buttons.Add(new Button(() => ForEach(g => g.Clear())) { text = "Clear", style = { flexGrow = 1 } });
+        buttons.Add(new Button(() => ForEach(g => g.SortIntoAreas()))
+        {
+            text = "Sort Into Areas",
+            tooltip = "Puts what was made into one child per area by where it stands, without making anything again, so each area can be hidden by its season.",
+            style = { flexGrow = 1 },
+        });
         root.Add(buttons);
 
         var count = new Label();

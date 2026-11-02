@@ -35,6 +35,33 @@ public class TreeZone : MonoBehaviour
         return Mathf.Abs(local.x) <= box.size.x * 0.5f && Mathf.Abs(local.z) <= box.size.z * 0.5f;
     }
 
+#if UNITY_EDITOR
+    // A stage gap opened at joinZ (WorldGap): past it the zone moves, across it the zone grows by the gap at its far end.
+    public void ShiftBeyond(float joinZ, float size)
+    {
+        float near = float.MaxValue, far = float.MinValue;
+        foreach (Vector3 corner in Corners())
+        {
+            near = Mathf.Min(near, corner.z);
+            far = Mathf.Max(far, corner.z);
+        }
+        if (far <= joinZ)
+            return;
+        if (near >= joinZ)
+        {
+            UnityEditor.Undo.RecordObject(transform, "Open Stage Gap");
+            transform.position += Vector3.forward * size;
+            return;
+        }
+        // Across the join: the far side moves, so the box grows along world Z.
+        BoxCollider box = Box;
+        Vector3 localGrow = transform.InverseTransformVector(Vector3.forward * size);
+        UnityEditor.Undo.RecordObject(box, "Open Stage Gap");
+        box.size += new Vector3(Mathf.Abs(localGrow.x), 0f, Mathf.Abs(localGrow.z)) * Mathf.Sign(size);
+        box.center += localGrow * 0.5f;
+    }
+#endif
+
     // The box's four corners from above, in world space.
     public Vector3[] Corners()
     {

@@ -324,6 +324,10 @@ public class IntroSequence : MonoBehaviour
             cloud.gameObject.SetActive(false);
         BirdController bird = BirdController.Instance;
         Perchable perch = startTree != null ? startTree.GetComponentInChildren<Perchable>() : null;
+        if (perch == null)
+            Debug.LogWarning(startTree == null
+                ? "IntroSequence: Start Tree is empty, so the bird starts at the stage's Bird Start instead of landing. Set it on IntroSequence."
+                : $"IntroSequence: Start Tree {startTree.name} has no Perchable under it, so the bird can't land on it.", this);
         if (perch != null)
             bird.HoldStill();
         else

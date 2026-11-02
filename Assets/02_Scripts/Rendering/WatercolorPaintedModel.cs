@@ -49,11 +49,23 @@ public class WatercolorPaintedModel : MonoBehaviour
     void OnEnable() => ApplyVariation();
     void OnValidate() => ApplyVariation();
 
-    // The shader user value is not saved with the scene, so it is set again whenever the model is enabled.
-    public void ApplyVariation()
+    public void ApplyVariation() => ApplyUserValue(gameObject);
+
+    // The shader user value: the low 8 bits are the Variation, the next 8 a WatercolorTint's whitening (0-255), the next 8 its hue shift
+    // (a signed byte, -127 to 127 for -MostHueShift to +MostHueShift). It is not saved with the scene, so it is set again whenever either
+    // is enabled.
+    public static void ApplyUserValue(GameObject root)
     {
-        uint value = (uint)Mathf.Clamp(variation, 0, 255);
-        foreach (var renderer in GetComponentsInChildren<Renderer>(true))
+        uint value = 0u;
+        if (root.TryGetComponent(out WatercolorPaintedModel model))
+            value |= (uint)Mathf.Clamp(model.variation, 0, 255);
+        if (root.TryGetComponent(out WatercolorTint tint))
+        {
+            value |= (uint)Mathf.RoundToInt(Mathf.Clamp01(tint.whiten) * 255f) << 8;
+            int hue = Mathf.RoundToInt(Mathf.Clamp(tint.hueShift / WatercolorTint.MostHueShift, -1f, 1f) * 127f);
+            value |= (uint)(hue & 255) << 16;
+        }
+        foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
         {
             if (renderer is MeshRenderer mesh)
                 mesh.SetShaderUserValue(value);

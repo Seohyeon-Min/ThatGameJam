@@ -27,4 +27,19 @@ float3 InstanceRandom()
     return frac(float3(variation * 0.618034, variation * 0.754878, variation * 0.569840) + 0.31);
 }
 
+// 인스턴스마다 하얗게 바랜 정도(0 = 본색, 1 = 흰색). WatercolorTint 가 셰이더 사용자 값의 다음 8비트로 준다.
+half InstanceWhiten()
+{
+    return ((unity_RendererUserValue >> 8) & 255u) / 255.0;
+}
+
+// 인스턴스마다 색상을 돌리는 양(한 바퀴 = 1). 그다음 8비트의 부호 있는 값(-127~127)이 -0.25~0.25 바퀴다(WatercolorTint.MostHueShift).
+half InstanceHueShift()
+{
+    int shift = (int)((unity_RendererUserValue >> 16) & 255u);
+    if (shift > 127)
+        shift -= 256;
+    return shift / 127.0 * 0.25;
+}
+
 #endif

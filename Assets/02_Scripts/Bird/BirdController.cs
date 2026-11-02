@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 // right-click cries, clicking the baby toggles sheltering her (following her pace) until clicked off again. Left idle
 // in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
 // hopping the camera to any branch on screen. Sent past where the way is still closed
-// (the current stage's sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
+// (the far end of the current stage's area, a little past its sunlit spot), it flies up to that line, then lands on the nearest branch and shakes its head (ADR 0011, ADR 0016).
 // Flies inside the area BirdCamera gives and on screen, and perches only on screen (ADR 0015). Its height follows the wheel's zoom
 // (SetZoom): the stage's altitude at zoom 1, higher zoomed out, and low zoomed all the way in, where it comes down and walks
 // wherever it can stand (Landable). Its changes of height ease along GameTuning.motionCurve.
@@ -841,8 +841,8 @@ public class BirdController : MonoBehaviour
         Cursor.SetCursor(show ? perchCursor : null, show ? perchCursorHotspot : Vector2.zero, CursorMode.Auto);
     }
 
-    // On screen, inside the margin, and not past the area's Z ends: no branch takes the bird beyond the current stage's sunlit spot
-    // (ADR 0012). Across the area it may perch anywhere on screen (trees stand beyond it).
+    // On screen, inside the margin, and not past the area's Z ends: no branch takes the bird beyond the current stage's area.
+    // Across the area it may perch anywhere on screen (trees stand beyond it).
     bool OnScreen(Vector3 point)
     {
         Vector3 viewport = Camera.main.WorldToViewportPoint(point);

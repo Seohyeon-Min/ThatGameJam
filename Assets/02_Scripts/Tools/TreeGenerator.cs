@@ -268,6 +268,20 @@ public class TreeGenerator : MonoBehaviour
         return freeKinds.Count > 0 ? freeKinds[roll % freeKinds.Count] : farthestKind;
     }
 
+    // A stage gap opened at joinZ (WorldGap): the trees at or past it move along with the ground, and so do the zones.
+    public void ShiftBeyond(float joinZ, float size)
+    {
+        WorldGap.ShiftAll(trees, joinZ, size);
+        ShiftZonesBeyond(joinZ, size);
+    }
+
+    // Zones past the join move; a zone across it grows by the gap, so a cleared road stays cleared all the way.
+    public void ShiftZonesBeyond(float joinZ, float size)
+    {
+        foreach (TreeZone zone in GetComponentsInChildren<TreeZone>(true))
+            zone.ShiftBeyond(joinZ, size);
+    }
+
     static bool AllPrefabs(GameObject[] prefabs) =>
         System.Array.TrueForAll(prefabs, p => p != null && PrefabUtility.IsPartOfPrefabAsset(p));
 
