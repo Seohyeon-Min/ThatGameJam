@@ -9736,6 +9736,11 @@ MonoBehaviour:
     m_Center: {x: 0.001903683, y: 2.7692854, z: 0.042390227}
     m_Extent: {x: 0.47216448, y: 2.8796918, z: 0.51794195}
   variation: 135
+--- !u!1 &110273352 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
+  m_PrefabInstance: {fileID: 1966365370}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &110500057
 GameObject:
   m_ObjectHideFlags: 0
@@ -210907,7 +210912,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1966365373}
   m_SourcePrefab: {fileID: 100100000, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
 --- !u!95 &1966365371 stripped
 Animator:
@@ -210919,6 +210927,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
   m_PrefabInstance: {fileID: 1966365370}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1966365373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 110273352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b09f10188fb5834eb0403b842a4cf7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyAnimationEvents
 --- !u!1001 &1968494266
 PrefabInstance:
   m_ObjectHideFlags: 0
