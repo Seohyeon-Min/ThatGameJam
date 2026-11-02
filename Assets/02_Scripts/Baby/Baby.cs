@@ -404,19 +404,33 @@ public class Baby : CryListener
         lookingAround = false;
     }
 
+    // The jump's position at progress t (0 to 1): eased horizontal lerp, plus a sine arc over the straight
+    // height lerp so it reads as a hop. Shared with BabyRoute's gizmo so the Scene view preview can never
+    // drift out of sync with what actually plays at runtime.
+    public static Vector3 EvaluateJump(Vector3 start, Vector3 target, float t, float arcHeight)
+    {
+        float eased = Mathf.SmoothStep(0f, 1f, t);
+        Vector3 flat = Vector3.Lerp(new Vector3(start.x, 0f, start.z), new Vector3(target.x, 0f, target.z), eased);
+        float height = Mathf.Lerp(start.y, target.y, eased) + Mathf.Sin(t * Mathf.PI) * arcHeight;
+        return new Vector3(flat.x, height, flat.z);
+    }
+
     // Stepping up onto a balance beam or down off the far end: one in-place hop before Walk/BalanceWalk resumes.
-    // Stepping up onto a balance beam or down off the far end: covers the segment itself (height included) over
-    // the clip's own timing, instead of ordinary walk-speed interpolation finishing the climb before the jump
-    // animation plays. StandStill(): the walk-cycle animator bool should read false while this plays.
+    // Covers the segment itself (height included) over the clip's own timing, instead of ordinary walk-speed
+    // interpolation finishing the climb before the jump animation plays. StandStill(): the walk-cycle animator
+    // bool should read false while this plays.
     IEnumerator JumpTo(Vector3 target)
     {
         StandStill();
-        TurnToward(target - transform.position);
         animator.CrossFade(JumpState, 0.1f);
         Vector3 start = transform.position;
+        float arcHeight = GameTuning.Current.babyJumpArcHeight;
         for (float time = 0f; time < jumpClip.length; time += Time.deltaTime)
         {
-            transform.position = Vector3.Lerp(start, target, time / jumpClip.length);
+            // Turning continues every frame (as WalkTo does), not just once at takeoff, so a route that
+            // bends right at the beam still has the baby facing the far end by the time she lands.
+            TurnToward(target - transform.position);
+            transform.position = EvaluateJump(start, target, time / jumpClip.length, arcHeight);
             yield return null;
         }
         transform.position = target;

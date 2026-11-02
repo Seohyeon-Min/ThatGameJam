@@ -12,7 +12,7 @@ public class DevTools : MonoBehaviour
     const float Top = 8f;
     const float TooltipWidth = 320f;
 
-    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8, Key.F9 };
+    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10, Key.F11, Key.F12 };
     static DevTools active;
 
     (System.Func<string> label, string tooltip, System.Action action)[] buttons;
@@ -47,6 +47,12 @@ public class DevTools : MonoBehaviour
             (() => GameFlow.Instance.CameraLocked ? "Cam: locked" : "Cam: bird", "Holds the camera on this stage's sunlit spot, or lets it follow the bird again. (F8)",
                 () => GameFlow.Instance.ToggleCameraLock()),
             (() => "Cutscene", "Plays this stage's wake cutscene from the start, or stops it if it is playing. The baby stays where it is. (F9)", ToggleCutscene),
+            (() => IntroSfx.HighPitchLabel, "Plays the next HighPitch variant (the intro's bird-appears stinger), to audition it without replaying the intro. (F10)",
+                IntroSfx.CycleHighPitch),
+            (() => IntroSfx.SwooshLabel, "Plays the next Swoosh variant (the intro's bird-dives stinger), to audition it without replaying the intro. (F11)",
+                IntroSfx.CycleSwoosh),
+            (() => "Flap", "Plays the wing-flap stinger on demand, same as the baked animation event does mid-flight (roughly every ~2s of continuous gliding, so it's easy to miss in normal play). (F12)",
+                PlayFlap),
         };
     }
 
@@ -81,6 +87,8 @@ public class DevTools : MonoBehaviour
     }
 
     static void CycleSpeed() => Time.timeScale = Mathf.Round(Time.timeScale) % MaxTimeScale + 1f;
+
+    static void PlayFlap() => FindAnyObjectByType<BirdAnimationEvents>()?.Flap();
 
     static NaturalTimer CurrentTimer()
     {

@@ -2,7 +2,7 @@
 <objects serializationModel="Studio.02.03.00">
 	<object class="Event" id="{cb6d354b-3144-4237-9929-85121992a4f6}">
 		<property name="name">
-			<value>Wind</value>
+			<value>wind</value>
 		</property>
 		<property name="outputFormat">
 			<value>1</value>
@@ -60,7 +60,7 @@
 	<object class="MarkerTrack" id="{c59afcf1-5f17-4097-81fa-7766c900a4f3}" />
 	<object class="GroupTrack" id="{7c5911a1-fa64-43a0-95d9-31f7f7832440}">
 		<relationship name="modules">
-			<destination>{4198017c-ba29-49b4-a8ed-841c726d3d4f}</destination>
+			<destination>{d0b59f1c-144e-47c9-9732-fe7eee0e8274}</destination>
 		</relationship>
 		<relationship name="mixerGroup">
 			<destination>{0b43b38a-ac02-4393-9825-7fe6c90c2c69}</destination>
@@ -68,7 +68,7 @@
 	</object>
 	<object class="Timeline" id="{aabacc9b-b349-4fe9-9880-29073343a6da}">
 		<relationship name="modules">
-			<destination>{4198017c-ba29-49b4-a8ed-841c726d3d4f}</destination>
+			<destination>{d0b59f1c-144e-47c9-9732-fe7eee0e8274}</destination>
 		</relationship>
 		<relationship name="markers">
 			<destination>{03b90a17-9a5e-4352-aa5d-0f69145eb8b1}</destination>
@@ -91,9 +91,9 @@
 		</relationship>
 	</object>
 	<object class="MixerBusPanner" id="{287a8d84-1c03-468a-ae80-bbc161cb21dc}" />
-	<object class="SingleSound" id="{4198017c-ba29-49b4-a8ed-841c726d3d4f}">
+	<object class="SingleSound" id="{d0b59f1c-144e-47c9-9732-fe7eee0e8274}">
 		<property name="length">
-			<value>18</value>
+			<value>31</value>
 		</property>
 		<relationship name="audioFile">
 			<destination>{35bf203e-e1d3-4612-a5d2-52bd4a6a021d}</destination>
@@ -118,7 +118,7 @@
 			<value>0</value>
 		</property>
 		<property name="length">
-			<value>18</value>
+			<value>31</value>
 		</property>
 		<relationship name="timeline">
 			<destination>{aabacc9b-b349-4fe9-9880-29073343a6da}</destination>

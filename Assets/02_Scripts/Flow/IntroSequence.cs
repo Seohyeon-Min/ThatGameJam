@@ -113,6 +113,8 @@ public class IntroSequence : MonoBehaviour
         Vector2 click = Mouse.current.position.ReadValue();
         StartCoroutine(FadeOutTitle());
         StartCoroutine(MoveCamera());
+        // The bird appears, flying up into view from below the screen.
+        IntroSfx.PlayHighPitch();
         yield return FlyIn(click);
 
         bird.BeginSkyFlight();
@@ -132,6 +134,7 @@ public class IntroSequence : MonoBehaviour
         yield return CircleUntilBabyClicked(angle);
 
         running = false;
+        IntroSfx.PlayDive();
         yield return Dive();
         yield return StartGame();
     }
