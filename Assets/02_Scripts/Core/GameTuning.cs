@@ -53,6 +53,12 @@ public class GameTuning : ScriptableObject
     [Range(0f, 1f)] public float babyShiverIntensityVariation = 0.7f;
     public float babyShiverIntensityFrequency = 0.35f;
 
+    [Header("Fog maze (ADR 0027)")]
+    // At a fork the bird has not cried at, the girl stands this long before she picks a way at random.
+    public float fogForkWaitTime = 3f;
+    // At the wall of a dead end she stands this long before she turns back.
+    public float fogWallPauseTime = 1f;
+
     [Header("Bird")]
     public float birdSpeed = 6f;
     public float birdAltitudeSpeed = 3f;
@@ -80,6 +86,18 @@ public class GameTuning : ScriptableObject
     // Height above her feet it flies at while sheltering, lower than the stage's altitude; it climbs back on release.
     public float birdShelterHeight = 2.8f;
     public float birdShelterCatchUp = 0.5f;
+    // The wheel moves the bird with the zoom: at cameraZoomMax it flies this many times as high above the stage's ground as at
+    // zoom 1 (the stage's altitude), and at cameraZoomMin it flies this low (this far above any log, bank or water under it) and
+    // comes down where it can stand: terrain no steeper than birdLandMaxSlope degrees, so not the banks down to the water.
+    public float birdZoomedOutHeightScale = 1.5f;
+    public float birdLowFlightHeight = 0.6f;
+    public float birdLandMaxSlope = 25f;
+    // Seconds a change of height takes along motionCurve: taking off, coming down to the ground, a new stage's altitude.
+    public float birdClimbDuration = 1f;
+    public float birdWalkSpeed = 1.2f;
+    // Placeholder until a walk clip exists: while walking, the body hops this high (world units), this many times a second.
+    public float birdWalkHopHeight = 0.08f;
+    public float birdWalkHopRate = 4f;
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;
     // Bank degrees per degree/second of turn rate.
@@ -93,8 +111,28 @@ public class GameTuning : ScriptableObject
     public float cameraZoomStep = 0.1f;
     public float cameraZoomMin = 0.5f;
     public float cameraZoomMax = 1.25f;
-    // How fast the camera eases to the new zoom level, in zoom-fraction per second.
-    public float cameraZoomSpeed = 3f;
+    // Seconds one wheel tick's zoom takes, along motionCurve.
+    public float cameraZoomDuration = 0.6f;
+
+    [Header("Camera framing the bird with the baby")]
+    // Up to the near distance (XZ, at zoom 1) from the baby the camera frames both; from there to the far distance it slides
+    // gradually over to the bird alone. Set by distance only, so the camera stops when the bird stops.
+    public float cameraTogetherNearDistance = 4f;
+    public float cameraTogetherFarDistance = 14f;
+    // The bird stays within this fraction of half the screen's shorter side from the screen's centre while both are framed, so it
+    // stays inside the screen margin BirdController keeps it in, also in a narrow browser window.
+    public float cameraTogetherMaxBirdScreen = 0.8f;
+    // Where between the bird (0) and the baby (1) the framed point lies.
+    public float cameraTogetherBabyShare = 0.5f;
+    // While framing both, the camera holds still until the framed point has moved this far (at zoom 1). Past it, it closes the
+    // part beyond in about this many seconds, so it eases into following instead of setting off at once. Small moves of the bird
+    // don't move the camera.
+    public float cameraTogetherDeadZone = 1.5f;
+    public float cameraTogetherFollowTime = 0.2f;
+
+    [Header("Easing")]
+    // 0 to 1 over 0 to 1. The zoom, the bird's changes of height and its way up or down to a branch all follow it.
+    public AnimationCurve motionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     static GameTuning current;
 
