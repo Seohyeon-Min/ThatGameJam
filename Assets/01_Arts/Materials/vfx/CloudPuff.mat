@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CloudPuff
+  m_Shader: {fileID: 4800000, guid: e5e66c924d2b4abc8b9772d01bc978f9, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BillowSpeed: 0.08
+    - _CoreWidth: 0.18
+    - _DarkRadius: 69
+    - _DarkStrength: 0.41
+    - _DriftSpeed: 0.015
+    - _EdgePosition: 0.27
+    - _EdgeSoftness: 0.19
+    - _LightStep: 0.78
+    - _LumpScale: 2.2
+    - _Lumpiness: 1.2
+    - _NearFadeEnd: 9
+    - _NearFadeStart: 3
+    - _RimAlpha: 0.73
+    - _ShadeStep: 0.4
+    - _ToneNoise: 0.35
+    - _ToneSoftness: 0.133
+    m_Colors:
+    - _DarkCentre: {r: 0, g: 0, b: 0, a: 0}
+    - _DarkColor: {r: 0.19742957, g: 0.20678425, b: 0.29811308, a: 1}
+    - _LightColor: {r: 0.96981126, g: 0.96981126, b: 0.9496831, a: 1}
+    - _MidColor: {r: 0.82562596, g: 0.81943035, b: 0.85660374, a: 1}
+    - _ShadeColor: {r: 0.36188677, g: 0.36188677, b: 0.5169811, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

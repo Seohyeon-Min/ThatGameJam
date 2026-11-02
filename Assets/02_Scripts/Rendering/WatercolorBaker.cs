@@ -57,18 +57,7 @@ public static class WatercolorBaker
     public static void BakeAll()
     {
         var models = Object.FindObjectsByType<WatercolorPaintedModel>();
-        var groups = new Dictionary<string, List<WatercolorPaintedModel>>();
-        var unique = new List<WatercolorPaintedModel>();
-        foreach (var model in models)
-        {
-            string key = ShareKey(model);
-            if (key == null)
-                unique.Add(model);
-            else if (groups.TryGetValue(key, out var list))
-                list.Add(model);
-            else
-                groups[key] = new List<WatercolorPaintedModel> { model };
-        }
+        GroupBySharedBake(models, out var groups, out var unique);
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
         int done = 0, total = groups.Count + unique.Count;
@@ -90,6 +79,89 @@ public static class WatercolorBaker
             EditorUtility.ClearProgressBar();
         }
         Debug.Log($"Watercolor: baked {models.Length} models as {total} bakes in {watch.Elapsed.TotalSeconds:F1} s");
+    }
+
+    // Bakes only what has no bake yet, and leaves every finished bake as it is. An unbaked instance of a prefab that already has a
+    // bake just takes that bake. Models without a WatercolorPaintedModel aren't seen: add one with Bake Selected Models.
+    [MenuItem("Tools/Watercolor/Bake Unbaked Models In Scene")]
+    public static void BakeUnbaked()
+    {
+        var models = Object.FindObjectsByType<WatercolorPaintedModel>();
+        GroupBySharedBake(models, out var groups, out var unique);
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        int baked = 0, copied = 0;
+        try
+        {
+            foreach (var (key, group) in groups)
+            {
+                WatercolorPaintedModel source = group.Find(IsBaked);
+                if (source == null)
+                {
+                    EditorUtility.DisplayProgressBar("Watercolor Bake", group[0].name, 0.5f);
+                    BakeGroup(group, key);
+                    baked++;
+                    continue;
+                }
+                foreach (var model in group)
+                {
+                    if (IsBaked(model))
+                        continue;
+                    CopyBake(source, model);
+                    model.variation = Variation(model);
+                    model.ApplyVariation();
+                    EditorUtility.SetDirty(model);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(model);
+                    copied++;
+                }
+            }
+            foreach (var model in unique)
+            {
+                if (IsBaked(model))
+                    continue;
+                EditorUtility.DisplayProgressBar("Watercolor Bake", model.name, 0.5f);
+                BakeGroup(new List<WatercolorPaintedModel> { model }, null);
+                baked++;
+            }
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log($"Watercolor: {baked} new bakes, {copied} instances took an existing bake, the rest of the {models.Length} models were already baked ({watch.Elapsed.TotalSeconds:F1} s)");
+    }
+
+    // Has its pattern, and every mesh in it is drawn with the baked shader.
+    static bool IsBaked(WatercolorPaintedModel model)
+    {
+        if (model.pattern == null)
+            return false;
+        foreach (var renderer in model.GetComponentsInChildren<Renderer>())
+        {
+            if (!renderer.enabled || (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer))
+                continue;
+            foreach (Material material in renderer.sharedMaterials)
+                if (material == null || material.shader.name != "ThatGameJam/WatercolorFlat")
+                    return false;
+        }
+        return true;
+    }
+
+    static void GroupBySharedBake(WatercolorPaintedModel[] models, out Dictionary<string, List<WatercolorPaintedModel>> groups, out List<WatercolorPaintedModel> unique)
+    {
+        groups = new Dictionary<string, List<WatercolorPaintedModel>>();
+        unique = new List<WatercolorPaintedModel>();
+        foreach (var model in models)
+        {
+            string key = ShareKey(model);
+            if (key == null)
+                unique.Add(model);
+            else if (groups.TryGetValue(key, out var list))
+                list.Add(model);
+            else
+                groups[key] = new List<WatercolorPaintedModel> { model };
+        }
     }
 
     // Bakes the model. A shared bake is redone for every instance of the same prefab in the open scenes, so they stay alike.
@@ -738,6 +810,8 @@ public class WatercolorManagerEditor : Editor
         EditorGUILayout.HelpBox("Blotch / backrun sizes and the colour chaos chunk, chance and drop sizes are used when baking. Re-bake after changing them.", MessageType.Info);
         if (GUILayout.Button("Bake All Models In Scene"))
             WatercolorBaker.BakeAll();
+        if (GUILayout.Button("Bake Unbaked Models In Scene"))
+            WatercolorBaker.BakeUnbaked();
     }
 
     // Use a saved look like a preset: load it into these settings, or save these settings over it.
