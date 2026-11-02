@@ -106,20 +106,20 @@ public class GameTuning : ScriptableObject
     public float cameraZoomDuration = 0.6f;
 
     [Header("Camera framing the bird with the baby")]
-    // Within this far (XZ, at zoom 1) of the baby, the camera eases over to frame both; past the exit distance it eases back to
-    // the bird alone. The gap between the two distances keeps it from flipping back and forth at one distance.
-    public float cameraTogetherEnterDistance = 7f;
-    public float cameraTogetherExitDistance = 10f;
+    // Up to the near distance (XZ, at zoom 1) from the baby the camera frames both; from there to the far distance it slides
+    // gradually over to the bird alone. Set by distance only, so the camera stops when the bird stops.
+    public float cameraTogetherNearDistance = 4f;
+    public float cameraTogetherFarDistance = 14f;
     // The bird stays within this fraction of half the screen's shorter side from the screen's centre while both are framed, so it
     // stays inside the screen margin BirdController keeps it in, also in a narrow browser window.
     public float cameraTogetherMaxBirdScreen = 0.8f;
-    // Seconds the camera takes to ease from the bird alone to both, or back.
-    public float cameraTogetherEaseTime = 2f;
     // Where between the bird (0) and the baby (1) the framed point lies.
     public float cameraTogetherBabyShare = 0.5f;
-    // While framing both, the camera holds still until the framed point has moved this far (at zoom 1), then follows just
-    // enough to keep it this close. Small moves of the bird don't move the camera.
+    // While framing both, the camera holds still until the framed point has moved this far (at zoom 1). Past it, it closes the
+    // part beyond in about this many seconds, so it eases into following instead of setting off at once. Small moves of the bird
+    // don't move the camera.
     public float cameraTogetherDeadZone = 1.5f;
+    public float cameraTogetherFollowTime = 0.2f;
 
     [Header("Easing")]
     // 0 to 1 over 0 to 1. The zoom, the bird's changes of height and its way up or down to a branch all follow it.
