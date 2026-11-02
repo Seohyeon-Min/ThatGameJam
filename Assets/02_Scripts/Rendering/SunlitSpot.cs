@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FMODUnity;
 using UnityEngine;
 
 // The sunlit spot at the end of a route: one or more shafts of light, always shining. Each child with a LightBeam is one
@@ -80,6 +81,7 @@ public class SunlitSpot : MonoBehaviour
         }
         ring.enabled = true;
         ring.Play();
+        RuntimeManager.PlayOneShot("event:/SFX/spiral");
     }
 
     static SunlitSpot NearestTo(Vector3 position)
