@@ -5,8 +5,8 @@ using UnityEngine.Serialization;
 using UnityEditor;
 #endif
 
-// One generator for the trees of the whole world. The areas are its child TreeZones: trees grow on a jittered grid inside the Trees zones
-// and outside the Clear zones, each turned and sized at random, neighbours never sharing a kind if it can be helped. Inside a Pines zone a
+// One generator for the trees of the whole world. The areas are its child TreeZones: trees grow on a jittered grid over the whole terrain
+// (Cover Ground) or inside the Trees zones, and outside the Clear zones except in the top and bottom paddings, which close off the road, each turned and sized at random, neighbours never sharing a kind if it can be helped. Inside a Pines zone a
 // share of those same trees are pines, so pines replace trees rather than add to them. Generate and Clear are inspector buttons
 // (TreeGeneratorEditor); the same seed and settings give the same trees.
 // Leaves: every tree draws its own number from 0 to 1 when it is made, and has leaves at a season level whose share is above that number.
@@ -46,6 +46,14 @@ public class TreeGenerator : MonoBehaviour
     [SerializeField] int seed = 2;
     [Tooltip("Trees stand on this terrain's surface. Empty: the scene's active terrain")]
     [SerializeField] Terrain ground;
+    [Tooltip("Trees grow over the whole terrain, as if a Trees zone covered it. Clear and Pines zones still count")]
+    [SerializeField] bool coverGround = true;
+    [Tooltip("Cover Ground: metres left bare along every edge of the terrain, the same on all four sides")]
+    [SerializeField, Min(0f)] float edgePadding = 0f;
+    [Tooltip("Top end (+Z): the last metres of the planted area where Clear zones don't count, so trees close off the road there")]
+    [SerializeField, Min(0f)] float topPadding = 0f;
+    [Tooltip("Bottom end (-Z): the first metres of the planted area where Clear zones don't count, so trees close off the road there")]
+    [SerializeField, Min(0f)] float bottomPadding = 0f;
     [Tooltip("Paint the bare trees in watercolor after making them. A kind's bake is shared, so this also bakes again every other tree of that kind in the open scenes")]
     [SerializeField] bool paint = true;
     // Everything Generate made, so Clear removes only these.
@@ -130,16 +138,27 @@ public class TreeGenerator : MonoBehaviour
         }
         Terrain terrain = ground != null ? ground : Terrain.activeTerrain;
         var zones = new List<TreeZone>(GetComponentsInChildren<TreeZone>());
-        if (!zones.Exists(z => z.kind == TreeZone.Kind.Trees))
+        if (coverGround && terrain == null)
         {
-            Debug.LogWarning("TreeGenerator: add a child with a TreeZone set to Trees, and size its box, first.", this);
+            Debug.LogWarning("TreeGenerator: Cover Ground is on but there is no terrain. Set Ground.", this);
+            return;
+        }
+        if (!coverGround && !zones.Exists(z => z.kind == TreeZone.Kind.Trees))
+        {
+            Debug.LogWarning("TreeGenerator: turn on Cover Ground, or add a child with a TreeZone set to Trees and size its box, first.", this);
             return;
         }
         int group = Undo.GetCurrentGroup();
         Clear();
 
-        // The grid covers all the Trees zones together, so trees keep one spacing across the joins between zones.
+        // The grid covers everything planted together, so trees keep one spacing across the joins between zones.
         Vector2 min = new(float.MaxValue, float.MaxValue), max = new(float.MinValue, float.MinValue);
+        if (coverGround)
+        {
+            Vector3 corner = terrain.transform.position;
+            min = new Vector2(corner.x, corner.z) + Vector2.one * edgePadding;
+            max = new Vector2(corner.x + terrain.terrainData.size.x, corner.z + terrain.terrainData.size.z) - Vector2.one * edgePadding;
+        }
         foreach (TreeZone zone in zones)
             if (zone.kind == TreeZone.Kind.Trees)
                 foreach (Vector3 corner in zone.Corners())
@@ -147,6 +166,8 @@ public class TreeGenerator : MonoBehaviour
                     min = Vector2.Min(min, new Vector2(corner.x, corner.z));
                     max = Vector2.Max(max, new Vector2(corner.x, corner.z));
                 }
+        // Inside the paddings the Clear zones don't count: the road is closed off at both ends.
+        float clearFrom = min.y + bottomPadding, clearTo = max.y - topPadding;
 
         var random = new System.Random(seed);
         var made = new List<GameObject>();
@@ -170,8 +191,9 @@ public class TreeGenerator : MonoBehaviour
                 float pineRoll = (float)random.NextDouble();
                 int pineKind = random.Next(Mathf.Max(pines.Length, 1));
                 int kindRoll = random.Next(1000);
-                if (!zones.Exists(zone => zone.kind == TreeZone.Kind.Trees && zone.Contains(position))
-                    || zones.Exists(zone => zone.kind == TreeZone.Kind.Clear && zone.Contains(position)))
+                if (!coverGround && !zones.Exists(zone => zone.kind == TreeZone.Kind.Trees && zone.Contains(position)))
+                    continue;
+                if (position.z >= clearFrom && position.z <= clearTo && zones.Exists(zone => zone.kind == TreeZone.Kind.Clear && zone.Contains(position)))
                     continue;
                 if (terrain != null)
                     position.y = terrain.transform.position.y + terrain.SampleHeight(position);

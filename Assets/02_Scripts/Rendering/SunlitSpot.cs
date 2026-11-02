@@ -3,6 +3,7 @@ using UnityEngine;
 
 // The sunlit spot at the end of a route: one or more shafts of light, always shining. Each child with a LightBeam is one
 // shaft; place and tilt them in the prefab. Level is how many are on, counted from the top of the hierarchy.
+// Put it under the last point of the stage's route, at zero: that point is where the baby lies down, so move the point, not the spot.
 // When the season advances (the baby fell asleep), the spot nearest the baby plays the child SpringRing outward from this
 // spot. The ring stays disabled otherwise: it rebuilds its mesh with raycasts every frame while enabled, and draws nothing
 // while disabled. What changes with each season listens to Season on its own, and can follow the ring by its _SpringRing global.

@@ -1,7 +1,8 @@
 using UnityEngine;
 
 // The path the baby walks: its child transforms, in order. Points carry height (for example along the fallen log).
-// The last point is the sunlit rest area.
+// The last point is the sunlit rest area: the stage's SunlitSpot sits under it, so moving that point moves the light, where the baby
+// lies down and how far the bird may fly, together.
 public class BabyRoute : MonoBehaviour
 {
     public int Count => transform.childCount;
