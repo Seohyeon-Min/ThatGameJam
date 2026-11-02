@@ -124,6 +124,16 @@ public class GameFlow : MonoBehaviour
 
     public bool CameraLocked => birdCamera.IsLocked;
 
+    // Dev tool: the game camera follows the bird again.
+    public void CameraFollowBird() => birdCamera.LockOn(null);
+
+    // Dev tool: the game camera stays on the middle of this stage (its place in Stages).
+    public void CameraShowStage(int index)
+    {
+        if (index < stages.Length)
+            birdCamera.LockOn(stages[index].area.center);
+    }
+
     Vector3 SunlitSpotPosition => CurrentStage.route[CurrentStage.route.Count - 1].position;
 
     void OnReachedRest() => EndStage();

@@ -58,6 +58,20 @@ public class BirdCamera : MonoBehaviour
         Cut();
     }
 
+    // Dev tool: stays on this point, or follows the bird again with null. Cuts there at once.
+    public void LockOn(Vector3? point)
+    {
+        lockedPoint = point;
+        Cut();
+    }
+
+    // Tools menu, outside Play Mode: puts what the camera follows on this point, cutting there.
+    public void JumpInEditor(Vector3 point)
+    {
+        transform.position = point;
+        followCamera.PreviousStateIsValid = false;
+    }
+
     // Dev tool: if locked, moves the lock to this point.
     public void MoveLock(Vector3 point)
     {

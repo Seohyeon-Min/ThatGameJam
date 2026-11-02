@@ -72,8 +72,20 @@ public class IntroSequence : MonoBehaviour
     public void Play()
     {
         running = true;
-        // The canvas may be off in the scene, to see past the title while working on it.
+        // These may be off in the scene, to see past the title and the sky while working on the game.
         title.GetComponentInParent<Canvas>(true).gameObject.SetActive(true);
+        skyCamera.gameObject.SetActive(true);
+        // The game starts up there: a cut, not a blend from the game camera. The bird's first place also reads this camera.
+        CinemachineBrain brain = Camera.main.GetComponent<CinemachineBrain>();
+        if (brain != null)
+        {
+            CinemachineBrain.UpdateMethods updateMethod = brain.UpdateMethod;
+            brain.UpdateMethod = CinemachineBrain.UpdateMethods.ManualUpdate;
+            brain.ManualUpdate();
+            brain.ActiveBlend = null;
+            brain.ManualUpdate();
+            brain.UpdateMethod = updateMethod;
+        }
         SetAlpha(whiteFade, 0f);
         StartCoroutine(Run());
     }
