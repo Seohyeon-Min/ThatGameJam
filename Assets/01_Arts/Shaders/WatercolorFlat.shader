@@ -65,6 +65,15 @@ Shader "ThatGameJam/WatercolorFlat"
         // Set at runtime by Perchable on whichever object the bird is currently standing on (not hand-tuned,
         // not a radius): never fade while this is on, so the bird never reads as floating on nothing.
         [HideInInspector] _CameraFadeExempt ("Camera Fade Exempt (runtime only)", Float) = 0
+
+        [Header(Wind)]
+        [Toggle] _Wind ("Sway In The Wind (pivot at the foot, not Static)", Float) = 0
+        _WindStrength ("Sway At The Top (m)", Range(0, 0.5)) = 0.05
+        _WindHeight ("Top Height (m above the pivot)", Float) = 0.5
+        _WindSpeed ("Speed", Range(0, 5)) = 1.5
+        _WindWaveLength ("Gust Length (m)", Float) = 4
+        _WindFlutter ("Flutter (share of the sway)", Range(0, 1)) = 0.25
+        _WindDirection ("Direction (world X, Z)", Vector) = (1, 0, 0.3, 0)
     }
 
     SubShader
@@ -110,7 +119,34 @@ Shader "ThatGameJam/WatercolorFlat"
             half _CameraFadeDistance;
             half _CameraFadeRange;
             half _CameraFadeExempt;
+            half _Wind;
+            half _WindStrength;
+            half _WindHeight;
+            half _WindSpeed;
+            half _WindWaveLength;
+            half _WindFlutter;
+            float4 _WindDirection;
         CBUFFER_END
+
+        // 바람(Wind 체크): 피벗(발치)에서 위로 갈수록 많이 휜다(높이 비율의 제곱). 바람 방향으로 지나가는 물결 두 개를 겹쳐
+        // 이웃한 포기들이 시차를 두고 흔들리고, 끝마다 작은 떨림을 더한다. 모든 패스가 같은 위치를 써야 그림자와 깊이가 맞는다.
+        // 피벗은 오브젝트 위치다. Static 으로 합쳐진 메시는 피벗이 원점이 되어 맞지 않는다.
+        float3 ApplyWind(float3 positionWS)
+        {
+            if (_Wind < 0.5)
+                return positionWS;
+            float3 pivot = UNITY_MATRIX_M._m03_m13_m23;
+            float height = saturate((positionWS.y - pivot.y) / max(_WindHeight, 1e-3));
+            float bend = height * height;
+            float2 direction = normalize(_WindDirection.xz + float2(1e-5, 0.0));
+            float along = dot(pivot.xz, direction) / max(_WindWaveLength, 1e-3) * TWO_PI;
+            float time = _Time.y * _WindSpeed;
+            float gust = 0.6 * sin(time - along) + 0.4 * sin(time * 0.43 - along * 0.6 + 1.7);
+            float flutter = sin(time * 4.7 + dot(positionWS.xz, float2(9.1, 6.7)));
+            float2 sway = direction * (0.35 + 0.65 * gust) + float2(-direction.y, direction.x) * flutter * _WindFlutter;
+            positionWS.xz += sway * _WindStrength * bend;
+            return positionWS;
+        }
 
         // WatercolorManager 가 정하는 전역 값. 모든 수채화 머티리얼이 같이 따른다.
         half _WC_PigmentThickness;
@@ -518,14 +554,14 @@ Shader "ThatGameJam/WatercolorFlat"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
-                VertexPositionInputs positions = GetVertexPositionInputs(input.positionOS.xyz);
-                output.positionCS = positions.positionCS;
-                output.positionWS = positions.positionWS;
+                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz));
+                output.positionCS = TransformWorldToHClip(positionWS);
+                output.positionWS = positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.patternUV = TwistPatternUV(input.patternUV);
                 output.positionOS = input.positionOS.xyz;
-                output.fogFactor = ComputeFogFactor(positions.positionCS.z);
+                output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
@@ -1089,7 +1125,7 @@ Shader "ThatGameJam/WatercolorFlat"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz));
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
                 float3 lightDirectionWS = normalize(_LightPosition - positionWS);
@@ -1139,7 +1175,7 @@ Shader "ThatGameJam/WatercolorFlat"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(ApplyWind(TransformObjectToWorld(input.positionOS.xyz)));
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }
@@ -1184,7 +1220,7 @@ Shader "ThatGameJam/WatercolorFlat"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(ApplyWind(TransformObjectToWorld(input.positionOS.xyz)));
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 return output;

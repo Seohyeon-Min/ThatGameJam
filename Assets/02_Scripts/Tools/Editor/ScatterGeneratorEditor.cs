@@ -2,8 +2,9 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-[CustomEditor(typeof(FlowerGenerator))]
-public class FlowerGeneratorEditor : Editor
+// Generate and Clear for every ScatterGenerator: FlowerGenerator and GrassGenerator.
+[CustomEditor(typeof(ScatterGenerator), true)]
+public class ScatterGeneratorEditor : Editor
 {
     public override VisualElement CreateInspectorGUI()
     {
@@ -16,14 +17,14 @@ public class FlowerGeneratorEditor : Editor
         root.Add(buttons);
 
         var count = new Label();
-        count.schedule.Execute(() => count.text = $"Flowers made by this generator: {((FlowerGenerator)target).FlowerCount}").Every(250);
+        count.schedule.Execute(() => count.text = $"Made by this generator: {((ScatterGenerator)target).MadeCount}").Every(250);
         root.Add(count);
         return root;
     }
 
-    void ForEach(System.Action<FlowerGenerator> action)
+    void ForEach(System.Action<ScatterGenerator> action)
     {
         foreach (UnityEngine.Object t in targets)
-            action((FlowerGenerator)t);
+            action((ScatterGenerator)t);
     }
 }
