@@ -32,7 +32,7 @@ ModelImporter:
     clipAnimations:
     - serializedVersion: 16
       name: Bird_Flap
-      takeName: Bird_Flap
+      takeName: Bird-Deform|Bird_Flap
       internalID: 8529535276016281644
       firstFrame: 0
       lastFrame: 24
@@ -68,7 +68,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_Glide
-      takeName: Bird_Glide
+      takeName: Bird-Deform|Bird_Glide
       internalID: -8344983768038178568
       firstFrame: 0
       lastFrame: 75
@@ -97,7 +97,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_Landing
-      takeName: Bird_Landing
+      takeName: Bird-Deform|Bird_Landing
       internalID: 691770354234515855
       firstFrame: 0
       lastFrame: 44
@@ -140,7 +140,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_PerchIdle
-      takeName: Bird_PerchIdle
+      takeName: Bird-Deform|Bird_PerchIdle
       internalID: -3799460164555546341
       firstFrame: 0
       lastFrame: 149
@@ -169,7 +169,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_PerchIdle_LeanBack
-      takeName: Bird_PerchIdle_LeanBack
+      takeName: Bird-Deform|Bird_PerchIdle_LeanBack
       internalID: 8216352128390774678
       firstFrame: 0
       lastFrame: 119
@@ -198,7 +198,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_PerchIdle_Preen
-      takeName: Bird_PerchIdle_Preen
+      takeName: Bird-Deform|Bird_PerchIdle_Preen
       internalID: 6527996695233745839
       firstFrame: 0
       lastFrame: 149
@@ -227,7 +227,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_Takeoff
-      takeName: Bird_Takeoff
+      takeName: Bird-Deform|Bird_Takeoff
       internalID: -1021669067021929114
       firstFrame: 0
       lastFrame: 24
@@ -263,7 +263,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_Hover
-      takeName: Bird_Hover
+      takeName: Bird-Deform|Bird_Hover
       internalID: 7550947293405968431
       firstFrame: 0
       lastFrame: 36
@@ -292,7 +292,7 @@ ModelImporter:
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
       name: Bird_Refuse
-      takeName: Bird_Refuse
+      takeName: Bird-Deform|Bird_Refuse
       internalID: -1949646161022648409
       firstFrame: 0
       lastFrame: 23
@@ -303,6 +303,122 @@ ModelImporter:
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Bird_Dive
+      takeName: Bird-Deform|Bird_Dive
+      internalID: -1373611561148776086
+      firstFrame: 0
+      lastFrame: 34
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Bird_DiveLoop
+      takeName: Bird-Deform|Bird_DiveLoop
+      internalID: -8520295153770976608
+      firstFrame: 0
+      lastFrame: 24
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Bird_Hop
+      takeName: Bird-Deform|Bird_Hop
+      internalID: 2611597647208531024
+      firstFrame: 0
+      lastFrame: 18
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Bird_Walk
+      takeName: Bird-Deform|Bird_Walk
+      internalID: 4384779253585820431
+      firstFrame: 0
+      lastFrame: 28
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0

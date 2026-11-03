@@ -128,11 +128,19 @@ public class GameFlow : MonoBehaviour
     // Dev tool: the game camera follows the bird again.
     public void CameraFollowBird() => birdCamera.LockOn(null);
 
-    // Dev tool: the game camera stays on the middle of this stage (its place in Stages).
+    // Dev tool: the game camera stays on this stage (its place in Stages), at StageViewPoint.
     public void CameraShowStage(int index)
     {
         if (index < stages.Length)
-            birdCamera.LockOn(stages[index].area.center);
+            birdCamera.LockOn(StageViewPoint(index));
+    }
+
+    // The middle of a stage's route, from where the baby starts to its sunlit spot: where that stage plays. Not the middle of its
+    // flight area, which reaches into the stages before and after it.
+    public Vector3 StageViewPoint(int index)
+    {
+        BabyRoute route = stages[index].route;
+        return (route[0].position + route[route.Count - 1].position) * 0.5f;
     }
 
     Vector3 SunlitSpotPosition => CurrentStage.route[CurrentStage.route.Count - 1].position;

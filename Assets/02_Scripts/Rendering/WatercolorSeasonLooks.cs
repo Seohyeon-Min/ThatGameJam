@@ -147,4 +147,15 @@ public class WatercolorSeasonLooks : MonoBehaviour
     }
 
     WatercolorLook LookFor(int level) => level >= 0 && level < looks.Length ? looks[level] : null;
+
+#if UNITY_EDITOR
+    // Season preview in the Editor: the look the game shows at this level, which is the nearest level at or below it that has one.
+    public WatercolorLook LookAtLevel(int level)
+    {
+        for (int l = Mathf.Min(level, looks.Length - 1); l >= 0; l--)
+            if (looks[l] != null)
+                return looks[l];
+        return null;
+    }
+#endif
 }

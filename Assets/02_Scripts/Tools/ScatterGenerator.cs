@@ -98,6 +98,11 @@ public abstract class ScatterGenerator : MonoBehaviour
         pendingLevel = -1;
     }
 
+#if UNITY_EDITOR
+    // Season preview in the Editor (SeasonPreview).
+    public void PreviewSeason(int level) => ShowForSeason(level);
+#endif
+
     void ShowForSeason(int level)
     {
         for (int i = 0; i < groups.Count && i < areas.Length; i++)

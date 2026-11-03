@@ -20,7 +20,7 @@ public class TreeGeneratorEditor : Editor
         count.schedule.Execute(() =>
         {
             var generator = (TreeGenerator)target;
-            count.text = $"Trees made by this generator: {generator.TreeCount} ({generator.PineCount} pines, {generator.CanLeafCount} can leaf out)";
+            count.text = $"Trees made by this generator: {generator.TreeCount} ({generator.PineCount} pines, {generator.OakCount} turn into oaks, {generator.CanLeafCount} can leaf out)";
         }).Every(250);
         root.Add(count);
         return root;

@@ -10,6 +10,9 @@ using UnityEngine.UI;
 // and the game starts behind a white fade. Everything here is saved in the scene: this only turns it on and off.
 public class IntroSequence : MonoBehaviour
 {
+    // Seconds into Bird_Dive at which the bird is falling, after its wing beat up and head down (the bird's export notes).
+    const float DiveFallsAfter = 0.6f;
+
     [Header("Camera")]
     [Tooltip("Stays at its saved rotation and only moves, from Camera Start to Camera End. Its priority must be above the game camera's.")]
     [SerializeField] CinemachineCamera skyCamera;
@@ -40,8 +43,16 @@ public class IntroSequence : MonoBehaviour
     [Tooltip("How far around the baby a click counts, as a fraction of the screen's height.")]
     [SerializeField, Range(0.01f, 0.5f)] float babyClickRadius = 0.1f;
     [SerializeField, Min(0.1f)] float diveSeconds = 4f;
-    [Tooltip("How fast the bird keeps circling as it dives. 1 = as fast as on the circle, 0 = only straight toward the spot.")]
-    [SerializeField, Min(0f)] float diveTurnRate = 1f;
+    [Tooltip("Turns of the spiral on the way down, on top of circling on as fast as it did. It goes on the way it was circling, from wherever it was")]
+    [SerializeField, Min(0f)] float diveTurns = 0.75f;
+    [Tooltip("How wide the spiral swings out halfway down, in metres from its middle. It starts at the circle's radius and closes on the stage's start")]
+    [SerializeField, Min(0f)] float diveSpiralRadius = 6f;
+    [Tooltip("The dive camera follows from this far behind the bird, along the way it is flying, and this high above it (metres)")]
+    [SerializeField] Vector2 diveChase = new Vector2(4f, 3f);
+    [Tooltip("How quickly the dive camera swings round behind the bird, per second. Lower lags more")]
+    [SerializeField, Min(0.1f)] float diveChaseFollow = 3f;
+    [Tooltip("Degrees the dive camera tilts per radian per second of the bird's turn, so the spiral leans the picture")]
+    [SerializeField] float diveCameraLean = 12f;
     [Tooltip("Seconds after the bird starts dropping (the lowest point of Dive Path) that the camera goes after it.")]
     [SerializeField, Min(0f)] float diveCameraBeat = 0.7f;
     [Tooltip("Seconds Dive Field Of View runs behind the rest of the dive.")]
@@ -50,10 +61,10 @@ public class IntroSequence : MonoBehaviour
     [SerializeField] AnimationCurve divePath = new AnimationCurve(new Keyframe(0f, 0f, 0f, -3f), new Keyframe(0.18f, -0.3f), new Keyframe(0.5f, 0.75f, 1.6f, 1.6f), new Keyframe(1f, 1f, 0.2f, 0f));
     [Tooltip("Vertical FOV across the dive, as a fraction of the sky camera's. Over 1 widens it, pushing the far things away, while the bird climbs. Under 1 zooms in, which pulls the ground closer.")]
     [SerializeField] AnimationCurve diveFieldOfView = new AnimationCurve(new Keyframe(0f, 1f, 0f, 3f), new Keyframe(0.18f, 1.4f, 0f, 0f), new Keyframe(1f, 0.5f, -1f, 0f));
-    [Tooltip("Placeholder for the dive animation: how far the body tips over during the dive, in degrees. Negative tips it the other way.")]
-    [SerializeField] float diveBodyPitch = 45f;
-    [Tooltip("Dive Body Pitch across the dive, as a fraction. Below 0 lifts the nose for the climb.")]
-    [SerializeField] AnimationCurve divePitch = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.1f, -0.4f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f));
+    [Tooltip("The most the body tips along its path during the dive, in degrees: nose down as it falls, up as it climbs. It points where the bird is actually going.")]
+    [SerializeField, Range(0f, 90f)] float diveBodyPitch = 80f;
+    [Tooltip("How quickly the body turns to its path, per second. Higher follows the path more tightly")]
+    [SerializeField, Min(0.1f)] float divePitchFollow = 8f;
 
     [Header("Game Start")]
     [Tooltip("The tree the bird drops onto as the white clears: the object, or one of its branches to choose where. It must be on screen in the game camera's opening frame. Empty: the bird just starts at the stage's start.")]
@@ -289,18 +300,64 @@ public class IntroSequence : MonoBehaviour
         float skyFieldOfView = skyCamera.Lens.FieldOfView;
         float dropStartsAt = DropStart() * diveSeconds;
         float cameraStartsAt = dropStartsAt + diveCameraBeat;
+        // Bird_Dive beats its wings up and tips its head down first, and is falling from DiveFallsAfter on: started that much before
+        // the drop, its fall meets the drop. Bird_DiveLoop follows it in the animator.
+        float diveAnimationAt = Mathf.Max(dropStartsAt - DiveFallsAfter, 0f);
+        bool diving = false;
+        Vector3 last = bird.transform.position;
+        float pitch = 0f;
+        float startAngle = circleAngle;
+        float angularSpeed = orbitSpeed / orbitRadius;
+        var chase = diveCamera.GetComponent<CinemachineFollow>();
+        // Starting behind the way it was circling, so the camera doesn't swing at the first frame.
+        var tangent = new Vector3(-Mathf.Sin(startAngle), 0f, Mathf.Cos(startAngle));
+        Vector3 chaseBehind = -tangent;
+        float lastHeading = Mathf.Atan2(tangent.z, tangent.x), lean = 0f;
         for (float t = 0f; t < diveSeconds; t += Time.deltaTime)
         {
             float progress = t / diveSeconds;
+            if (!diving && t >= diveAnimationAt)
+            {
+                diving = true;
+                bird.SetDiving(true);
+            }
             if (t >= cameraStartsAt && !diveCamera.gameObject.activeSelf)
                 diveCamera.gameObject.SetActive(true);
-            circleAngle += orbitSpeed / orbitRadius * diveTurnRate * Time.deltaTime;
-            Vector3 spiral = new Vector3(Mathf.Cos(circleAngle), 0f, Mathf.Sin(circleAngle)) * (orbitRadius * (1f - progress));
+            // A spiral round a middle that slides from the circle's centre to the stage's start. It carries straight on from the circle:
+            // the same centre, radius and way round at the start, so it begins wherever the bird was. It swings wide halfway down and
+            // closes on the start at the end. Climbing (descent below 0), it only goes on circling.
             float descent = divePath.Evaluate(progress);
-            // Lerp stops at from: during the climb only the height goes past it.
-            Vector3 path = Vector3.Lerp(from, to, descent);
+            float down = Mathf.Clamp01(descent);
+            circleAngle = startAngle + angularSpeed * t + diveTurns * 2f * Mathf.PI * down;
+            float radius = (orbitRadius + (diveSpiralRadius - orbitRadius) * Mathf.Sin(Mathf.PI * down)) * Mathf.Sqrt(1f - down);
+            Vector3 spiral = new Vector3(Mathf.Cos(circleAngle), 0f, Mathf.Sin(circleAngle)) * radius;
+            Vector3 path = Vector3.Lerp(from, to, down);
             path.y = Mathf.LerpUnclamped(from.y, to.y, descent);
-            bird.MoveScripted(path + spiral, diveBodyPitch * divePitch.Evaluate(progress));
+            // The body points along the way it is going: how steeply it falls (or climbs) against how fast it goes across.
+            Vector3 next = path + spiral;
+            Vector3 step = next - last;
+            last = next;
+            float across = new Vector2(step.x, step.z).magnitude;
+            if (step.sqrMagnitude > 1e-8f)
+            {
+                float along = Mathf.Clamp(Mathf.Atan2(-step.y, across) * Mathf.Rad2Deg, -diveBodyPitch, diveBodyPitch);
+                pitch = Mathf.Lerp(pitch, along, 1f - Mathf.Exp(-divePitchFollow * Time.deltaTime));
+            }
+            bird.MoveScripted(next, pitch);
+
+            // The dive camera chases from behind, along the way the bird flies, swinging round with it and leaning into the turn.
+            if (across > 1e-5f && Time.deltaTime > 0f)
+            {
+                Vector3 behind = -new Vector3(step.x, 0f, step.z) / across;
+                chaseBehind = Vector3.Slerp(chaseBehind, behind, 1f - Mathf.Exp(-diveChaseFollow * Time.deltaTime));
+                float heading = Mathf.Atan2(step.z, step.x);
+                float turnRate = Mathf.DeltaAngle(lastHeading * Mathf.Rad2Deg, heading * Mathf.Rad2Deg) * Mathf.Deg2Rad / Time.deltaTime;
+                lastHeading = heading;
+                lean = Mathf.Lerp(lean, Mathf.Clamp(turnRate * diveCameraLean, -25f, 25f), 1f - Mathf.Exp(-diveChaseFollow * Time.deltaTime));
+            }
+            if (chase != null)
+                chase.FollowOffset = chaseBehind * diveChase.x + Vector3.up * diveChase.y;
+            diveCamera.Lens.Dutch = lean;
             // On both cameras, so the blend between them doesn't change the zoom.
             skyCamera.Lens.FieldOfView = diveCamera.Lens.FieldOfView = skyFieldOfView * diveFieldOfView.Evaluate(Mathf.Max(t - diveFieldOfViewBeat, 0f) / diveSeconds);
             // Faint at first, so the drop can still be seen.

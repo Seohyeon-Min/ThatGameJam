@@ -3,7 +3,12 @@ guid: 2b8c5ddda7a50d74e856bf69caf13650
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Snow
+    second: {fileID: 2100000, guid: 12325d2653344644ba968734557f4bd9, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -106,6 +111,35 @@ ModelImporter:
       name: Girl_GetUp
       takeName: NPC-Girl-Rig|Girl_GetUp
       internalID: 3110401735797763657
+      firstFrame: 0
+      lastFrame: 377
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Girl_Intro_GetUp
+      takeName: NPC-Girl-Rig|Girl_Intro_GetUp
+      internalID: 8261657684473197624
       firstFrame: 0
       lastFrame: 377
       wrapMode: 0
@@ -309,6 +343,35 @@ ModelImporter:
       name: Girl_Sleep
       takeName: NPC-Girl-Rig|Girl_Sleep
       internalID: -268540970522901141
+      firstFrame: 0
+      lastFrame: 90
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: Girl_Intro_Sleep
+      takeName: NPC-Girl-Rig|Girl_Intro_Sleep
+      internalID: 1611965628600829264
       firstFrame: 0
       lastFrame: 90
       wrapMode: 0

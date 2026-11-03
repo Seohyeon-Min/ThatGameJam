@@ -12,17 +12,24 @@ public class Baby : CryListener
     static readonly int AsleepParam = Animator.StringToHash("Asleep");
     static readonly int LookAroundParam = Animator.StringToHash("LookAround");
     static readonly int SleepState = Animator.StringToHash("Sleep");
+    // Asleep under the snow, in the intro until its GetUp: Girl_Intro_Sleep.
+    static readonly int IntroSleepState = Animator.StringToHash("IntroSleep");
     static readonly int QuietWaitParam = Animator.StringToHash("QuietWait");
     static readonly int IdleState = Animator.StringToHash("Idle");
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
     static readonly int JumpState = Animator.StringToHash("Jump");
+    static readonly int IntroWakeParam = Animator.StringToHash("IntroWake");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
     [SerializeField] Animator animator;
     // The baby starts walking when this has played.
     [SerializeField] AnimationClip getUpClip;
+    [Tooltip("Played instead of the GetUp clip the first time the baby wakes in the first stage (the intro), shaking off the snow")]
+    [SerializeField] AnimationClip introGetUpClip;
+    [Tooltip("The snow lying on her in the intro (Snow_Clumps). Shown only while she sleeps there before that first wake; off for good once she is up")]
+    [SerializeField] Renderer snowClumps;
     [Tooltip("Played on the eyes during the GetUp clip.")]
     [SerializeField] ParticleSystem[] eyeSparkles;
     [Tooltip("The frame of the GetUp clip they play on: when the flowers appear in the eyes.")]
@@ -49,6 +56,10 @@ public class Baby : CryListener
     // BalanceWalk plays instead of Walk, and the baby ignores curious pauses/cries until BalanceBeamEnd.
     bool onBalanceBeam;
     bool gettingUp;
+    // The intro GetUp has played: the snow is gone for the rest of the game.
+    bool snowShaken;
+    // 0 to 1: how far the cold tremor has eased in since she set off.
+    float shiverFade;
     float curiousPauseCooldown;
     // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
     float noiseSeed;
@@ -77,18 +88,22 @@ public class Baby : CryListener
     }
 
     // Cold tremor on the model only (never on transform, which drives movement/arrival checks elsewhere).
-    // Off once asleep/resting: curled up out of the wind by then. Off while getting up too: the animation carries it alone.
+    // Off once asleep/resting: curled up out of the wind by then. Off while waking too (getting up, looking round): the animation
+    // carries it alone. Once she sets off it eases in over babyShiverFadeIn, so it never starts with a jolt.
     void Update()
     {
-        if (State == BabyState.Sleeping || State == BabyState.Resting || gettingUp)
+        if (State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking || gettingUp)
         {
+            shiverFade = 0f;
             animator.transform.localRotation = modelBaseRotation;
             return;
         }
         GameTuning tuning = GameTuning.Current;
+        shiverFade = Mathf.MoveTowards(shiverFade, 1f, Time.deltaTime / Mathf.Max(tuning.babyShiverFadeIn, 0.01f));
         // A slow-moving envelope on top of the shiver itself, so it isn't a constant metronomic hum: it
         // eases from barely shivering up to a harder tremble and back, unpredictably, like a real chill.
-        float intensity = Mathf.Max(0f, 1f + Noise(130f, tuning.babyShiverIntensityFrequency) * 2f * tuning.babyShiverIntensityVariation);
+        float intensity = Mathf.Max(0f, 1f + Noise(130f, tuning.babyShiverIntensityFrequency) * 2f * tuning.babyShiverIntensityVariation)
+            * Mathf.SmoothStep(0f, 1f, shiverFade);
         float x = Noise(57f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle * intensity;
         float z = Noise(83f, tuning.babyShiverFrequency) * 2f * tuning.babyShiverAngle * intensity;
         animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
@@ -165,8 +180,8 @@ public class Baby : CryListener
         gettingUp = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
-        // Already lying: no lying-down animation after the move.
-        animator.Play(SleepState, 0, 0f);
+        // Already lying: no lying-down animation after the move. Under the snow in the intro, until it is shaken off.
+        animator.Play(InIntro && !snowShaken ? IntroSleepState : SleepState, 0, 0f);
         CurrentBlocker = null;
         State = BabyState.Resting;
         animator.SetBool(WalkingParam, false);
@@ -174,6 +189,7 @@ public class Baby : CryListener
         animator.SetBool(QuietWaitParam, false);
         animator.SetBool(AsleepParam, true);
         wakeTimer.ResetTimer();
+        ShowSnow();
     }
 
     // Dev tool: stands the baby on the spot and has it lie down there, as at the end of its route: Reached Rest follows.
@@ -222,6 +238,23 @@ public class Baby : CryListener
         animator.SetBool(AsleepParam, true);
         wakeTimer.ResetTimer();
         wakeTimer.Begin();
+        ShowSnow();
+    }
+
+    static bool InIntro
+    {
+        get
+        {
+            GameFlow flow = GameFlow.Instance;
+            return flow != null && flow.Stages.Count > 0 && flow.CurrentStage == flow.Stages[0];
+        }
+    }
+
+    // The snow lies on her only while she sleeps in the intro, until the intro GetUp has shaken it off.
+    void ShowSnow()
+    {
+        if (snowClumps != null)
+            snowClumps.enabled = InIntro && !snowShaken;
     }
 
     protected override void OnCry(Vector3 origin)
@@ -233,9 +266,9 @@ public class Baby : CryListener
     }
 
     // A glint on each eye when the flowers appear in the GetUp clip.
-    IEnumerator SparkleEyes()
+    IEnumerator SparkleEyes(AnimationClip clip)
     {
-        yield return new WaitForSeconds(eyeSparkleFrame / getUpClip.frameRate);
+        yield return new WaitForSeconds(eyeSparkleFrame / clip.frameRate);
         foreach (ParticleSystem sparkle in eyeSparkles)
             sparkle.Play();
     }
@@ -248,11 +281,19 @@ public class Baby : CryListener
         if (cutscene != null)
             cutscene.Play();
         GameTuning tuning = GameTuning.Current;
+        bool intro = InIntro && !snowShaken && introGetUpClip != null;
+        AnimationClip clip = intro ? introGetUpClip : getUpClip;
+        animator.SetBool(IntroWakeParam, intro);
         animator.SetBool(AsleepParam, false);
         gettingUp = true;
-        StartCoroutine(SparkleEyes());
-        yield return new WaitForSeconds(getUpClip.length);
+        StartCoroutine(SparkleEyes(clip));
+        yield return new WaitForSeconds(clip.length);
         gettingUp = false;
+        if (intro)
+        {
+            snowShaken = true;
+            ShowSnow();
+        }
         if (byBird)
             yield return LookUp(tuning.babyLookUpDuration);
         else

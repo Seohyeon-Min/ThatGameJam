@@ -12,6 +12,8 @@ using UnityEditor;
 // Leaves: every tree draws its own number from 0 to 1 when it is made, and has leaves at a season level whose share is above that number.
 // So the trees that leaf out first keep their leaves as the share grows. A tree that can ever leaf out is made twice, bare and leafy, and
 // the season shows one of them: nothing is made while playing. Pines always have their leaves.
+// Oaks: the birches turn into oaks as the seasons go by, the same way: each draws its own number, and is an oak at a level whose share is
+// above it. An oak is the same model repainted brown without the birch marks (Oak Colour), still varying in colour as the birches do.
 public class TreeGenerator : MonoBehaviour
 {
     // Trees closer than spacing times this are next to each other: the grid neighbours along X and Z, not the diagonal ones.
@@ -24,6 +26,7 @@ public class TreeGenerator : MonoBehaviour
         public GameObject leafy;
         public float leafNumber;
         public bool pine;
+        public float oakNumber;
     }
 
     [Tooltip("The tree kinds without leaves")]
@@ -34,7 +37,13 @@ public class TreeGenerator : MonoBehaviour
     [Tooltip("Pines, for the Pines zones. They always have their leaves")]
     [SerializeField] GameObject[] pines = { };
     [Tooltip("Share of the trees inside a Pines zone that are pines")]
-    [SerializeField, Range(0f, 1f)] float pineShare = 0.1f;
+    [SerializeField, Range(0f, 1f)] float pineShare = 0.05f;
+    [Tooltip("Share of the birches that have turned into oaks at each season level, from level 0. Past the end, the last value. Keep it rising, so an oak never turns back")]
+    [SerializeField] float[] oakShareByLevel = { 0f, 0.1f, 0.5f, 0.9f };
+    [Tooltip("Bark of the oaks: the birches' colour, as it would look before the watercolor tints and per-tree variation")]
+    [SerializeField] Color oakColour = new(0.45f, 0.33f, 0.24f);
+    [Tooltip("The birches' leaves, brighter than the oaks' by this much (their leaf material's Brightness). 1 = the same")]
+    [SerializeField, Range(0.5f, 2f)] float birchLeafBrightness = 1.15f;
     [Tooltip("Share of the trees with leaves at each season level, from level 0. Past the end, the last value. Keep it rising, so a tree never loses its leaves")]
     [SerializeField] float[] leafShareByLevel = { 0f, 0f, 0.1f, 0.7f, 1f };
     [Tooltip("Average distance between neighbouring trees")]
@@ -59,12 +68,17 @@ public class TreeGenerator : MonoBehaviour
     // Everything Generate made, so Clear removes only these.
     [SerializeField, HideInInspector] List<GameObject> trees = new();
     [SerializeField, HideInInspector] List<Planted> planted = new();
+    // Each birch bark material and its oak version, by index, so a season can swap one for the other while playing.
+    [SerializeField, HideInInspector] List<Material> birchBark = new();
+    [SerializeField, HideInInspector] List<Material> oakBark = new();
 
     Season season;
     int pendingLevel = -1;
 
     public int TreeCount => planted.Count;
     public int PineCount => planted.FindAll(p => p.pine).Count;
+    public int OakCount => planted.FindAll(p => !p.pine && p.oakNumber < MostOaks).Count;
+    float MostOaks => oakShareByLevel.Length == 0 ? 0f : Mathf.Max(oakShareByLevel);
     public int CanLeafCount => planted.FindAll(p => p.leafy != null).Count;
 
     void Start()
@@ -72,7 +86,7 @@ public class TreeGenerator : MonoBehaviour
         season = FindAnyObjectByType<Season>();
         if (season == null)
             return;
-        ShowLeaves(season.Level);
+        ShowSeason(season.Level);
         season.OnSeasonChanged.AddListener(OnSeasonChanged);
     }
 
@@ -90,12 +104,63 @@ public class TreeGenerator : MonoBehaviour
     {
         if (pendingLevel < 0)
             return;
-        ShowLeaves(pendingLevel);
+        ShowSeason(pendingLevel);
         pendingLevel = -1;
     }
 
+#if UNITY_EDITOR
+    // Season preview in the Editor (SeasonPreview).
+    public void PreviewSeason(int level) => ShowSeason(level);
+    public void RestoreBark(int level) => ShowOaks(level);
+#endif
+
     float LeafShare(int level) =>
         leafShareByLevel.Length == 0 ? 0f : leafShareByLevel[Mathf.Clamp(level, 0, leafShareByLevel.Length - 1)];
+
+    void ShowSeason(int level)
+    {
+        ShowLeaves(level);
+        ShowOaks(level);
+    }
+
+    float OakShare(int level) =>
+        oakShareByLevel.Length == 0 ? 0f : oakShareByLevel[Mathf.Clamp(level, 0, oakShareByLevel.Length - 1)];
+
+    void ShowOaks(int level)
+    {
+        float share = OakShare(level);
+        foreach (Planted tree in planted)
+        {
+            if (tree.pine)
+                continue;
+            bool oak = tree.oakNumber < share;
+            SetBark(tree.bare, oak);
+            SetBark(tree.leafy, oak);
+        }
+    }
+
+    // Swaps the tree's bark between birch and oak. Its leaves keep their own material.
+    void SetBark(GameObject tree, bool oak)
+    {
+        if (tree == null)
+            return;
+        List<Material> from = oak ? birchBark : oakBark, to = oak ? oakBark : birchBark;
+        foreach (Renderer renderer in tree.GetComponentsInChildren<Renderer>(true))
+        {
+            Material[] materials = renderer.sharedMaterials;
+            bool changed = false;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                int index = from.IndexOf(materials[i]);
+                if (index < 0 || to[index] == null)
+                    continue;
+                materials[i] = to[index];
+                changed = true;
+            }
+            if (changed)
+                renderer.sharedMaterials = materials;
+        }
+    }
 
     void ShowLeaves(int level)
     {
@@ -170,6 +235,8 @@ public class TreeGenerator : MonoBehaviour
         float clearFrom = min.y + bottomPadding, clearTo = max.y - topPadding;
 
         var random = new System.Random(seed);
+        // Its own sequence, so adding oaks didn't move a single tree.
+        var oakRandom = new System.Random(seed + 7919);
         var made = new List<GameObject>();
         var plantedNow = new List<Planted>();
         var painted = new Dictionary<GameObject, WatercolorPaintedModel>();
@@ -199,8 +266,9 @@ public class TreeGenerator : MonoBehaviour
                     position.y = terrain.transform.position.y + terrain.SampleHeight(position);
                 Quaternion rotation = Quaternion.Euler(0f, randomRotation ? yaw : 0f, 0f);
 
+                float oakNumber = (float)oakRandom.NextDouble();
                 bool pine = pines.Length > 0 && pineRoll < pineShare && zones.Exists(zone => zone.kind == TreeZone.Kind.Pines && zone.Contains(position));
-                var tree = new Planted { leafNumber = leafNumber, pine = pine };
+                var tree = new Planted { leafNumber = leafNumber, pine = pine, oakNumber = oakNumber };
                 if (pine)
                     tree.bare = Place(pines[pineKind], position, rotation, scale, made, painted);
                 else
@@ -218,13 +286,23 @@ public class TreeGenerator : MonoBehaviour
         // tree is still shown: the bake only finds models that are active.
         foreach (WatercolorPaintedModel model in painted.Values)
             WatercolorBaker.Bake(model);
+        // After the bake, which gives every tree of a kind the same materials: an oak version of every bark the birches use.
+        birchBark.Clear();
+        oakBark.Clear();
+        foreach (Planted tree in plantedNow)
+            if (!tree.pine)
+            {
+                PairBark(tree.bare);
+                PairBark(tree.leafy);
+            }
+        AssetDatabase.SaveAssets();
 
         // After the trees: registering a created object flushes a pending change to the lists.
         Undo.RecordObject(this, "Generate Trees");
         trees.AddRange(made);
         planted.AddRange(plantedNow);
         Season sceneSeason = FindAnyObjectByType<Season>();
-        ShowLeaves(sceneSeason != null ? sceneSeason.Level : 0);
+        ShowSeason(sceneSeason != null ? sceneSeason.Level : 0);
         Undo.SetCurrentGroupName("Generate Trees");
         Undo.CollapseUndoOperations(group);
     }
@@ -245,6 +323,112 @@ public class TreeGenerator : MonoBehaviour
         }
         made.Add(tree);
         return tree;
+    }
+
+    // Notes an oak version for each bark material on the tree that doesn't have one yet. The leaves go the other way: the birches get a
+    // brighter copy of them, and the oaks keep the leaf material as it is.
+    void PairBark(GameObject tree)
+    {
+        if (tree == null)
+            return;
+        foreach (Renderer renderer in tree.GetComponentsInChildren<Renderer>(true))
+        {
+            Material[] materials = renderer.sharedMaterials;
+            bool changed = false;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                Material material = materials[i];
+                if (material == null || birchBark.Contains(material))
+                    continue;
+                if (material.HasProperty("_Brightness"))
+                {
+                    int known = oakBark.IndexOf(material);
+                    Material birchLeaves = known >= 0 ? birchBark[known] : BirchLeaves(material);
+                    if (known < 0)
+                    {
+                        birchBark.Add(birchLeaves);
+                        oakBark.Add(material);
+                    }
+                    materials[i] = birchLeaves;
+                    changed = true;
+                    continue;
+                }
+                Material oak = OakMaterial(material);
+                if (oak == material)
+                    continue;
+                birchBark.Add(material);
+                oakBark.Add(oak);
+            }
+            if (!changed)
+                continue;
+            Undo.RecordObject(renderer, "Generate Trees");
+            renderer.sharedMaterials = materials;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+        }
+    }
+
+    // A copy of a leaf material next to it, with Birch Leaf Brightness, made again from it on every Generate.
+    Material BirchLeaves(Material leaves)
+    {
+        string leavesPath = AssetDatabase.GetAssetPath(leaves);
+        string path = $"{leavesPath.Substring(0, leavesPath.LastIndexOf('/'))}/{leaves.name}_birch.mat";
+        var birch = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (birch == null)
+        {
+            birch = new Material(leaves);
+            AssetDatabase.CreateAsset(birch, path);
+        }
+        else
+        {
+            birch.shader = leaves.shader;
+            birch.CopyPropertiesFromMaterial(leaves);
+        }
+        birch.SetFloat("_Brightness", leaves.GetFloat("_Brightness") * birchLeafBrightness);
+        EditorUtility.SetDirty(birch);
+        return birch;
+    }
+
+    // The oak version of a bark material, next to it (watercolor, from the bake) or under Materials/Oak (a model's own, unpainted),
+    // made again from it on every Generate so it follows the bake and Oak Colour. Anything else (leaves) is returned as it is.
+    Material OakMaterial(Material bark)
+    {
+        string path;
+        if (bark.HasProperty("_Birch") && bark.GetFloat("_Birch") > 0.5f && !bark.name.EndsWith("_oak_watercolor"))
+        {
+            string barkPath = AssetDatabase.GetAssetPath(bark);
+            string folder = barkPath.Substring(0, barkPath.LastIndexOf('/'));
+            path = $"{folder}/{bark.name.Replace("_watercolor", "")}_oak_watercolor.mat";
+        }
+        else if (bark.HasProperty("_BASE_COLOR") && !bark.name.EndsWith("_oak"))
+        {
+            const string oakFolder = "Assets/01_Arts/Materials/Oak";
+            if (!AssetDatabase.IsValidFolder(oakFolder))
+                AssetDatabase.CreateFolder("Assets/01_Arts/Materials", "Oak");
+            path = $"{oakFolder}/{bark.name}_oak.mat";
+        }
+        else
+            return bark;
+
+        var oak = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (oak == null)
+        {
+            oak = new Material(bark);
+            AssetDatabase.CreateAsset(oak, path);
+        }
+        else
+        {
+            oak.shader = bark.shader;
+            oak.CopyPropertiesFromMaterial(bark);
+        }
+        if (oak.HasProperty("_Birch"))
+        {
+            oak.SetFloat("_Birch", 0f);
+            oak.SetColor("_BaseColor", oakColour);
+        }
+        else
+            oak.SetColor("_BASE_COLOR", oakColour);
+        EditorUtility.SetDirty(oak);
+        return oak;
     }
 
     // A kind no tree next to this one has; if every kind is taken, the kind whose nearest tree is farthest.

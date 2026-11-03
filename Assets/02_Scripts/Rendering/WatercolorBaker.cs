@@ -139,7 +139,7 @@ public static class WatercolorBaker
             return false;
         foreach (var renderer in model.GetComponentsInChildren<Renderer>())
         {
-            if (!renderer.enabled || (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer))
+            if (!renderer.enabled || (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer) || KeepsItsShader(renderer))
                 continue;
             foreach (Material material in renderer.sharedMaterials)
                 if (material == null || material.shader.name != "ThatGameJam/WatercolorFlat")
@@ -191,7 +191,7 @@ public static class WatercolorBaker
         {
             Mesh mesh = renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh
                 : renderer.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null;
-            if (!renderer.enabled || mesh == null || renderer.sharedMaterial == null)
+            if (!renderer.enabled || mesh == null || renderer.sharedMaterial == null || KeepsItsShader(renderer))
                 continue;
             Matrix4x4 meshToRoot = root.worldToLocalMatrix * renderer.transform.localToWorldMatrix;
             key.Append(PathUnder(root, renderer.transform)).Append('|')
@@ -262,7 +262,7 @@ public static class WatercolorBaker
             baked.TryAdd(PathUnder(source.transform, renderer.transform), renderer);
         foreach (var renderer in target.GetComponentsInChildren<Renderer>())
         {
-            if (!baked.TryGetValue(PathUnder(target.transform, renderer.transform), out Renderer from))
+            if (KeepsItsShader(renderer) || !baked.TryGetValue(PathUnder(target.transform, renderer.transform), out Renderer from))
                 continue;
             Undo.RecordObject(renderer, "Watercolor Bake");
             if (renderer is SkinnedMeshRenderer skinned && from is SkinnedMeshRenderer fromSkinned)
@@ -300,7 +300,7 @@ public static class WatercolorBaker
 
         foreach (var renderer in root.GetComponentsInChildren<Renderer>())
         {
-            if (!renderer.enabled || renderer.sharedMaterial == null || !TryReadPart(renderer, root, out Part part))
+            if (!renderer.enabled || renderer.sharedMaterial == null || KeepsItsShader(renderer) || !TryReadPart(renderer, root, out Part part))
                 continue;
             if (!groups.TryGetValue(renderer.sharedMaterial, out var list))
                 groups[renderer.sharedMaterial] = list = new List<Part>();
@@ -405,6 +405,10 @@ public static class WatercolorBaker
         EditorSceneManager.MarkSceneDirty(model.gameObject.scene);
         return $"{root.name}: {pieces} pieces in {masses} masses ({groups.Count} colours) -> {folder}";
     }
+
+    // A renderer whose shader carries the WatercolorBake = Skip tag (such as SoftSnow) keeps its own look: the bake leaves it alone.
+    static bool KeepsItsShader(Renderer renderer) =>
+        renderer.sharedMaterial != null && renderer.sharedMaterial.GetTag("WatercolorBake", false) == "Skip";
 
     static bool TryReadPart(Renderer renderer, Transform root, out Part part)
     {

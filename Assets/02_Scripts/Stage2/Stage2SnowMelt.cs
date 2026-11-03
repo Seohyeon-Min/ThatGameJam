@@ -27,6 +27,18 @@ public class Stage2SnowMelt : MonoBehaviour
 
     void OnDisable() => season.OnSeasonChanged.RemoveListener(Apply);
 
+#if UNITY_EDITOR
+    public Transform[] Snowbanks => snowbanks;
+
+    // Season preview in the Editor (SeasonPreview): the banks as they end up, gone from Melt At on.
+    public void PreviewSeason(int level)
+    {
+        foreach (Transform bank in snowbanks)
+            if (bank != null)
+                bank.gameObject.SetActive(level < meltAt);
+    }
+#endif
+
     void Apply(int level)
     {
         if (level < meltAt || melting)

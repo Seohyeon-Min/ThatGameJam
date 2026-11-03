@@ -18,6 +18,11 @@ public class BirdController : MonoBehaviour
     static readonly int PerchedParam = Animator.StringToHash("Perched");
     static readonly int MovingParam = Animator.StringToHash("Moving");
     static readonly int RefuseParam = Animator.StringToHash("Refuse");
+    static readonly int DivingParam = Animator.StringToHash("Diving");
+    static readonly int WalkingParam = Animator.StringToHash("Walking");
+    static readonly int WalkRateParam = Animator.StringToHash("WalkRate");
+    // How fast Bird_Walk steps forward without its feet sliding, in the model's units per second (the bird's export notes).
+    const float WalkClipSpeed = 0.26f;
     // In the sky, going back on screen: how much of the camera's speed it may lose.
     const float SkyMostFallBehind = 0.7f;
     // Flying low, it comes down only where the ground this far ahead along its way is also landable, so it doesn't land at the
@@ -88,8 +93,6 @@ public class BirdController : MonoBehaviour
     // BirdCamera's zoom, eased, and the zoom it is heading to. 1 = the authored distance.
     float zoom = 1f;
     float zoomHeading = 1f;
-    float hopTime;
-    Vector3 visualBasePosition;
     // Current horizontal speed, ramping toward GameTuning.birdSpeed (or down, braking into a landing).
     float currentSpeed;
     // True from the moment a perch is left until the Takeoff clip's FootRelease event fires: the body holds
@@ -133,7 +136,6 @@ public class BirdController : MonoBehaviour
         if (visualRoot != null)
         {
             visualBaseRotation = visualRoot.localRotation;
-            visualBasePosition = visualRoot.localPosition;
         }
         clickMask = LayerMask.GetMask("Ground", "Interactable", "ClickPlane");
         groundMask = LayerMask.GetMask("Ground", "ClickPlane");
@@ -289,7 +291,11 @@ public class BirdController : MonoBehaviour
         control = Control.Game;
         SkyDrift = Vector3.zero;
         bodyPitch = 0f;
+        SetDiving(false);
     }
+
+    // Intro: Bird_Dive then Bird_DiveLoop while on, back to gliding when off.
+    public void SetDiving(bool diving) => animator.SetBool(DivingParam, diving);
 
     public void MoveScripted(Vector3 position, float pitch = 0f)
     {
@@ -309,6 +315,7 @@ public class BirdController : MonoBehaviour
             visualRoot.localRotation = visualBaseRotation;
         animator.SetBool(MovingParam, false);
         animator.SetBool(PerchedParam, false);
+        SetDiving(false);
     }
 
     // MoveScripted, but facing ahead as in FlyAhead.
@@ -385,7 +392,9 @@ public class BirdController : MonoBehaviour
         // Glides while it moves and hovers in place otherwise.
         animator.SetBool(MovingParam, moved);
         animator.SetBool(PerchedParam, state is State.Landing or State.Perched or State.Walking);
-        Hop(state == State.Walking && moved);
+        animator.SetBool(WalkingParam, state == State.Walking && moved);
+        // Bird_Walk sped up or slowed to the walking speed, so its feet don't slide.
+        animator.SetFloat(WalkRateParam, GameTuning.Current.birdWalkSpeed / (WalkClipSpeed * animator.transform.lossyScale.x));
 
         idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
         if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
@@ -685,16 +694,6 @@ public class BirdController : MonoBehaviour
     {
         if (target.z > bounds.max.z && flat.z >= bounds.max.z - 0.01f)
             Refuse();
-    }
-
-    // Placeholder until a walk clip exists: the body hops while it walks.
-    void Hop(bool hopping)
-    {
-        if (visualRoot == null)
-            return;
-        hopTime = hopping ? hopTime + Time.deltaTime : 0f;
-        float height = GameTuning.Current.birdWalkHopHeight * Mathf.Abs(Mathf.Sin(Mathf.PI * GameTuning.Current.birdWalkHopRate * hopTime));
-        visualRoot.localPosition = visualBasePosition + Vector3.up * (height / transform.lossyScale.y);
     }
 
     // Flies down to a spot a little ahead of and above the baby, then keeps over it at her pace, facing the way she walks.

@@ -52,6 +52,8 @@ public class GameTuning : ScriptableObject
     // nothing at its lowest), so the tremor rises and falls unevenly instead of humming at one constant level.
     [Range(0f, 1f)] public float babyShiverIntensityVariation = 0.7f;
     public float babyShiverIntensityFrequency = 0.35f;
+    // Seconds the shiver takes to ease in once she sets off after waking (none while she gets up and looks round).
+    public float babyShiverFadeIn = 3f;
 
     [Header("Fog maze (ADR 0027)")]
     // At a fork the bird has not cried at, the girl stands this long before she picks a way at random.
@@ -95,9 +97,6 @@ public class GameTuning : ScriptableObject
     // Seconds a change of height takes along motionCurve: taking off, coming down to the ground, a new stage's altitude.
     public float birdClimbDuration = 1f;
     public float birdWalkSpeed = 1.2f;
-    // Placeholder until a walk clip exists: while walking, the body hops this high (world units), this many times a second.
-    public float birdWalkHopHeight = 0.08f;
-    public float birdWalkHopRate = 4f;
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;
     // Bank degrees per degree/second of turn rate.
