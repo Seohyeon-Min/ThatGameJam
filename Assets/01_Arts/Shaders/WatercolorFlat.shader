@@ -42,6 +42,7 @@ Shader "ThatGameJam/WatercolorFlat"
         _SelfShadowSkip ("Ignore Own Shadow Within (m)", Range(0, 3)) = 0
         [Toggle] _ReceiveCastShadows ("Receive Cast Shadows", Float) = 1
         [Toggle] _LeavePaper ("Leave Paper White On The Lit Side", Float) = 1
+        [Toggle] _NoShade ("No Shading (eyes: never darkened by its turn from the light or by shadows)", Float) = 0
         [Header(Character)]
         [Enum(Background, 0, Character, 128)] _Character ("Painted As", Float) = 0
         [Toggle] _Skin ("Skin (Character only: uses the three values below for its shade)", Float) = 0
@@ -74,6 +75,13 @@ Shader "ThatGameJam/WatercolorFlat"
         _WindWaveLength ("Gust Length (m)", Float) = 4
         _WindFlutter ("Flutter (share of the sway)", Range(0, 1)) = 0.25
         _WindDirection ("Direction (world X, Z)", Vector) = (1, 0, 0.3, 0)
+
+        [Header(Leaf Card)]
+        [Toggle] _LeafCard ("Leaf Card (each card turns to the camera, its texture boils)", Float) = 0
+        _BoilSpeed ("Boil Speed (UV per second)", Vector) = (0.08, 0.056, 0, 0)
+        _BoilScale ("Boil Noise Scale", Float) = 10
+        _BoilAmount ("Boil Amount (UV)", Float) = 0.1
+        _Roll ("Random Roll (share of a turn)", Range(0, 1)) = 1
     }
 
     SubShader
@@ -84,6 +92,7 @@ Shader "ThatGameJam/WatercolorFlat"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Assets/01_Arts/Shaders/BakedPatternUV.hlsl"
+        #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Hashes.hlsl"
         #include "Assets/01_Arts/Shaders/SunPool.hlsl"
 
         TEXTURE2D(_BaseMap);
@@ -104,6 +113,7 @@ Shader "ThatGameJam/WatercolorFlat"
             half _SelfShadowSkip;
             half _ReceiveCastShadows;
             half _LeavePaper;
+            half _NoShade;
             half _Birch;
             half _Character;
             half _Skin;
@@ -126,6 +136,11 @@ Shader "ThatGameJam/WatercolorFlat"
             half _WindWaveLength;
             half _WindFlutter;
             float4 _WindDirection;
+            half _LeafCard;
+            float4 _BoilSpeed;
+            float _BoilScale;
+            float _BoilAmount;
+            float _Roll;
         CBUFFER_END
 
         // 바람(Wind 체크): 피벗(발치)에서 위로 갈수록 많이 휜다(높이 비율의 제곱). 바람 방향으로 지나가는 물결 두 개를 겹쳐
@@ -146,6 +161,62 @@ Shader "ThatGameJam/WatercolorFlat"
             float2 sway = direction * (0.35 + 0.65 * gust) + float2(-direction.y, direction.x) * flutter * _WindFlutter;
             positionWS.xz += sway * _WindStrength * bend;
             return positionWS;
+        }
+
+        // 잎 카드(Leaf Card 체크, 나무 모델의 LeafCard_* 처럼 카드마다 오브젝트가 따로 있는 잎): 카드(XY 평면 사각형)를 자기
+        // 원점에서 카메라의 오른쪽/위로 펼쳐 늘 카메라를 보게 한다. 카드마다 화면에서 도는 각도가 달라(원점으로 정한다) 잎이
+        // 한 방향으로만 서지 않는다. Static 으로 합쳐지면 원점이 사라져 맞지 않는다. 그림자는 원래 방향의 카드로 드리운다.
+        float3 LeafCardPositionWS(float3 positionOS)
+        {
+            float3 originWS = TransformObjectToWorld(float3(0, 0, 0));
+            float scaleX = length(float3(UNITY_MATRIX_M[0].x, UNITY_MATRIX_M[1].x, UNITY_MATRIX_M[2].x));
+            float scaleY = length(float3(UNITY_MATRIX_M[0].y, UNITY_MATRIX_M[1].y, UNITY_MATRIX_M[2].y));
+            float roll = frac(sin(dot(originWS, float3(12.9898, 78.233, 37.719))) * 43758.5453) * _Roll * TWO_PI;
+            float2 flat = float2(positionOS.x * scaleX, positionOS.y * scaleY);
+            float s = sin(roll), c = cos(roll);
+            flat = float2(flat.x * c - flat.y * s, flat.x * s + flat.y * c);
+            return originWS + UNITY_MATRIX_V[0].xyz * flat.x + UNITY_MATRIX_V[1].xyz * flat.y;
+        }
+
+        // Where a vertex is drawn (and its depth taken): a leaf card turned to the camera, or the model swaying in the wind.
+        float3 DrawnPositionWS(float3 positionOS)
+        {
+            if (_LeafCard > 0.5)
+                return LeafCardPositionWS(positionOS);
+            return ApplyWind(TransformObjectToWorld(positionOS));
+        }
+
+        // The old leaf graph's noise (Shader Graph's Simple Noise, Deterministic hash), for the boiling leaves.
+        float LeafValueNoise(float2 uv)
+        {
+            float2 i = floor(uv);
+            float2 f = frac(uv);
+            f = f * f * (3.0 - 2.0 * f);
+            float r0, r1, r2, r3;
+            Hash_Tchou_2_1_float(i, r0);
+            Hash_Tchou_2_1_float(i + float2(1.0, 0.0), r1);
+            Hash_Tchou_2_1_float(i + float2(0.0, 1.0), r2);
+            Hash_Tchou_2_1_float(i + float2(1.0, 1.0), r3);
+            return lerp(lerp(r0, r1, f.x), lerp(r2, r3, f.x), f.y);
+        }
+
+        float LeafSimpleNoise(float2 uv, float scale)
+        {
+            float value = 0.0;
+            for (int octave = 0; octave < 3; octave++)
+                value += LeafValueNoise(uv * (scale / pow(2.0, octave))) * pow(0.5, 3 - octave);
+            return value;
+        }
+
+        // Leaf cards: the texture coordinates pushed by two layers of flowing noise, so the leaf masses boil (뭉실뭉실) as before.
+        float2 LeafUV(float2 uv)
+        {
+            if (_LeafCard < 0.5)
+                return uv;
+            float2 flowing = uv + _Time.y * _BoilSpeed.xy;
+            float x = LeafSimpleNoise(flowing, _BoilScale);
+            float y = LeafSimpleNoise(flowing + float2(17.3, 5.1), _BoilScale);
+            return uv + (float2(x, y) - 1.0) * _BoilAmount;
         }
 
         // WatercolorManager 가 정하는 전역 값. 모든 수채화 머티리얼이 같이 따른다.
@@ -384,7 +455,7 @@ Shader "ThatGameJam/WatercolorFlat"
         void AlphaClip(float2 uv)
         {
             #if defined(_ALPHATEST_ON)
-            clip(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).a * _BaseColor.a - _Cutoff);
+            clip(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, LeafUV(uv)).a * _BaseColor.a - _Cutoff);
             #endif
         }
 
@@ -554,10 +625,13 @@ Shader "ThatGameJam/WatercolorFlat"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
-                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz));
+                float3 positionWS = DrawnPositionWS(input.positionOS.xyz);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                // A two-sided leaf card shows the side facing the camera.
+                if (_LeafCard > 0.5 && dot(output.normalWS, GetWorldSpaceViewDir(positionWS)) < 0)
+                    output.normalWS = -output.normalWS;
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.patternUV = TwistPatternUV(input.patternUV);
                 output.positionOS = input.positionOS.xyz;
@@ -597,7 +671,7 @@ Shader "ThatGameJam/WatercolorFlat"
 
                 CameraFadeClip(input.positionWS, input.positionCS.xy);
 
-                half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
+                half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, LeafUV(input.uv));
                 #if defined(_ALPHATEST_ON)
                 clip(baseSample.a * _BaseColor.a - _Cutoff);
                 #endif
@@ -719,6 +793,9 @@ Shader "ThatGameJam/WatercolorFlat"
                 half sunPeak = max(mainLight.color.r, max(mainLight.color.g, mainLight.color.b));
                 half sun = saturate(sunPeak / max(_WC_Environment.x, 1e-3));
                 cast = lerp(1.0, cast, sun);
+                // No Shading: always on the lit side, whatever falls on it.
+                shadowAtten = lerp(shadowAtten, 1.0, _NoShade);
+                cast = lerp(cast, 1.0, _NoShade);
                 // 바닥은 윤곽, 경계 띠, 종이 영역, 크림 띠, 파스텔 조각을 쓰지 않는다. 넓은 면에서 윤곽(시선 각도 기준)은 멀수록
                 // 진해지는 그라데이션이 되고, 종이 영역은 바닥 전체를 하얗게 만든다.
                 half objectOnly = 1.0 - _Floor;
@@ -735,7 +812,7 @@ Shader "ThatGameJam/WatercolorFlat"
 
                 // 빛 띠: 빛(종이) 경계에서 화면 비율로 정한 거리까지, 빛에 가까울수록 밝고 옅은 크림색 쪽으로 바랜다.
                 // 노랗게 물들이지 않으니 파랑이 녹색으로, 흰색이 탁한 노랑으로 가지 않는다. 바닥에는 쓰지 않는다.
-                half warmZone = smoothstep(paperEdge - ScreenWidth(ndotlRaw, _WC_WarmWidth), paperEdge, ndotl) * objectOnly * sun;
+                half warmZone = smoothstep(paperEdge - ScreenWidth(ndotlRaw, _WC_WarmWidth), paperEdge, ndotl) * objectOnly * sun * (1.0 - _NoShade);
                 half3 lightColor = lerp(albedo, _WC_LightCream.rgb, _WC_LightCream.a * warmZone);
                 // 빛 쪽 파스텔 조각: 색 물방울 자리에 옅은 파스텔 색이 비친다. 물방울이 진할수록 또렷하다.
                 // 흰색(채도와 밝기로 본 흰 물감)에는 넣지 않는다. 흰 새처럼 흰 물체는 깨끗하게 남는다.
@@ -790,9 +867,10 @@ Shader "ThatGameJam/WatercolorFlat"
 
                 // 빛: 빛을 정면으로 받는 쪽은 칠하지 않은 종이로 남긴다. 그림자가 드리운 곳에는 남기지 않는다.
                 // Leave Paper White 를 끈 머티리얼(예: 짙은 새)은 빛 쪽에도 흰 종이를 남기지 않는다.
-                half paper = smoothstep(paperEdge, _WC_PaperThreshold + paperSoft, ndotl) * cast * objectOnly * _LeavePaper;
+                // No Shading has no light boundary on it either: no paper and no boundary band, so it is its colour all over.
+                half paper = smoothstep(paperEdge, _WC_PaperThreshold + paperSoft, ndotl) * cast * objectOnly * _LeavePaper * (1.0 - _NoShade);
                 // 경계 안료 축적 E(d): 종이 경계에 가까워질수록 커지는 색 쪽의 띠(폭은 화면 비율). 종이 안으로는 넘어가지 않는다.
-                half band = smoothstep(paperEdge - ScreenWidth(ndotlRaw, _WC_BoundaryWidth), paperEdge, ndotl) * (1.0 - paper) * cast * objectOnly;
+                half band = smoothstep(paperEdge - ScreenWidth(ndotlRaw, _WC_BoundaryWidth), paperEdge, ndotl) * (1.0 - paper) * cast * objectOnly * (1.0 - _NoShade);
                 accumulate += band * _WC_BoundaryPigment * unevenness * (1.0 - _WC_Gouache.x);
                 // 그림자 경계에 고인 안료: 그림자 쪽 경계의 좁은 띠. 바닥에도 적용한다.
                 half shade = 1.0 - cast;
@@ -847,7 +925,7 @@ Shader "ThatGameJam/WatercolorFlat"
                     half t = ndotlRaw + (pattern.r - 0.5) * 0.1 + dry + pastelBreak;
                     half e = _WC_GouacheSteps.x, w = _WC_GouacheSteps.y;
                     half formLevel = 0.5 * smoothstep(e - w - 0.01, e - w + 0.01, t) + 0.5 * smoothstep(e + w - 0.01, e + w + 0.01, t);
-                    formLevel = lerp(1.0, formLevel, objectOnly);
+                    formLevel = lerp(1.0, formLevel, objectOnly * (1.0 - _NoShade));
                     // 드리운 그림자: 경계 근처에서만 붓질로 흔들고, 같은 세 단계로 나눈다(가운데가 전환색).
                     half shadowEdgeBand = saturate((1.0 - abs(saturate(shadowAtten) * 2.0 - 1.0)) * 3.0);
                     // 그림자 경계는 단단하게: 그림자 맵의 부드러운 경계를 좁게 자르고, 붓질로만 갈라지게 한다.
@@ -1184,7 +1262,7 @@ Shader "ThatGameJam/WatercolorFlat"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                output.positionCS = TransformWorldToHClip(ApplyWind(TransformObjectToWorld(input.positionOS.xyz)));
+                output.positionCS = TransformWorldToHClip(DrawnPositionWS(input.positionOS.xyz));
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }
@@ -1229,9 +1307,12 @@ Shader "ThatGameJam/WatercolorFlat"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                output.positionCS = TransformWorldToHClip(ApplyWind(TransformObjectToWorld(input.positionOS.xyz)));
+                float3 positionWS = DrawnPositionWS(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(positionWS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                if (_LeafCard > 0.5 && dot(output.normalWS, GetWorldSpaceViewDir(positionWS)) < 0)
+                    output.normalWS = -output.normalWS;
                 return output;
             }
 

@@ -624,6 +624,25 @@ public static class WatercolorBaker
         return SaveAsset(texture, path);
     }
 
+    const string LeafCardShader = "ThatGameJam/LeafCard";
+
+    // Leaves drawn with LeafCard keep what that did: each card turned to the camera, the texture boiling, cut out by its alpha, both
+    // sides drawn.
+    static void MakeLeafCard(Material source, Material material)
+    {
+        material.SetFloat("_LeafCard", 1f);
+        foreach (string property in new[] { "_BoilScale", "_BoilAmount", "_Roll" })
+            if (source.HasProperty(property))
+                material.SetFloat(property, source.GetFloat(property));
+        if (source.HasProperty("_BoilSpeed"))
+            material.SetVector("_BoilSpeed", source.GetVector("_BoilSpeed"));
+        material.SetFloat("_Cutoff", source.HasProperty("_Cutoff") ? source.GetFloat("_Cutoff") : 0.5f);
+        material.SetFloat("_AlphaClip", 1f);
+        material.EnableKeyword("_ALPHATEST_ON");
+        material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+    }
+
     static Material FlatMaterial(Material source, Texture3D pattern, string folder)
     {
         string name = source.name.Replace("_watercolor", "");
@@ -643,10 +662,11 @@ public static class WatercolorBaker
             else if (source.HasProperty("_BASE_COLOR"))
                 material.SetColor("_BaseColor", source.GetColor("_BASE_COLOR"));
             // The model's own texture drives every colour calculation. Older materials (Standard, from some FBX
-            // exports) keep it in _MainTex.
+            // exports) keep it in _MainTex; the leaf and grass shaders in _GrassTexture.
             string texProperty = source.HasProperty("_BaseMap") && source.GetTexture("_BaseMap") != null ? "_BaseMap"
                 : source.HasProperty("_MainTex") ? "_MainTex"
-                : source.HasProperty("_BASE_COLOR_MAP") ? "_BASE_COLOR_MAP" : null;
+                : source.HasProperty("_BASE_COLOR_MAP") ? "_BASE_COLOR_MAP"
+                : source.HasProperty("_GrassTexture") ? "_GrassTexture" : null;
             if (texProperty != null)
             {
                 material.SetTexture("_BaseMap", source.GetTexture(texProperty));
@@ -655,6 +675,8 @@ public static class WatercolorBaker
             }
             if (source.HasProperty("_Floor"))
                 material.SetFloat("_Floor", source.GetFloat("_Floor"));
+            if (source.shader.name == LeafCardShader)
+                MakeLeafCard(source, material);
         }
         material.SetTexture("_PatternTex", pattern);
         material.SetFloat("_HasPattern", 1f);

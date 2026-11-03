@@ -16,6 +16,9 @@ Shader "ThatGameJam/SpringRing"
         _MaxRadius ("Max Radius", Float) = 40
         _Lift ("Lift Above Ground", Float) = 0.03
         _Duration ("Duration (seconds, 0 key)", Float) = 10
+        [Header(Fade Out)]
+        _FadeStart ("Fade Starts At (Progress)", Range(0, 1)) = 0.3
+        _FadeEnd ("Gone At (Progress)", Range(0, 1)) = 1
         [Header(Band)]
         [HDR] _Color ("Band Color", Color) = (1, 0.95, 0.75, 1)
         _BandIntensity ("Band Intensity", Range(0, 2)) = 0.5
@@ -59,6 +62,8 @@ Shader "ThatGameJam/SpringRing"
                 float _MaxRadius;
                 float _Lift;
                 float _Duration;
+                half _FadeStart;
+                half _FadeEnd;
                 half _BandIntensity;
                 float _Width;
                 half _Softness;
@@ -136,6 +141,8 @@ Shader "ThatGameJam/SpringRing"
                     glow = pow(saturate(1.0 - abs(input.uv.y * 2.0 - 1.0)), _Softness) * _BandIntensity;
                     color = _Color.rgb;
                 }
+                // The whole ring fades out as it grows, from Fade Starts At until it is gone at Gone At.
+                glow *= 1.0 - smoothstep(_FadeStart, max(_FadeEnd, _FadeStart + 1e-3), _Progress);
                 // Premultiplied: coverage in alpha, colour already scaled by it.
                 half coverage = saturate(glow * input.alpha);
                 return half4(color * coverage, coverage);

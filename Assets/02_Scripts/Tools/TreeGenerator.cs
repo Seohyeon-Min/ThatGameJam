@@ -63,7 +63,7 @@ public class TreeGenerator : MonoBehaviour
     [SerializeField, Min(0f)] float topPadding = 0f;
     [Tooltip("Bottom end (-Z): the first metres of the planted area where Clear zones don't count, so trees close off the road there")]
     [SerializeField, Min(0f)] float bottomPadding = 0f;
-    [Tooltip("Paint the bare trees in watercolor after making them. A kind's bake is shared, so this also bakes again every other tree of that kind in the open scenes")]
+    [Tooltip("Paint the bare and leafy trees in watercolor after making them. A kind's bake is shared, so this also bakes again every other tree of that kind in the open scenes")]
     [SerializeField] bool paint = true;
     // Everything Generate made, so Clear removes only these.
     [SerializeField, HideInInspector] List<GameObject> trees = new();
@@ -285,7 +285,10 @@ public class TreeGenerator : MonoBehaviour
         // One bake per kind paints every tree of that kind in the open scenes (they share it). Before ShowLeaves, while every
         // tree is still shown: the bake only finds models that are active.
         foreach (WatercolorPaintedModel model in painted.Values)
+        {
             WatercolorBaker.Bake(model);
+            FadeWhenBlocking(model);
+        }
         // After the bake, which gives every tree of a kind the same materials: an oak version of every bark the birches use.
         birchBark.Clear();
         oakBark.Clear();
@@ -313,9 +316,10 @@ public class TreeGenerator : MonoBehaviour
         tree.transform.SetPositionAndRotation(position, rotation);
         tree.transform.localScale = Vector3.one * scale;
         Undo.RegisterCreatedObjectUndo(tree, "Generate Trees");
-        // Painted like the bare trees placed before: each carries its own watercolor settings, its kind shares one bake. Leafy trees and
-        // pines stay as they are, as the leafy ones placed by hand do: the bake can't read their leaves' wind shader yet (grey squares).
-        if (paint && System.Array.IndexOf(bareTrees, prefab) >= 0)
+        // Painted like the bare trees placed before: each carries its own watercolor settings, its kind shares one bake. Leafy trees too:
+        // their LeafCard leaves become watercolor leaf cards (WatercolorFlat's Leaf Card). Pines stay as they are: their needles are still
+        // on the old wind graph.
+        if (paint && (System.Array.IndexOf(bareTrees, prefab) >= 0 || System.Array.IndexOf(leafyTrees, prefab) >= 0))
         {
             if (!tree.TryGetComponent(out WatercolorPaintedModel model))
                 model = tree.AddComponent<WatercolorPaintedModel>();
@@ -464,6 +468,19 @@ public class TreeGenerator : MonoBehaviour
     {
         foreach (TreeZone zone in GetComponentsInChildren<TreeZone>(true))
             zone.ShiftBeyond(joinZ, size);
+    }
+
+    // A tree between the camera and the bird or the baby turns see-through (WatercolorFlat's Camera Fade). The bake makes its materials
+    // with it off, so it is turned on for every tree it paints, bark and leaves alike.
+    static void FadeWhenBlocking(WatercolorPaintedModel model)
+    {
+        foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
+            foreach (Material material in renderer.sharedMaterials)
+                if (material != null && material.HasProperty("_CameraFade") && material.GetFloat("_CameraFade") < 0.5f)
+                {
+                    material.SetFloat("_CameraFade", 1f);
+                    EditorUtility.SetDirty(material);
+                }
     }
 
     static bool AllPrefabs(GameObject[] prefabs) =>

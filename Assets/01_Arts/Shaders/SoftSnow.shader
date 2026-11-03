@@ -1,8 +1,9 @@
 // 부드러운 눈 덩어리: 아이 몸에 얹힌 눈(Snow_Clumps)처럼 작은 덩어리가 많은 메시를 한 덩어리 눈처럼 보이게 한다.
 // - 가장자리: 화면에서 옆으로 누운 면일수록 투명해져 덩어리마다의 윤곽(가생이)이 사라지고, 겹친 덩어리가 서로 스며든다.
 //   경계는 몸에 붙은 3D 노이즈로 흔들어 솜처럼 뭉실뭉실한 테두리가 된다(몸을 따라 움직이고 미끄러지지 않는다).
-// - 빛: 빛을 감싸 들어가게(wrap) 받아 명암이 부드럽게 넘어가고, 그늘은 옅은 하늘색이다. 정점 법선도 부풀려 매끈하게 한다.
-// - 깊이를 쓰지 않아 수채화 윤곽선이 그려지지 않고, 그림자를 드리우지도 받지도 않는다(딱딱한 그림자 가장자리가 생기지 않게).
+// - 빛: 빛을 감싸 들어가게(wrap) 받아 명암이 부드럽게 넘어가고, 그늘은 옅은 하늘색이다.
+// - 깊이를 쓰지 않아 수채화 윤곽선이 그려지지 않고, 그림자도 드리우지 않는다(딱딱한 그림자 가장자리가 생기지 않게).
+//   다른 물체의 그림자는 절반 세기로 받는다.
 // 수채화 베이크(WatercolorBaker)는 이 셰이더의 렌더러를 건너뛴다(WatercolorBake = Skip 태그).
 Shader "ThatGameJam/SoftSnow"
 {
@@ -129,10 +130,13 @@ Shader "ThatGameJam/SoftSnow"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
 
             struct Attributes
             {
@@ -172,9 +176,10 @@ Shader "ThatGameJam/SoftSnow"
                 float3 normalWS = normalize(input.normalWS);
                 half alpha = SnowAlpha(input.positionOS, normalWS, input.positionWS);
 
-                // No cast shadows on the snow: only its own turn from the light shades it.
-                Light mainLight = GetMainLight();
-                half lit = saturate((dot(normalWS, mainLight.direction) + _Wrap) / (1.0 + _Wrap));
+                Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
+                half wrapped = saturate((dot(normalWS, mainLight.direction) + _Wrap) / (1.0 + _Wrap));
+                // Shadows soften too: half of the shade they would give.
+                half lit = wrapped * lerp(1.0, mainLight.shadowAttenuation, 0.5);
                 half3 colour = lerp(_ShadeColor.rgb, _Color.rgb, lit) * lerp(1.0, mainLight.color, 0.5);
                 colour += SampleSH(normalWS) * 0.15;
                 return half4(MixFog(colour, input.fogFactor), alpha);

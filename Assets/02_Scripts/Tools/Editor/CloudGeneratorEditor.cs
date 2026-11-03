@@ -15,6 +15,7 @@ public class CloudGeneratorEditor : Editor
             foreach (UnityEngine.Object t in targets)
                 ((CloudGenerator)t).Generate();
         }) { text = "Generate", style = { marginTop = 6 } });
+        root.Add(new Button(CloudGenerator.SortAllPuffs) { text = "Sort Draw Order (all clouds)" });
 
         var count = new Label();
         count.schedule.Execute(() => count.text = $"Puffs: {((CloudGenerator)target).PuffCount}").Every(500);

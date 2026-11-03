@@ -28,6 +28,13 @@ public class CloudGenerator : MonoBehaviour
     [SerializeField, Min(0f)] float holeRadius;
     [Tooltip("Changes the scatter.")]
     [SerializeField] int seed = 1842;
+    [Tooltip("The way the intro camera looks. Puffs are drawn in a fixed order along it, farthest first, so overlapping puffs don't swap places and flicker as the camera moves.")]
+    [SerializeField] Vector3 drawOrderView = new(-0.28f, -0.92f, 0.28f);
+
+    // Draw order per centimetre along Draw Order View. All of it above 0, so the clouds draw over the snow and other see-through things
+    // below them. Whatever must show over the clouds (the bird's particles) is ordered higher still.
+    const float OrderPerMetre = 100f;
+    const int MiddleOrder = 10000;
 
 #if UNITY_EDITOR
     public int PuffCount
@@ -64,6 +71,31 @@ public class CloudGenerator : MonoBehaviour
             generator.Build();
         }
         PrefabUtility.RevertObjectOverride(this, InteractionMode.AutomatedAction);
+        SortAllPuffs();
+    }
+
+    // Every cloud's puffs in the scene, off ones too, in one order: from where they stand, so the clouds needn't know of each other.
+    public static void SortAllPuffs()
+    {
+        foreach (CloudGenerator cloud in FindObjectsByType<CloudGenerator>(FindObjectsInactive.Include))
+            cloud.SortPuffs();
+    }
+
+    // Farther along Draw Order View draws first (a lower sortingOrder), whatever the camera's distance to each puff is that frame.
+    void SortPuffs()
+    {
+        Vector3 view = drawOrderView.sqrMagnitude > 0f ? drawOrderView.normalized : Vector3.down;
+        foreach (Transform child in transform)
+        {
+            if (!child.name.StartsWith(PuffPrefix) || !child.TryGetComponent(out Renderer renderer))
+                continue;
+            int order = Mathf.Clamp(MiddleOrder - Mathf.RoundToInt(Vector3.Dot(child.position, view) * OrderPerMetre), short.MinValue, short.MaxValue);
+            if (renderer.sortingOrder == order)
+                continue;
+            Undo.RecordObject(renderer, "Sort Cloud Puffs");
+            renderer.sortingOrder = order;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+        }
     }
 
     void Build()
@@ -79,6 +111,7 @@ public class CloudGenerator : MonoBehaviour
                 DestroyImmediate(transform.GetChild(i).gameObject);
 
         var quad = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+        // Outside a prefab the order is set right here. In one, Generate sorts the scene's instances afterwards, where they stand.
         var random = new System.Random(seed);
         for (int i = 0; i < puffCount; i++)
         {
@@ -105,6 +138,8 @@ public class CloudGenerator : MonoBehaviour
             meshRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
         }
 
+        if (gameObject.scene.IsValid() && !EditorSceneManager.IsPreviewScene(gameObject.scene))
+            SortPuffs();
         EditorUtility.SetDirty(gameObject);
         if (gameObject.scene.IsValid() && !EditorSceneManager.IsPreviewScene(gameObject.scene))
             EditorSceneManager.MarkSceneDirty(gameObject.scene);
