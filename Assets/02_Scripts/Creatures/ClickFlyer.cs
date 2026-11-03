@@ -28,7 +28,7 @@ public class ClickFlyer : MonoBehaviour
     void Update()
     {
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.isPressed)
+        if (mouse != null && mouse.leftButton.isPressed && !Encyclopedia.IsOpen)
         {
             Ray ray = Camera.main.ScreenPointToRay(mouse.position.ReadValue());
             if (new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float distance))
