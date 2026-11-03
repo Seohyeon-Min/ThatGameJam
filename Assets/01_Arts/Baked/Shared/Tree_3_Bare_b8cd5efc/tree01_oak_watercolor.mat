@@ -47,6 +47,8 @@ Material:
     - _BirchLength: 0.28
     - _BirchMarks: 2.5
     - _BirchThickness: 0.16
+    - _BoilAmount: 0.1
+    - _BoilScale: 10
     - _CameraFade: 1
     - _CameraFadeDistance: 2
     - _CameraFadeExempt: 0
@@ -56,8 +58,11 @@ Material:
     - _Cutoff: 0.5
     - _Floor: 0
     - _HasPattern: 1
+    - _LeafCard: 0
     - _LeavePaper: 1
+    - _NoShade: 0
     - _ReceiveCastShadows: 0
+    - _Roll: 1
     - _SelfShadowSkip: 0
     - _Skin: 0
     - _SkinShadeDepth: 0.5
@@ -71,6 +76,7 @@ Material:
     m_Colors:
     - _BaseColor: {r: 0.45, g: 0.33, b: 0.24, a: 1}
     - _BirchColour: {r: 0.42, g: 0.27, b: 0.18, a: 1}
+    - _BoilSpeed: {r: 0.08, g: 0.056, b: 0, a: 0}
     - _DabColourA: {r: 0.95, g: 0.62, b: 0.62, a: 1}
     - _DabColourB: {r: 0.54999995, g: 0.7, b: 0.75, a: 1}
     - _DabColourC: {r: 1, g: 0.9, b: 0.75, a: 1}

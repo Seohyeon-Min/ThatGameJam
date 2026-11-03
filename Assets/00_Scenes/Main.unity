@@ -142574,8 +142574,8 @@ MonoBehaviour:
   fadeOutSeconds: 1.2
   flyInSeconds: 1.2
   orbitCentre: {fileID: 1728174542}
-  orbitRadius: 2.5800273
-  orbitSpeed: 2.150023
+  orbitRadius: 2.7
+  orbitSpeed: 2.32
   approachSeconds: 3
   babyClickRadius: 0.1
   diveSeconds: 4
@@ -142583,7 +142583,7 @@ MonoBehaviour:
   diveSpiralRadius: 6
   diveChase: {x: 4, y: 3}
   diveChaseFollow: 3
-  diveCameraLean: 12
+  diveCameraLean: 8.3
   diveCameraBeat: 0.7
   diveFieldOfViewBeat: 0.175
   divePath:
@@ -142661,7 +142661,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  diveBodyPitch: 80
+  diveBodyPitch: 0
   divePitchFollow: 8
   startTree: {fileID: 0}
   dropHeight: 2
@@ -510648,6 +510648,10 @@ PrefabInstance:
       propertyPath: m_LocalRotation.z
       value: -0.013720529
       objectReference: {fileID: 0}
+    - target: {fileID: 3902794415562770297, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: 02e06381559e129429f98c8558018555, type: 2}
     - target: {fileID: 4076145010825235950, guid: 2b8c5ddda7a50d74e856bf69caf13650, type: 3}
       propertyPath: m_LocalRotation.w
       value: 0.61320597
