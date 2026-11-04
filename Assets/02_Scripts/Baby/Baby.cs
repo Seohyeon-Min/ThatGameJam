@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Resting }
+public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Resting, Ending }
 
 // The baby: sleeps until the cry or its wake timer, walks its route, waits at blockers,
 // and looks up at the bird whenever the bird was the one who helped (design doc §2.2, §4).
@@ -19,7 +19,11 @@ public class Baby : CryListener
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
     static readonly int JumpState = Animator.StringToHash("Jump");
+    // Played directly (CrossFade), as the jump: the fog maze has her run to the bird (ADR 0028).
+    static readonly int RunState = Animator.StringToHash("Run");
     static readonly int IntroWakeParam = Animator.StringToHash("IntroWake");
+    // Played directly as the ending, which has no animation of its own yet.
+    static readonly int IntroGetUpState = Animator.StringToHash("IntroGetUp");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -56,6 +60,8 @@ public class Baby : CryListener
     // BalanceWalk plays instead of Walk, and the baby ignores curious pauses/cries until BalanceBeamEnd.
     bool onBalanceBeam;
     bool gettingUp;
+    // In the Run state, which has no transitions: walking or standing still cross-fades out of it.
+    bool running;
     // The intro GetUp has played: the snow is gone for the rest of the game.
     bool snowShaken;
     // 0 to 1: how far the cold tremor has eased in since she set off.
@@ -92,7 +98,7 @@ public class Baby : CryListener
     // carries it alone. Once she sets off it eases in over babyShiverFadeIn, so it never starts with a jolt.
     void Update()
     {
-        if (State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking || gettingUp)
+        if (State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking or BabyState.Ending || gettingUp)
         {
             shiverFade = 0f;
             animator.transform.localRotation = modelBaseRotation;
@@ -178,6 +184,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
+        running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         // Already lying: no lying-down animation after the move. Under the snow in the intro, until it is shaken off.
@@ -197,6 +204,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
+        running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         CurrentBlocker = null;
@@ -228,6 +236,10 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
+        // Run has no transitions, so asleep would not take her out of it.
+        if (running)
+            animator.Play(SleepState, 0, 0f);
+        running = false;
         lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
@@ -484,6 +496,11 @@ public class Baby : CryListener
     {
         animator.SetBool(QuietWaitParam, false);
         animator.SetBool(WalkingParam, true);
+        if (running)
+        {
+            running = false;
+            animator.CrossFade(WalkState, 0.2f);
+        }
         GameTuning tuning = GameTuning.Current;
         Vector3 toTarget = target - transform.position;
         float wanderYaw = Noise(31f, tuning.babyWanderFrequency) * 2f * tuning.babyWanderAngle;
@@ -493,8 +510,62 @@ public class Baby : CryListener
         return transform.position == target;
     }
 
+    // One frame of running toward the target, straight and at fogRunSpeed; true on arrival. The fog maze leads her this way.
+    public bool RunToward(Vector3 target)
+    {
+        animator.SetBool(QuietWaitParam, false);
+        animator.SetBool(WalkingParam, true);
+        if (!running)
+        {
+            running = true;
+            animator.CrossFade(RunState, 0.15f);
+        }
+        TurnToward(target - transform.position);
+        transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.fogRunSpeed * Time.deltaTime);
+        return transform.position == target;
+    }
+
     // Standing still while a blocker leads the baby.
-    public void StandStill() => animator.SetBool(WalkingParam, false);
+    public void StandStill()
+    {
+        animator.SetBool(WalkingParam, false);
+        if (running)
+        {
+            running = false;
+            animator.CrossFade(IdleState, 0.2f);
+        }
+    }
+
+    // One frame of standing still, turning toward the point.
+    public void StandFacing(Vector3 point)
+    {
+        StandStill();
+        TurnToward(point - transform.position);
+    }
+
+    // One frame of resting on the stone at the cliff, turning toward the point. The model has no sit animation yet: she stands
+    // and only breathes.
+    public void SitFacing(Vector3 point)
+    {
+        StandStill();
+        animator.SetBool(QuietWaitParam, true);
+        TurnToward(point - transform.position);
+    }
+
+    // The ending. Its animation isn't made yet: she gets up as she first did in the intro (Girl_Intro_GetUp), then stands.
+    public void PlayEnding()
+    {
+        StopAllCoroutines();
+        running = false;
+        lookingAround = false;
+        CurrentBlocker = null;
+        State = BabyState.Ending;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(QuietWaitParam, false);
+        animator.SetBool(LookAroundParam, false);
+        animator.SetBool(AsleepParam, false);
+        animator.CrossFade(IntroGetUpState, 0.25f);
+    }
 
     // Stands and turns toward the bird. The model has no look-up animation yet.
     IEnumerator LookUp(float duration)

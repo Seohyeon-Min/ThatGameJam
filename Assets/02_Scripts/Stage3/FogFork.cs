@@ -1,16 +1,16 @@
 using UnityEngine;
 
-// One fork of the fog maze (ADR 0027): the right way on to the next fork or the goal, a dead end closed by a wall, and the
-// rabbit that shows the right way when the bird cries.
+// One fork of the fog maze (ADR 0028): the right way on to the next fork or the goal, a dead end closed by a wall, and the
+// animal on the right way that answers the bird's cry.
 public class FogFork : MonoBehaviour
 {
-    [SerializeField] FogRabbit rabbit;
+    [SerializeField] FogForkAnimal animal;
     // Children in order, from the fork to the next fork or the goal.
     [SerializeField] Transform rightWay;
     // Children in order, from the fork to where the girl stops in front of the wall.
     [SerializeField] Transform deadEnd;
 
-    public bool Shown => rabbit.HasRun;
+    public FogForkAnimal Animal => animal;
     public Transform RightWay => rightWay;
     public Transform DeadEnd => deadEnd;
 

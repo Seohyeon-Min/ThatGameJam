@@ -250,10 +250,12 @@ public class BirdController : MonoBehaviour
     bool OnGroundZoom => zoomHeading <= GameTuning.Current.cameraZoomMin;
 
     // From the zoom only, over the stage's ground (the area's centre height), so it doesn't bump over logs and water.
-    float FlightAltitude()
+    float FlightAltitude() => AltitudeForZoom(zoom, baseAltitude, bounds.center.y);
+
+    // The flying height for a zoom: the altitude at zoom 1, higher zoomed out and lower zoomed in (GameTuning).
+    public static float AltitudeForZoom(float zoom, float baseAltitude, float ground)
     {
         GameTuning tuning = GameTuning.Current;
-        float ground = bounds.center.y;
         if (zoom >= 1f)
             return baseAltitude + (baseAltitude - ground) * (tuning.birdZoomedOutHeightScale - 1f) * Mathf.InverseLerp(1f, tuning.cameraZoomMax, zoom);
         return Mathf.Lerp(ground + tuning.birdLowFlightHeight, baseAltitude, Mathf.InverseLerp(tuning.cameraZoomMin, 1f, zoom));
@@ -360,6 +362,12 @@ public class BirdController : MonoBehaviour
     {
         if (control == Control.Scripted)
             return;
+        // The encyclopedia is open: the game is paused and the mouse belongs to the page.
+        if (Encyclopedia.IsOpen)
+        {
+            ShowPerchCursor(false);
+            return;
+        }
         if (control == Control.Sky)
         {
             FlyInSky();

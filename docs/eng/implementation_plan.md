@@ -168,7 +168,7 @@ The clips of the art's girl model (`Assets/01_Arts/Models/Girl/NPC-Girl-Animated
 | Waiting at a device, looking up after the bird helped, waiting for a trail in the fog | Standing idles. Each time one of breathing (`Girl_Idle_Breathing`), humming (`Girl_Idle_Hum`), or stretching (`Girl_Idle_Stretch`) ends, the next is picked at random |
 | Reaching the sunlit spot | `Girl_LieDown` → `Girl_Sleep`. The season effect and transition start after lying down ends |
 
-No clip yet: crouch, sit and rest, the waiting signals (toss and turn, rub eyes, stretch), look up, peek, watch. At crouch and sit stops the baby waits standing. `Girl_Run` is not used.
+No clip yet: crouch, sit and rest, the waiting signals (toss and turn, rub eyes, stretch), look up, peek, watch. At crouch and sit stops the baby waits standing. `Girl_Run` is used in the fog stage when she runs to the bird (the `Run` state, played directly by `Baby`).
 
 ### 4.4 Natural Resolution Timer and Waiting Signals (§3)
 
@@ -263,14 +263,19 @@ Current first version (`Sam_Test`, 2026-10-30): one mother, three kits, and two 
 
 ### 4.12 Stage 3 — Fog (§9.2 ~ §9.5)
 
-**Changed on 2026-11-01 by [ADR 0027](decisions/0027-fog-stage-becomes-a-fork-map-led-by-rabbits.md).** The current implementation is below. The rest of this section (breadcrumb trail, hidden obstacles, natural resolution) is the old design and lives on only in `Sam_Fog_Test`.
+**Changed on 2026-11-04 by [ADR 0028](decisions/0028-fog-stage-six-forks-and-the-girl-runs-to-the-bird.md)** (before that, [ADR 0027](decisions/0027-fog-stage-becomes-a-fork-map-led-by-rabbits.md)). The current implementation is below. The rest of this section (breadcrumb trail, hidden obstacles, natural resolution) is the old design and lives on only in `Sam_Fog_Test`.
 
-- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. The director's sketch (4 forks) is turned so the start-to-goal line runs along +Z. The sketch is stretched 1.4 times across and 1.22 times along. Start z 40.5 (the fog edge), goal z 85.1 (the sunlit spot). The terrain ends at z 91.6, so it is no longer.
-- `FogMaze` (a `PathBlocker`): when the girl reaches the `StopPoint` at the fog edge, it leads her through the forks in turn. At each fork she takes the right way if the rabbit showed it. Otherwise she stands `fogForkWaitTime` (3 s) and picks 50:50. On a dead end she walks to 1 m before the wall, stands `fogWallPauseTime` (1 s), and comes back. No natural resolution timer.
-- `FogFork`: one fork. Point lists for the right way and the dead end, and the rabbit.
-- `FogRabbit` (a `CryListener`, prefab `Assets/03_Prefabs/Stage3/FogRabbit.prefab`): when the bird cries within 3.5 m of it (flat distance, whatever the bird's height), it hops down the right way and disappears. A cry before the girl arrives still counts as shown for that fork.
-- Fog: one `FogField` covers the whole map. 7 layers (0.2 to 2.6 m) at `density` 0.22, so it is light. The `FogMaze` checkboxes `birdClearsFog` (off) and `girlClearsFog` (on) choose who clears it.
-- A wall is five trees across the end of a dead end. Every path is lined on both sides by a row of trees 2.2 m from its middle; behind the rows is a looser forest (`MazeTrees`, beyond 3.8 m from a path's middle, 3.2 m apart). Forks 3 and 4 have trees filling the V between their two ways. The forest past the stages (`TreesAhead`) now starts at z 88, so it is empty for now.
+- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. Rerunning keeps `Stage3`'s `Stage` and rebuilds only what is under it. Positions are relative to the `Stage3` root, so they follow the stage spacing (`Stage.AdjustSpacing`).
+- Ways: where the girl wakes (stage 2's sunlit spot, z 68.75) is the `StopPoint` itself, so a cry calls her as soon as she is up. A cry while she gets up is kept, and she runs to it once up. From 1 m past stage 3's start (z 75.5), a 21.5 m straight way, then six forks; the maze's goal is at z 227.2. Past it, with no sunlit spot, the road goes on to the ending place (4.13). Right ways are 22 to 28 m, dead ends 14 to 18 m, the whole right route about 174 m. The two ways of every fork leave toward screen right (world +X+Z) and screen up (world -X+Z).
+- `FogMaze` (a `PathBlocker`): when the girl reaches the `StopPoint` it leads her from the straight way on. Walking by herself, she takes the right way at a fork whose animal has answered; otherwise she stands `fogForkWaitTime` (3 s) and picks 50:50. On a dead end she walks to 1 m before the wall, stands `fogWallPauseTime` (1 s), and comes back. No natural resolution timer.
+- A cry (`CryListener.Cried`, inside the stage's area only): the first animal ahead of the bird along the right route answers. The girl runs (`Girl_Run`) at `fogRunSpeed` (2.5 m/s) to the point nearest the bird on the way she is on and the two ways of the fork ahead, watches the bird for `fogRunIdleTime` (3 s), and walks on. Walking on inside a dead end, she turns back at once if its animal has answered.
+- `FogFork`: one fork. Point lists for the right way and the dead end, and the animal.
+- `FogForkAnimal` (prefab `Assets/03_Prefabs/Stage3/FogForkAnimal.prefab`): a placeholder capsule (`Test/Animal.mat`) and a `CryRing`. Each instance has its own size (squirrel 0.3 to bear 1.0). `CryRing` is a thick yellow ring facing the camera that grows and fades over 0.6 s. It is drawn over the fog (sorting order 1). When the animal is off the screen, it shows at the screen's edge in that direction, within 5 m of the camera and at least 6 % of the screen's height.
+- Fog: one `FogField` (42 × 158 m, 256 cells, 7 layers at 0.2 to 2.6 m). Density 0.9; it thickens from nothing along the straight way (`rampLength` 21.5 m), and within 2.8 m of a way it is 25 % of that (about 0.22, ADR 0027's light fog) (`FogMaze`). Nobody clears it.
+- Trees: a row on both sides of every way 2.6 m from its middle, a wedge between the two ways of every fork, a five-tree wall at the end of every dead end, and beyond 4.4 m from any way a forest 3.2 m apart (`MazeTrees`, 762 trees). They are painted in watercolor, so they turn see-through when they hide the bird or the girl. They never leaf out.
+- Around it: the terrain now reaches z 251.2 (`WorldGap`). The world forest (`01_SYSTEM/TreeGenerator`) has a Clear zone `Stage3 Maze` over the maze and was made again. The flowers and grass were laid again too.
+- The fog thins out to none over the last 8 m of the maze (`fadeOutLength`).
+- Past the maze a cry no longer brings the girl, and no animal answers (ADR 0029).
 
 **Old design (2026-10-27)**
 
@@ -312,6 +317,18 @@ This is the hardest and riskiest part. A prototype built separately from the oth
 - When natural resolution comes, the baby drops the remaining trail, goes to the nearest correct path point, and walks along the correct path (Q10). If it is away from the correct path, it retraces the trail it walked until it is near the correct path, so it never cuts across water, and then joins it. On the correct path it never goes back; it heads for the end of the nearest segment.
 
 ### 4.13 3-3 — Cliff and Breaking Through the Clouds (§9.6)
+
+**First version, 2026-11-04** ([ADR 0029](decisions/0029-a-cliff-and-a-resting-stone-at-the-end-of-the-fog-stage.md)). The director asked for a rough version and will change it later. The climb, the clouds, and the happy and normal endings of the "Earlier plan" below are not there yet.
+
+- The ending place is part of `Stage3` (`Stage3/CliffEnding`). There is no sunlit spot, and the season does not advance. The builder is `BuildStage3.Run`.
+- The `StopPoint` at the maze's goal (z 227.2) waits for `CliffEnding` (a `PathBlocker`). `CliffEnding` leads the girl along a bending way of about 21 m to beside the stone. There, with no sit clip, she stands and only breathes (`Baby.SitFacing`, `QuietWait`), facing the cliff. The blocker never opens, so she never lies down.
+- The big stone: a sphere primitive 2.6 × 0.9 × 2 m, `WC_Rock.mat`. 3 m before the cliff, at x -2.5.
+- The cliff: the end of the terrain (z 251.2). The sky colour shows beyond it. `02_WORLD/ClickPlane` under the ground reaches z 291, so empty air can be clicked. The stage's area (where the bird flies) reaches 40 m past the cliff too.
+- Camera: `CliffEnding/CameraZone`. When the bird crosses a band 6 m before the cliff, the camera holds still with the cliff's edge in front of the stone in the middle of the screen. It releases when the bird goes 1.5 m past the band back toward the maze (`lockOffset` stretches the lock area out past the cliff).
+- Ending: with the girl beside the stone, when the bird, past the cliff, reaches 10 % (`screenEdge`) from an edge of the screen, `Baby.PlayEnding()`. There is no ending animation, so `Girl_Intro_GetUp` plays. Then she stands and rests. Nothing follows.
+- Forest: from where the maze's forest ends (z 235.7) to the cliff, across the whole width, trees on the world forest's 3 m grid, fewer and fewer toward the cliff down to 4 % (77 trees). The world forest leaves that zone empty (Clear zone `Stage3 Ending`). The world forest's `topPadding` is 0. Grass and flowers keep stage 3's values.
+
+**Earlier plan**
 
 - The baby sits at the resting stone `StopPoint`. This `StopPoint` is the end of the path.
 - Bird altitude: raise the altitude based on how far past the cliff line the bird is. The input stays left click to move (§9.6). Thanks to `ClickPlane`, empty air can be clicked too.
@@ -438,7 +455,8 @@ Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3
 | 1. Shared framework | Done | `Assets/00_Scenes/Sam_Test.unity`. Work records 04, 05 |
 | 2. Fog prototype | Done | `Assets/00_Scenes/Sam_Fog_Test.unity`. Work record 06 |
 | 3. Stage 2 | First playable version; awaiting feedback | `Sam_Test/Stage2`: demo, sleeping family, two branches/bypass, natural resolution, local snow melt. The 1-3 rabbit procession is not yet implemented |
-| Stage 3 (fog, ADR 0027) | First playable, awaiting feedback | `Main/Stage3`. 4 forks, rabbits, light fog, clearing toggles. No 3-3 yet |
+| Stage 3 (fog, ADR 0028) | First playable, awaiting feedback | `Main/Stage3`. A straight way and 6 forks, 6 placeholder animals, the girl running to the bird, fog thin only over the ways |
+| 3-3 cliff and resting stone (ADR 0029) | Rough first version, awaiting feedback | `Main/Stage3/CliffEnding`. A road through a thinning forest, a big stone, the cliff; when the bird reaches the screen's edge, `Girl_Intro_GetUp` in place of the ending. No clouds or two endings yet |
 | 4 to 6 | Not started | |
 
 Changes outside the plan:

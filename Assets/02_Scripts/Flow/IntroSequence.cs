@@ -74,6 +74,9 @@ public class IntroSequence : MonoBehaviour
     [Tooltip("How far above its perch on that tree the bird starts, behind the white. It drops at once, and lands as the white clears.")]
     [SerializeField, Min(0f)] float dropHeight = 2f;
 
+    // From Play until the white clears and this turns off.
+    public static bool IsPlaying { get; private set; }
+
     CloudGenerator[] clouds;
     Vector3[] cloudCentres;
     float[] cloudReaches;
@@ -84,6 +87,7 @@ public class IntroSequence : MonoBehaviour
 
     public void Play()
     {
+        IsPlaying = true;
         running = true;
         // These may be off in the scene, to see past the title and the sky while working on the game.
         title.GetComponentInParent<Canvas>(true).gameObject.SetActive(true);
@@ -417,6 +421,8 @@ public class IntroSequence : MonoBehaviour
         SetAlpha(whiteFade, 0f);
         gameObject.SetActive(false);
     }
+
+    void OnDisable() => IsPlaying = false;
 
     bool ClickedThisFrame()
     {

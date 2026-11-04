@@ -101,6 +101,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Perchable
   perchPoint: {fileID: 0}
   idleSpot: 1
+  alwaysExempt: 0
   alignBird: 1
   onPerched:
     m_PersistentCalls:
@@ -113,18 +114,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 6961330656072012996}
     m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 9b028dc7ec888e4478d2b09fbeba71f4, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0.086236864
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9b028dc7ec888e4478d2b09fbeba71f4, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 2.5155864
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 9b028dc7ec888e4478d2b09fbeba71f4, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0.12018071
-      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9b028dc7ec888e4478d2b09fbeba71f4, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1

@@ -115,7 +115,8 @@ public class BirdCamera : MonoBehaviour
     {
         GameTuning tuning = GameTuning.Current;
         // A cutscene holding the player still (Lock Player) holds the zoom too: the wheel would move the bird's height.
-        float scroll = Cutscene.PlayerLocked ? 0f : scrollAction.ReadValue<Vector2>().y;
+        // So does the open encyclopedia, which takes the mouse.
+        float scroll = Cutscene.PlayerLocked || Encyclopedia.IsOpen ? 0f : scrollAction.ReadValue<Vector2>().y;
         float next = Mathf.Clamp(targetZoom - Mathf.Sign(scroll) * tuning.cameraZoomStep, tuning.cameraZoomMin, tuning.cameraZoomMax);
         if (scroll != 0f && next != targetZoom)
         {

@@ -31,7 +31,7 @@ public class SoundManager : MonoBehaviour
 
     void Update()
     {
-        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && !Encyclopedia.IsOpen)
             RuntimeManager.PlayOneShot(birdEvent);
     }
 

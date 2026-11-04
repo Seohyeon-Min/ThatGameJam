@@ -10,6 +10,10 @@ public class FogField : MonoBehaviour
     [SerializeField] Renderer[] layers;
     // Overall thickness. Below 1 the fog is light enough to see through (ADR 0027).
     [SerializeField, Range(0f, 1f)] float density = 1f;
+    // From the near edge (-Z) of the area, the fog thickens from none to full over this many metres. 0: full everywhere.
+    [SerializeField, Min(0f)] float rampLength;
+    // Toward the far edge (+Z), the fog thins to none over this many metres. 0: full up to the edge.
+    [SerializeField, Min(0f)] float fadeOutLength;
 
     static readonly int MaskId = Shader.PropertyToID("_FogMask");
     static readonly int AreaId = Shader.PropertyToID("_FogArea");
@@ -36,7 +40,14 @@ public class FogField : MonoBehaviour
     void Awake()
     {
         cells = new byte[resolution * resolution];
-        System.Array.Fill(cells, byte.MaxValue);
+        for (int y = 0; y < resolution; y++)
+        {
+            float fromEdge = (y + 0.5f) * size.y / resolution;
+            float rampIn = rampLength > 0f ? Mathf.Clamp01(fromEdge / rampLength) : 1f;
+            float rampOut = fadeOutLength > 0f ? Mathf.Clamp01((size.y - fromEdge) / fadeOutLength) : 1f;
+            byte value = (byte)Mathf.RoundToInt(255f * Mathf.Min(rampIn, rampOut));
+            System.Array.Fill(cells, value, y * resolution, resolution);
+        }
         mask = new Texture2D(resolution, resolution, TextureFormat.R8, false, true)
         {
             wrapMode = TextureWrapMode.Clamp,
