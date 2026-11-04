@@ -43,6 +43,9 @@ public class BirdController : MonoBehaviour
     // The bird and the branches it perches on stay this far inside the screen's edges, as a fraction of the screen (ADR 0015).
     [SerializeField, Range(0f, 0.3f)] float screenMargin = 0.08f;
     [SerializeField] UnityEvent onCry;
+    // Sky-style call pulse (BirdCryPulse prefab: an expanding glow ring plus a burst of warm motes), played at the bird's
+    // position each cry. Reference any ParticleSystem in the prefab instance; Play()'s default withChildren plays the rest.
+    [SerializeField] ParticleSystem cryPulse;
 
     enum State { Flying, ToPerch, Landing, Perched, Walking }
     // Who moves the bird. Sky and Scripted are for the intro (IntroSequence): Sky is clicks on the flying height, with no perches or
@@ -818,6 +821,8 @@ public class BirdController : MonoBehaviour
         CryListener.Broadcast(transform.position);
         onCry.Invoke();
         StartCoroutine(CryPulse());
+        if (cryPulse != null)
+            cryPulse.Play();
     }
 
     // Placeholder until the cry animation exists.
