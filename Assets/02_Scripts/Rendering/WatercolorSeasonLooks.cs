@@ -16,6 +16,8 @@ public class WatercolorSeasonLooks : MonoBehaviour
     [SerializeField] WatercolorLook[] looks = { };
     [Tooltip("Crossfade time of the looks' volume profiles. Also the look's own blend time if the season wipe isn't set up.")]
     [SerializeField, Min(0f)] float blendSeconds = 2f;
+    [Tooltip("The scene's own Volume, whose profile the looks (and cutscenes) swap. Empty finds it: the global one in use with the lowest priority, so not one that is usually off, like the encyclopedia's blur")]
+    [SerializeField] Volume sceneVolume;
 
     WatercolorManager manager;
     Volume volume;
@@ -28,7 +30,18 @@ public class WatercolorSeasonLooks : MonoBehaviour
     float blend = 1f;
     int wipeCheckFrom;
 
-    public Volume SceneVolume => volume;
+    public Volume SceneVolume => volume != null ? volume : FindSceneVolume();
+
+    Volume FindSceneVolume()
+    {
+        if (sceneVolume != null)
+            return sceneVolume;
+        Volume best = null;
+        foreach (Volume candidate in FindObjectsByType<Volume>(FindObjectsInactive.Exclude))
+            if (candidate.isGlobal && candidate.weight > 0f && candidate != incoming && (best == null || candidate.priority < best.priority))
+                best = candidate;
+        return best;
+    }
 
     void Start()
     {
@@ -36,7 +49,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
         season = FindAnyObjectByType<Season>();
         if (manager == null || season == null)
             return;
-        volume = FindAnyObjectByType<Volume>();
+        volume = FindSceneVolume();
 
         // The game starts in its level's look at once.
         currentLevel = season.Level;
@@ -64,18 +77,22 @@ public class WatercolorSeasonLooks : MonoBehaviour
             return;
         currentLevel = level;
         WatercolorLook look = LookFor(level);
-        if (look == null)
-            return;
-        CrossfadeVolume(look.volumeProfile);
+        if (look != null)
+            CrossfadeVolume(look.volumeProfile);
 
+        // The photo is taken even when the level has no look of its own: what the season brings out (HiddenUntilSeason, the trees'
+        // leaves) must still spread from the ring instead of appearing everywhere at once.
         Camera view = Camera.main;
         if (view != null && SeasonWipe.Capture(view, Characters()))
         {
             to = null;
-            manager.Apply(look.settings, 1f);
+            if (look != null)
+                manager.Apply(look.settings, 1f);
             wipeCheckFrom = Time.frameCount + RingStartFrames;
             return;
         }
+        if (look == null)
+            return;
 
         Debug.LogWarning("WatercolorSeasonLooks: no photo was taken, so the look blends on the whole screen. Is SeasonWipeFeature on this renderer?", this);
         from = JsonUtility.FromJson<WatercolorManager.Settings>(JsonUtility.ToJson(manager.settings));

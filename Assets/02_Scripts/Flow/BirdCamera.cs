@@ -38,6 +38,12 @@ public class BirdCamera : MonoBehaviour
     Vector3 held;
     // Set by Cut: the next frame frames at once instead of easing.
     bool snap = true;
+    // From the moment the baby starts lying down at a sunlit spot until she wakes in the next stage, the camera eases onto her,
+    // centred on her, and stays there, so the season's ring spreads around her over a still picture (the season wipe masks the new
+    // season against a photo taken as it changes). Eased in and out like a zone. Before she lies down, the spot's semi-lock zone
+    // (CameraZone without a device) keeps it in view.
+    Vector3? restPoint;
+    float restWeight;
 
     public bool IsLocked => lockedPoint.HasValue;
 
@@ -103,6 +109,23 @@ public class BirdCamera : MonoBehaviour
             heldPoint = null;
     }
 
+    void UpdateRestHold()
+    {
+        BabyState state = Baby.Instance.State;
+        // She starts lying down: from here the camera settles on her.
+        if (!restPoint.HasValue && state == BabyState.Resting)
+        {
+            restPoint = Baby.Instance.transform.position;
+            restWeight = 0f;
+        }
+        if (!restPoint.HasValue)
+            return;
+        bool asleep = state == BabyState.Resting || state == BabyState.Sleeping;
+        restWeight = Mathf.MoveTowards(restWeight, asleep ? 1f : 0f, Time.deltaTime / zoneEaseTime);
+        if (!asleep && restWeight <= 0f)
+            restPoint = null;
+    }
+
     // Puts the camera where it frames at once instead of sweeping there.
     public void Cut()
     {
@@ -138,14 +161,17 @@ public class BirdCamera : MonoBehaviour
         {
             CameraZone zone = zones[i];
             zone.TrackBird(bird);
-            zoneWeights[i] = Mathf.MoveTowards(zoneWeights[i], zone.IsLocked ? 1f : 0f, Time.deltaTime / zoneEaseTime);
-            point = Vector3.Lerp(point, ClampXZ(point, zone.AreaMin, zone.AreaMax), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
+            zoneWeights[i] = Mathf.MoveTowards(zoneWeights[i], zone.Hold, Time.deltaTime / zoneEaseTime);
+            point = Vector3.Lerp(point, zone.SemiFollow(point), Mathf.SmoothStep(0f, 1f, zoneWeights[i]));
         }
         if (heldPoint.HasValue)
         {
             UpdateHold();
             point = heldPoint ?? point;
         }
+        UpdateRestHold();
+        if (restPoint.HasValue)
+            point = Vector3.Lerp(point, new Vector3(restPoint.Value.x, point.y, restPoint.Value.z), Mathf.SmoothStep(0f, 1f, restWeight));
         if (lockedPoint.HasValue)
             point = new Vector3(lockedPoint.Value.x, bird.y, lockedPoint.Value.z);
         transform.position = point;

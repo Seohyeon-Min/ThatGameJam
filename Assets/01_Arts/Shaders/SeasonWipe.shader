@@ -47,8 +47,10 @@ Shader "Hidden/ThatGameJam/SeasonWipe"
                 float2 centre = ComputeNormalizedDeviceCoordinates(_SpringRing.xyz, UNITY_MATRIX_VP);
                 float2 metreAway = ComputeNormalizedDeviceCoordinates(_SpringRing.xyz + UNITY_MATRIX_V[0].xyz, UNITY_MATRIX_VP);
                 float pixelsPerMetre = max(length((metreAway - centre) * screen), 1e-3);
-                // The rest in metres at the ring's depth, so the edge and its lumps keep their sizes.
-                float2 offset = (uv - centre) * screen / pixelsPerMetre;
+                // This pixel through the same projection as the centre, so both are in the same screen convention (uv here and the
+                // projected one can differ by a flip). The rest in metres at the ring's depth, so the edge and its lumps keep their sizes.
+                float2 here = ComputeNormalizedDeviceCoordinates(onView, UNITY_MATRIX_VP);
+                float2 offset = (here - centre) * screen / pixelsPerMetre;
                 // A lumpy edge rather than a clean circle.
                 float2 lumpAt = offset / max(_SeasonWipe.z, 1e-3);
                 float lumps = SunPoolNoise(lumpAt) * 0.6 + SunPoolNoise(lumpAt * 2.3 + 5.1) * 0.4;

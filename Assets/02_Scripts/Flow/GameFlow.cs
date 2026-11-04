@@ -152,6 +152,10 @@ public class GameFlow : MonoBehaviour
     {
         if (finished)
             return false;
+        // The baby asleep and the season changing open the sunlit spot's semi-lock, as a device opens its own.
+        foreach (CameraZone zone in CurrentStage.GetComponentsInChildren<CameraZone>())
+            if (!zone.HasDevice)
+                zone.Release();
         season.AdvanceSeason();
         if (current + 1 >= stages.Length)
         {
