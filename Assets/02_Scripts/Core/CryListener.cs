@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,8 +9,12 @@ public abstract class CryListener : MonoBehaviour
 
     protected abstract float CryRadius { get; }
 
+    // Every cry, wherever it is: for what decides by the bird's place on a whole map rather than by a range (the fog maze).
+    public static event Action<Vector3> Cried;
+
     public static void Broadcast(Vector3 origin)
     {
+        Cried?.Invoke(origin);
         // Copy, because a reaction may enable or disable listeners.
         foreach (CryListener listener in all.ToArray())
         {

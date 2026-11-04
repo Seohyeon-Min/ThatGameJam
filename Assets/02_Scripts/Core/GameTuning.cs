@@ -55,11 +55,15 @@ public class GameTuning : ScriptableObject
     // Seconds the shiver takes to ease in once she sets off after waking (none while she gets up and looks round).
     public float babyShiverFadeIn = 3f;
 
-    [Header("Fog maze (ADR 0027)")]
-    // At a fork the bird has not cried at, the girl stands this long before she picks a way at random.
+    [Header("Fog maze (ADR 0028)")]
+    // At a fork whose animal has not answered, the girl stands this long before she picks a way at random.
     public float fogForkWaitTime = 3f;
     // At the wall of a dead end she stands this long before she turns back.
     public float fogWallPauseTime = 1f;
+    // When the bird cries she runs to it at this speed.
+    public float fogRunSpeed = 2.5f;
+    // Having run to the bird, she waits this long for another cry before she walks on by herself.
+    public float fogRunIdleTime = 3f;
 
     [Header("Bird")]
     public float birdSpeed = 6f;

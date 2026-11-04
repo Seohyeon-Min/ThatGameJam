@@ -168,7 +168,7 @@ The clips of the art's girl model (`Assets/01_Arts/Models/Girl/NPC-Girl-Animated
 | Waiting at a device, looking up after the bird helped, waiting for a trail in the fog | Standing idles. Each time one of breathing (`Girl_Idle_Breathing`), humming (`Girl_Idle_Hum`), or stretching (`Girl_Idle_Stretch`) ends, the next is picked at random |
 | Reaching the sunlit spot | `Girl_LieDown` → `Girl_Sleep`. The season effect and transition start after lying down ends |
 
-No clip yet: crouch, sit and rest, the waiting signals (toss and turn, rub eyes, stretch), look up, peek, watch. At crouch and sit stops the baby waits standing. `Girl_Run` is not used.
+No clip yet: crouch, sit and rest, the waiting signals (toss and turn, rub eyes, stretch), look up, peek, watch. At crouch and sit stops the baby waits standing. `Girl_Run` is used in the fog stage when she runs to the bird (the `Run` state, played directly by `Baby`).
 
 ### 4.4 Natural Resolution Timer and Waiting Signals (§3)
 
@@ -263,14 +263,17 @@ Current first version (`Sam_Test`, 2026-10-30): one mother, three kits, and two 
 
 ### 4.12 Stage 3 — Fog (§9.2 ~ §9.5)
 
-**Changed on 2026-11-01 by [ADR 0027](decisions/0027-fog-stage-becomes-a-fork-map-led-by-rabbits.md).** The current implementation is below. The rest of this section (breadcrumb trail, hidden obstacles, natural resolution) is the old design and lives on only in `Sam_Fog_Test`.
+**Changed on 2026-11-04 by [ADR 0028](decisions/0028-fog-stage-six-forks-and-the-girl-runs-to-the-bird.md)** (before that, [ADR 0027](decisions/0027-fog-stage-becomes-a-fork-map-led-by-rabbits.md)). The current implementation is below. The rest of this section (breadcrumb trail, hidden obstacles, natural resolution) is the old design and lives on only in `Sam_Fog_Test`.
 
-- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. The director's sketch (4 forks) is turned so the start-to-goal line runs along +Z. The sketch is stretched 1.4 times across and 1.22 times along. Start z 40.5 (the fog edge), goal z 85.1 (the sunlit spot). The terrain ends at z 91.6, so it is no longer.
-- `FogMaze` (a `PathBlocker`): when the girl reaches the `StopPoint` at the fog edge, it leads her through the forks in turn. At each fork she takes the right way if the rabbit showed it. Otherwise she stands `fogForkWaitTime` (3 s) and picks 50:50. On a dead end she walks to 1 m before the wall, stands `fogWallPauseTime` (1 s), and comes back. No natural resolution timer.
-- `FogFork`: one fork. Point lists for the right way and the dead end, and the rabbit.
-- `FogRabbit` (a `CryListener`, prefab `Assets/03_Prefabs/Stage3/FogRabbit.prefab`): when the bird cries within 3.5 m of it (flat distance, whatever the bird's height), it hops down the right way and disappears. A cry before the girl arrives still counts as shown for that fork.
-- Fog: one `FogField` covers the whole map. 7 layers (0.2 to 2.6 m) at `density` 0.22, so it is light. The `FogMaze` checkboxes `birdClearsFog` (off) and `girlClearsFog` (on) choose who clears it.
-- A wall is five trees across the end of a dead end. Every path is lined on both sides by a row of trees 2.2 m from its middle; behind the rows is a looser forest (`MazeTrees`, beyond 3.8 m from a path's middle, 3.2 m apart). Forks 3 and 4 have trees filling the V between their two ways. The forest past the stages (`TreesAhead`) now starts at z 88, so it is empty for now.
+- `Stage3` in `Main`. Builder: `AgentScripts/BuildStage3.cs`, `BuildStage3.Run`. Rerunning keeps `Stage3`'s `Stage` and rebuilds only what is under it. Positions are relative to the `Stage3` root, so they follow the stage spacing (`Stage.AdjustSpacing`).
+- Ways: from the `StopPoint` 1 m ahead of where the girl wakes (z 75.5), a 21.5 m straight way, then six forks; the goal (the sunlit spot) is at z 227.2. Right ways are 22 to 28 m, dead ends 14 to 18 m, the whole right route about 174 m. The two ways of every fork leave toward screen right (world +X+Z) and screen up (world -X+Z).
+- `FogMaze` (a `PathBlocker`): when the girl reaches the `StopPoint` it leads her from the straight way on. Walking by herself, she takes the right way at a fork whose animal has answered; otherwise she stands `fogForkWaitTime` (3 s) and picks 50:50. On a dead end she walks to 1 m before the wall, stands `fogWallPauseTime` (1 s), and comes back. No natural resolution timer.
+- A cry (`CryListener.Cried`, inside the stage's area only): the first animal ahead of the bird along the right route answers. The girl runs (`Girl_Run`) at `fogRunSpeed` (2.5 m/s) to the point nearest the bird on the way she is on and the two ways of the fork ahead, watches the bird for `fogRunIdleTime` (3 s), and walks on. Walking on inside a dead end, she turns back at once if its animal has answered.
+- `FogFork`: one fork. Point lists for the right way and the dead end, and the animal.
+- `FogForkAnimal` (prefab `Assets/03_Prefabs/Stage3/FogForkAnimal.prefab`): a placeholder capsule (`Test/Animal.mat`) and a `CryRing`. Each instance has its own size (squirrel 0.3 to bear 1.0). `CryRing` is a thick white ring facing the camera that grows and fades over 0.6 s.
+- Fog: one `FogField` (42 × 158 m, 256 cells, 7 layers at 0.2 to 2.6 m). Density 0.9; it thickens from nothing along the straight way (`rampLength` 21.5 m), and within 2.8 m of a way it is 10 % of that (`FogMaze`). Nobody clears it.
+- Trees: a row on both sides of every way 2.6 m from its middle, a wedge between the two ways of every fork, a five-tree wall at the end of every dead end, and beyond 4.4 m from any way a forest 3.2 m apart (`MazeTrees`, 762 trees). They are painted in watercolor, so they turn see-through when they hide the bird or the girl. They never leaf out.
+- Around it: the terrain now reaches z 251.2 (`WorldGap`). The world forest (`01_SYSTEM/TreeGenerator`) has a Clear zone `Stage3 Maze` over the maze and was made again. The flowers and grass were laid again too.
 
 **Old design (2026-10-27)**
 
@@ -438,7 +441,7 @@ Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3
 | 1. Shared framework | Done | `Assets/00_Scenes/Sam_Test.unity`. Work records 04, 05 |
 | 2. Fog prototype | Done | `Assets/00_Scenes/Sam_Fog_Test.unity`. Work record 06 |
 | 3. Stage 2 | First playable version; awaiting feedback | `Sam_Test/Stage2`: demo, sleeping family, two branches/bypass, natural resolution, local snow melt. The 1-3 rabbit procession is not yet implemented |
-| Stage 3 (fog, ADR 0027) | First playable, awaiting feedback | `Main/Stage3`. 4 forks, rabbits, light fog, clearing toggles. No 3-3 yet |
+| Stage 3 (fog, ADR 0028) | First playable, awaiting feedback | `Main/Stage3`. A straight way and 6 forks, 6 placeholder animals, the girl running to the bird, fog thin only over the ways. No 3-3 yet |
 | 4 to 6 | Not started | |
 
 Changes outside the plan:
