@@ -37,6 +37,22 @@ public class FogField : MonoBehaviour
 
     Vector2 Min => new Vector2(transform.position.x, transform.position.z) - size * 0.5f;
 
+    // The density cells as a texture (1 = full fog) and the area they cover (corner x, z, size x, z), for DreamFog.
+    public Texture Mask => mask;
+    public Vector4 Area => new(Min.x, Min.y, size.x, size.y);
+
+    // How far into the fog this point is along the area (Z only, so the bird flying off to the side stays in it), from its ramp in and
+    // fade out only, cleared spots aside: 0 before or past it.
+    public float RampAt(Vector3 point)
+    {
+        float fromEdge = point.z - Min.y;
+        if (fromEdge < 0f || fromEdge > size.y)
+            return 0f;
+        float rampIn = rampLength > 0f ? Mathf.Clamp01(fromEdge / rampLength) : 1f;
+        float rampOut = fadeOutLength > 0f ? Mathf.Clamp01((size.y - fromEdge) / fadeOutLength) : 1f;
+        return Mathf.Min(rampIn, rampOut);
+    }
+
     void Awake()
     {
         cells = new byte[resolution * resolution];

@@ -28,6 +28,8 @@ public class BirdCamera : MonoBehaviour
     float zoom = 1f;
     float zoomFrom = 1f;
     float zoomTime = float.MaxValue;
+    // The farthest the wheel may zoom out in the current stage (its Max Altitude Share).
+    float zoomMax = float.MaxValue;
     // Dev tool: while set, the camera stays on this point instead of following the bird.
     Vector3? lockedPoint;
     // While set, the camera stays on this point while the bird lands and sits, and follows again once the bird flies off.
@@ -64,6 +66,36 @@ public class BirdCamera : MonoBehaviour
     {
         zones = stage.GetComponentsInChildren<CameraZone>();
         zoneWeights = new float[zones.Length];
+        zoomMax = ZoomForAltitudeShare(stage);
+        // Already zoomed out past it: eased back in to it.
+        if (targetZoom > zoomMax)
+        {
+            targetZoom = zoomMax;
+            zoomFrom = zoom;
+            zoomTime = 0f;
+        }
+    }
+
+    // The zoom at which the bird flies at the stage's Max Altitude Share of its highest height above the stage's ground. Height rises
+    // with the zoom (BirdController.AltitudeForZoom), so halving the range finds it.
+    static float ZoomForAltitudeShare(Stage stage)
+    {
+        GameTuning tuning = GameTuning.Current;
+        if (stage.maxAltitudeShare >= 1f)
+            return tuning.cameraZoomMax;
+        float ground = stage.area.center.y;
+        float Height(float zoom) => BirdController.AltitudeForZoom(zoom, stage.birdAltitude, ground) - ground;
+        float goal = Height(tuning.cameraZoomMax) * stage.maxAltitudeShare;
+        float low = tuning.cameraZoomMin, high = tuning.cameraZoomMax;
+        for (int i = 0; i < 24; i++)
+        {
+            float middle = (low + high) * 0.5f;
+            if (Height(middle) > goal)
+                high = middle;
+            else
+                low = middle;
+        }
+        return low;
     }
 
     // Dev tool: locks the camera on the point, or unlocks it. Cuts there at once.
@@ -140,7 +172,7 @@ public class BirdCamera : MonoBehaviour
         // A cutscene holding the player still (Lock Player) holds the zoom too: the wheel would move the bird's height.
         // So does the open encyclopedia, which takes the mouse.
         float scroll = Cutscene.PlayerLocked || Encyclopedia.IsOpen ? 0f : scrollAction.ReadValue<Vector2>().y;
-        float next = Mathf.Clamp(targetZoom - Mathf.Sign(scroll) * tuning.cameraZoomStep, tuning.cameraZoomMin, tuning.cameraZoomMax);
+        float next = Mathf.Clamp(targetZoom - Mathf.Sign(scroll) * tuning.cameraZoomStep, tuning.cameraZoomMin, Mathf.Min(zoomMax, tuning.cameraZoomMax));
         if (scroll != 0f && next != targetZoom)
         {
             targetZoom = next;

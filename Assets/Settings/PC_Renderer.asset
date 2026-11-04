@@ -16,6 +16,48 @@ MonoBehaviour:
   shader: {fileID: 4800000, guid: 2695ffe4b13c62a4aaf167c1d81cdfca, type: 3}
   fadeRadius: 2
   fadeSoftness: 1.5
+--- !u!114 &-6587109528150381837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: AboveFog
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
+  m_Active: 1
+  settings:
+    passTag: AboveFog
+    Event: 550
+    filterSettings:
+      RenderQueueType: 1
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 4096
+      PassNames: []
+    overrideMaterial: {fileID: 0}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 1
+    overrideDepthState: 0
+    depthCompareFunction: 4
+    enableWrite: 1
+    stencilSettings:
+      overrideStencilState: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 0
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60
 --- !u!114 &-4074364379582627839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -58,6 +100,20 @@ MonoBehaviour:
       restoreCamera: 1
       offset: {x: 0, y: 0, z: 0, w: 0}
       cameraFieldOfView: 60
+--- !u!114 &-340777391107591180
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ef41a2b95a4cf5478fde212f853316e, type: 3}
+  m_Name: DreamFog
+  m_EditorClassIdentifier: Assembly-CSharp::DreamFogFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: db1836a5b6ea4b54a981c45114af8654, type: 3}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -90,7 +146,9 @@ MonoBehaviour:
   - {fileID: -4074364379582627839}
   - {fileID: 2830710763801503158}
   - {fileID: -6909916961520376234}
-  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b4482756a62141220b1ba0
+  - {fileID: -340777391107591180}
+  - {fileID: -6587109528150381837}
+  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b4482756a62141220b1ba0f4338cafc45045fbf36a01bec8e295a4
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -100,10 +158,10 @@ MonoBehaviour:
     m_Bits: 4294967295
   m_OpaqueLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294963199
   m_TransparentLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294963199
   m_DefaultStencilState:
     overrideStencilState: 0
     stencilReference: 1

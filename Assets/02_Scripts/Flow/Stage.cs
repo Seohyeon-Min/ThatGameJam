@@ -11,6 +11,9 @@ public class Stage : MonoBehaviour
     public Transform birdStart;
     public BabyRoute route;
     public float birdAltitude = 3f;
+    // The highest the bird may fly in this stage, as a share of how high it flies zoomed all the way out: the wheel's zoom stops there,
+    // so the camera doesn't rise past it either (the fog maze can't be seen from above). 1 = no cap.
+    [Range(0.1f, 1f)] public float maxAltitudeShare = 1f;
     // Plays after the baby wakes in this stage, before it walks. Empty: it just walks.
     public Cutscene wakeCutscene;
     // Holding the click on the walking baby makes the bird fly over her and keep the snow off (SnowShelter, the intro only).
