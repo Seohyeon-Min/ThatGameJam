@@ -43,7 +43,7 @@ public static class BuildStage3
     const float MazeHalfWidth = 21f;
     // The girl turns back this far before a wall.
     const float WallStop = 1f;
-    // She stops this far into the stage from where she wakes, at the start of the straight way.
+    // The straight way and its fog start this far past the stage's own start (EntryInStage).
     const float StartStep = 1f;
     // "A rather long straight way" at the start, where the fog thickens.
     const float StraightLength = 21.5f;
@@ -56,8 +56,7 @@ public static class BuildStage3
     const float GroundPastGoal = 24f;
     // The ground is stretched here, a little into the straight way, where it is flat.
     const float JoinPastEntry = 4f;
-    // Where the girl wakes in this stage (babyStart), in the frame of the stage's root, which the stage spacing
-    // (Stage.AdjustSpacing) moves. She walks there from stage 2's sunlit spot when stage 3 begins.
+    // Where the map starts, in the frame of the stage's root, which the stage spacing (Stage.AdjustSpacing) moves.
     static readonly Vector3 EntryInStage = new(0f, 0f, 38.5f);
 
     // In the quarter view (camera yaw 315) R runs straight right on the screen and U straight up, so the two ways of every fork
@@ -98,6 +97,9 @@ public static class BuildStage3
         terrain = Terrain.activeTerrain;
         Stage stage = GameObject.Find("02_WORLD/Stages/Stage3").GetComponent<Stage>();
         Vector3 entry = Ground(stage.transform.TransformPoint(EntryInStage));
+        // The girl wakes at stage 2's sunlit spot, and the maze leads her from there: a cry calls her as soon as she is up.
+        BabyRoute stage2Route = GameObject.Find("02_WORLD/Stages/Stage2").GetComponent<Stage>().route;
+        Vector3 wake = stage2Route[stage2Route.Count - 1].position;
 
         // The ways, flat at first; set on the ground once the ground is there.
         Vector3 start = entry + Z * StartStep;
@@ -113,7 +115,7 @@ public static class BuildStage3
         Vector3 goal = fork;
         string room = MakeRoom(entry.z + JoinPastEntry, goal.z + GroundPastGoal);
 
-        Vector3[] approach = OnGround(new[] { start, rightWays[0][0] });
+        Vector3[] approach = OnGround(new[] { wake, start, rightWays[0][0] });
         rightWays = rightWays.Select(OnGround).ToList();
         deadEnds = deadEnds.Select(OnGround).ToList();
         goal = rightWays[^1][^1];
@@ -122,8 +124,8 @@ public static class BuildStage3
         foreach (Transform child in stage.transform.Cast<Transform>().ToArray())
             UnityEngine.Object.DestroyImmediate(child.gameObject);
         GameObject root = stage.gameObject;
-        stage.babyStart = Child(root, "BabyStart", entry).transform;
-        stage.birdStart = Child(root, "BirdStart", entry + new Vector3(1.5f, 2.5f, -1f)).transform;
+        stage.babyStart = Child(root, "BabyStart", wake).transform;
+        stage.birdStart = Child(root, "BirdStart", wake + new Vector3(1.5f, 2.5f, -1f)).transform;
         stage.birdAltitude = 4f;
         float areaStart = entry.z - 9f;
         stage.area = new Bounds(new Vector3(0f, 0f, (areaStart + stageEnd) / 2f), new Vector3(39f, 1f, stageEnd - areaStart));
@@ -143,7 +145,7 @@ public static class BuildStage3
             Objects(so.FindProperty("forks"), forks);
         });
 
-        GameObject route = Path(root, "BabyRoute", new[] { start, goal });
+        GameObject route = Path(root, "BabyRoute", new[] { approach[0], goal });
         stage.route = route.AddComponent<BabyRoute>();
         var stop = route.transform.GetChild(0).gameObject.AddComponent<StopPoint>();
         Set(stop, so => so.FindProperty("blocker").objectReferenceValue = maze);
@@ -288,7 +290,7 @@ public static class BuildStage3
         }
         foreach (var list in new[] { walked, lined })
         {
-            AddPath(list, new[] { approach[0] - Z * (StartStep + 2f) }.Concat(approach).ToArray());
+            AddPath(list, approach);
             foreach (Vector3[] path in rightWays)
                 AddPath(list, path);
         }
@@ -435,6 +437,8 @@ public static class BuildStage3
         line.alignment = LineAlignment.View;
         line.numCapVertices = 0;
         line.numCornerVertices = 2;
+        // After the fog, which is in the same transparent queue at order 0.
+        line.sortingOrder = 1;
 
         var animal = root.AddComponent<FogForkAnimal>();
         Set(animal, so =>

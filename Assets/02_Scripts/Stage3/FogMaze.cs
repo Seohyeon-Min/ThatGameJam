@@ -38,6 +38,8 @@ public class FogMaze : PathBlocker
     Coroutine routine;
     int way;
     bool helped;
+    // A cry after she woke but before she came to the start of the straight way: she runs to it when she gets there.
+    Vector3? call;
 
     int ForkCount => forks.Length;
     bool Leading => routine != null;
@@ -111,7 +113,8 @@ public class FogMaze : PathBlocker
     {
         baby = Baby.Instance;
         way = 0;
-        routine = StartCoroutine(WalkOn());
+        routine = StartCoroutine(call is Vector3 bird ? RunToBird(bird) : WalkOn());
+        call = null;
     }
 
     void Update()
@@ -131,7 +134,11 @@ public class FogMaze : PathBlocker
             return;
         AnswerAhead(bird);
         if (!Leading)
+        {
+            if (stage == GameFlow.Instance.CurrentStage && Baby.Instance.State is BabyState.Waking or BabyState.Walking)
+                call = bird;
             return;
+        }
         StopCoroutine(routine);
         routine = StartCoroutine(RunToBird(bird));
     }
