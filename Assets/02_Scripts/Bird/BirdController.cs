@@ -343,10 +343,18 @@ public class BirdController : MonoBehaviour
     void Update()
     {
         if (control == Control.Scripted)
+        {
+            // The intro's scripted moments (circling, the dive run-up) move the bird on their own, but crying
+            // is still the player's: it only sets off a cooldown/effect, nothing here moves it.
+            TryCry();
             return;
+        }
         if (control == Control.Sky)
         {
             FlyInSky();
+            // The intro (above the clouds, before the game proper) still lets the player cry: the only
+            // thing the sky flight doesn't offer is perching/the stage area, not the cry itself.
+            TryCry();
             return;
         }
         altitude = FlightAltitude();
@@ -378,9 +386,7 @@ public class BirdController : MonoBehaviour
             StartClimb();
         }
 
-        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.AnyPlaying;
-        if (cried && Time.time >= nextCryTime)
-            Cry();
+        bool cried = TryCry();
 
         Vector3 before = transform.position;
         switch (state)
@@ -813,6 +819,17 @@ public class BirdController : MonoBehaviour
         bankAngle = Mathf.MoveTowards(bankAngle, targetAngle, GameTuning.Current.birdBankSpeed * Time.deltaTime);
         if (visualRoot != null)
             visualRoot.localRotation = visualBaseRotation * Quaternion.Euler(bodyPitch, 0f, bankAngle);
+    }
+
+    // Right-click, no cutscene playing: shared by Game and Sky control (the intro cries too). Returns whether
+    // the player attempted a cry this frame (counts as activity for the idle-perch timer) even if it was on
+    // cooldown and so didn't actually Cry().
+    bool TryCry()
+    {
+        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.AnyPlaying;
+        if (cried && Time.time >= nextCryTime)
+            Cry();
+        return cried;
     }
 
     void Cry()
