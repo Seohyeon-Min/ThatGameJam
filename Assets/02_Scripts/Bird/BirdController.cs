@@ -22,6 +22,7 @@ public class BirdController : MonoBehaviour
     static readonly int WalkingParam = Animator.StringToHash("Walking");
     static readonly int WalkRateParam = Animator.StringToHash("WalkRate");
     static readonly int HoppingParam = Animator.StringToHash("Hopping");
+    static readonly int HoverRateParam = Animator.StringToHash("HoverRate");
     // How fast Bird_Hop goes forward without its feet sliding, in the model's units per second (the bird's export notes).
     const float HopClipSpeed = 0.44f;
     // How fast Bird_Walk steps forward without its feet sliding, in the model's units per second (the bird's export notes).
@@ -41,6 +42,8 @@ public class BirdController : MonoBehaviour
     // Rolled for the turn bank (Face), separate from this transform so the root's rotation stays pure yaw
     // for perch alignment and area clamping. Usually the Animator's GameObject (e.g. "Bird-Animated").
     [SerializeField] Transform visualRoot;
+    [Tooltip("The head bone (Head). Rising or sinking in the air, it tips to look the way the bird goes, over the animation.")]
+    [SerializeField] Transform headBone;
     [SerializeField] Texture2D perchCursor;
     [SerializeField] Vector2 perchCursorHotspot;
     // The bird and the branches it perches on stay this far inside the screen's edges, as a fraction of the screen (ADR 0015).
@@ -126,8 +129,21 @@ public class BirdController : MonoBehaviour
     // While sheltering: reached the spot over the baby, from then on moving at her pace.
     bool shelterReached;
     Vector3 lastBabyPosition;
+    // Degrees the head tips over the animation, down positive (headBone).
+    float headPitch;
+    // Seconds of hovering left after the height last changed, and the rise smoothed over the wheel's ticks.
+    float climbHold;
+    float smoothRise;
+    float hoverRate = 1f;
     // Where it would be over her, before the area and screen limits.
     Vector3 shelterSpot;
+
+    // After the animator has posed the bird: the head tips down as it sinks and up as it rises.
+    void LateUpdate()
+    {
+        if (headBone != null && Mathf.Abs(headPitch) > 0.01f)
+            headBone.rotation = Quaternion.AngleAxis(headPitch, transform.right) * headBone.rotation;
+    }
 
     void Awake()
     {
@@ -360,12 +376,21 @@ public class BirdController : MonoBehaviour
         ShowPerchCursor(hovered != null);
 
         bool pressed = moveAction.WasPressedThisFrame() && !clicksLocked && !DevTools.Covers(pointAction.ReadValue<Vector2>());
-        if (Cutscene.AnyPlaying)
+        if (Cutscene.PlayerLocked)
+        {
+            // Held still: no clicks count, and it stops where it is instead of going on to its last target.
             following = false;
+            target = transform.position;
+        }
         else if (pressed && CanShelter() && Baby.Instance.GetComponent<Collider>().Raycast(ray, out _, Mathf.Infinity))
             ToggleShelter();
         else if (pressed && hasHit)
+        {
             Click(hit, hovered);
+            // A new click on the ground hops again, however often it comes (HopAgain).
+            if (state == State.Walking)
+                HopAgain();
+        }
         else if (!moveAction.IsPressed())
             following = false;
         else if (following && hasHit)
@@ -378,7 +403,7 @@ public class BirdController : MonoBehaviour
             StartClimb();
         }
 
-        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.AnyPlaying;
+        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.PlayerLocked;
         if (cried && Time.time >= nextCryTime)
             Cry();
 
@@ -392,8 +417,20 @@ public class BirdController : MonoBehaviour
             case State.Walking: Walk(); break;
         }
         bool moved = transform.position != before;
-        // Glides while it moves and hovers in place otherwise.
-        animator.SetBool(MovingParam, moved);
+        // Rising or sinking in the air (the wheel's zoom changing its height): it hovers in place and looks the way it goes.
+        GameTuning tuning = GameTuning.Current;
+        float rise = Time.deltaTime > 0f ? (transform.position.y - before.y) / Time.deltaTime : 0f;
+        climbHold = state == State.Flying && Mathf.Abs(rise) > tuning.birdClimbHoverSpeed ? tuning.birdClimbHoverHold
+            : state == State.Flying ? climbHold - Time.deltaTime : 0f;
+        bool climbing = climbHold > 0f;
+        // The head follows the rise smoothed over the wheel's ticks, so it holds its tilt between them instead of nodding.
+        smoothRise = Mathf.Lerp(smoothRise, climbing ? rise : 0f, 1f - Mathf.Exp(-3f * Time.deltaTime));
+        float headGoal = climbing ? Mathf.Clamp(-smoothRise * tuning.birdClimbHeadPerSpeed, -tuning.birdClimbHeadMost, tuning.birdClimbHeadMost) : 0f;
+        headPitch = Mathf.Lerp(headPitch, headGoal, 1f - Mathf.Exp(-tuning.birdClimbHeadEase * Time.deltaTime));
+        // Glides while it moves and hovers in place otherwise; rising or sinking, the wings beat faster, eased in and out.
+        animator.SetBool(MovingParam, moved && !climbing);
+        hoverRate = Mathf.Lerp(hoverRate, climbing ? tuning.birdClimbHoverRate : 1f, 1f - Mathf.Exp(-6f * Time.deltaTime));
+        animator.SetFloat(HoverRateParam, hoverRate);
         animator.SetBool(PerchedParam, state is State.Landing or State.Perched or State.Walking);
         animator.SetBool(WalkingParam, state == State.Walking && moved);
         animator.SetBool(HoppingParam, state == State.Walking && moved && hopping);
@@ -679,6 +716,15 @@ public class BirdController : MonoBehaviour
 
     // On the ground, it walks to the target. Zoomed back out, or reaching what it can't stand on, it takes off (and Fly brings it
     // down again past it).
+    // Hops for a while from now (birdHopSeconds). Already hopping, it only goes on longer, never shorter, so clicks coming fast keep
+    // one hop going and the animation never cuts back and forth between hopping and walking.
+    void HopAgain()
+    {
+        Vector2 seconds = GameTuning.Current.birdHopSeconds;
+        float until = Time.time + Random.Range(Mathf.Min(seconds.x, seconds.y), Mathf.Max(seconds.x, seconds.y));
+        hopUntil = Mathf.Max(hopUntil, until);
+    }
+
     // The speed its steps carry the bird at, hopping or walking, as the clip plays (birdWalkClipRate) at the model's size, so its feet
     // don't slide.
     float WalkSpeed => (hopping ? HopClipSpeed : WalkClipSpeed) * animator.transform.lossyScale.x * GameTuning.Current.birdWalkClipRate
@@ -695,10 +741,7 @@ public class BirdController : MonoBehaviour
         // Setting off from standing, it hops for a moment before it settles into walking.
         bool going = (goal - new Vector3(position.x, 0f, position.z)).sqrMagnitude > 1e-6f;
         if (going && !wasWalking)
-        {
-            Vector2 seconds = GameTuning.Current.birdHopSeconds;
-            hopUntil = Time.time + Random.Range(Mathf.Min(seconds.x, seconds.y), Mathf.Max(seconds.x, seconds.y));
-        }
+            HopAgain();
         wasWalking = going;
         hopping = going && Time.time < hopUntil;
         Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), goal, WalkSpeed * Time.deltaTime);

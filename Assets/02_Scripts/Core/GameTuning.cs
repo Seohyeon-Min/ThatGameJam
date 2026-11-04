@@ -104,6 +104,17 @@ public class GameTuning : ScriptableObject
     public float birdWalkTurnSpeed = 720f;
     // Setting off on the ground, it hops (Bird_Hop, faster) for a while between these many seconds, then walks.
     public Vector2 birdHopSeconds = new(1f, 3f);
+    // Rising or sinking in the air faster than this (metres a second, the wheel's zoom moving its height), it hovers in place
+    // (Bird_Hover) and looks the way it goes: its head tips this many degrees per metre a second, up to the most, eased at this rate.
+    public float birdClimbHoverSpeed = 0.25f;
+    // Seconds it keeps hovering after its height stops changing, so a wheel turned in ticks (each a small rise that eases to a stop)
+    // keeps one hover going instead of cutting between hover and glide at every tick.
+    public float birdClimbHoverHold = 0.8f;
+    // How fast Bird_Hover plays while it rises or sinks (1 = as made); hovering still, it plays at 1.
+    public float birdClimbHoverRate = 1.8f;
+    public float birdClimbHeadPerSpeed = 25f;
+    public float birdClimbHeadMost = 45f;
+    public float birdClimbHeadEase = 6f;
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;
     // Bank degrees per degree/second of turn rate.

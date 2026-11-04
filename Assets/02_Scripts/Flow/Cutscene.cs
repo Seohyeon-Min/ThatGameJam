@@ -8,7 +8,7 @@ using UnityEngine.Timeline;
 // A staged moment: plays this object's Timeline, with its own watercolor look if it has one, and tells the game when it's over.
 // Assign one to a Stage's Wake Cutscene and the baby waits for it after waking, before it walks.
 // The camera, animation and sound are on the Timeline. The look's Volume Profile switches with the look.
-// While one plays, the player can't move the bird or cry.
+// While one with Lock Player plays, the player can't move the bird or cry, and the bird stops where it is.
 // Animation tracks are for previewing in the Timeline window: in Play Mode they are unbound, and animators play what the game tells them.
 [RequireComponent(typeof(PlayableDirector))]
 public class Cutscene : MonoBehaviour
@@ -17,11 +17,15 @@ public class Cutscene : MonoBehaviour
     public const float AnimationFramesPerSecond = 30f;
 
     static int playing;
+    // Playing cutscenes that hold the player still (Lock Player).
+    static int locking;
 
-    [Tooltip("Frames to wait after Play before it really starts, at 30 per second like the baby's animations. Nothing is locked or changed until then.")]
+    [Tooltip("Frames to wait after Play before it really starts, at 30 per second like the baby's animations. Nothing but Lock Player is changed until then.")]
     [SerializeField, Min(0)] int startDelayFrames;
     [Tooltip("Applied at once when the cutscene starts, with its Volume Profile if it has one, and what was there before comes back at once when it ends. Empty keeps the current look.")]
     [SerializeField] WatercolorLook look;
+    [Tooltip("From Play (its start delay included) to its end: the player can't move the bird, zoom or cry, and the bird stops where it is.")]
+    [SerializeField] bool lockPlayer = true;
 
     PlayableDirector director;
     WatercolorManager manager;
@@ -30,8 +34,11 @@ public class Cutscene : MonoBehaviour
     VolumeProfile profileBefore;
     bool lookHeld;
     bool started;
+    bool locked;
 
     public static bool AnyPlaying => playing > 0;
+    // A cutscene with Lock Player is playing: the bird takes no clicks or cries and stays where it is.
+    public static bool PlayerLocked => locking > 0;
     public bool IsPlaying { get; private set; }
 
     void Awake()
@@ -63,6 +70,8 @@ public class Cutscene : MonoBehaviour
             director.stopped -= OnDirectorStopped;
         if (started)
             playing--;
+        if (locked)
+            locking--;
     }
 
     public void Play()
@@ -70,6 +79,12 @@ public class Cutscene : MonoBehaviour
         if (IsPlaying)
             return;
         IsPlaying = true;
+        // From Play on, its start delay too: the player is held still for the whole of it.
+        if (lockPlayer)
+        {
+            locked = true;
+            locking++;
+        }
         StartCoroutine(StartAfterDelay());
     }
 
@@ -128,6 +143,9 @@ public class Cutscene : MonoBehaviour
         if (started)
             playing--;
         started = false;
+        if (locked)
+            locking--;
+        locked = false;
         if (lookHeld)
         {
             lookHeld = false;
