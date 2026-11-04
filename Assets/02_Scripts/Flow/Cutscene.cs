@@ -1,4 +1,6 @@
 using System.Collections;
+using FMOD.Studio;
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
@@ -26,8 +28,11 @@ public class Cutscene : MonoBehaviour
     [SerializeField] WatercolorLook look;
     [Tooltip("From Play (its start delay included) to its end: the player can't move the bird, zoom or cry, and the bird stops where it is.")]
     [SerializeField] bool lockPlayer = true;
+    [Tooltip("Starts alongside the Timeline (after the start delay). Stops if the cutscene is cut short. Empty plays nothing.")]
+    [SerializeField] EventReference cutsceneAudio;
 
     PlayableDirector director;
+    EventInstance audioInstance;
     WatercolorManager manager;
     WatercolorManager.Settings before;
     Volume volume;
@@ -104,6 +109,12 @@ public class Cutscene : MonoBehaviour
             SwitchVolume();
         }
 
+        if (!cutsceneAudio.IsNull)
+        {
+            audioInstance = RuntimeManager.CreateInstance(cutsceneAudio);
+            audioInstance.start();
+        }
+
         if (director.playableAsset != null)
         {
             director.time = 0d;
@@ -146,6 +157,11 @@ public class Cutscene : MonoBehaviour
         if (locked)
             locking--;
         locked = false;
+        if (audioInstance.isValid())
+        {
+            audioInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+            audioInstance.release();
+        }
         if (lookHeld)
         {
             lookHeld = false;

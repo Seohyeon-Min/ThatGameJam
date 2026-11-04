@@ -49,6 +49,9 @@ public class BirdController : MonoBehaviour
     // The bird and the branches it perches on stay this far inside the screen's edges, as a fraction of the screen (ADR 0015).
     [SerializeField, Range(0f, 0.3f)] float screenMargin = 0.08f;
     [SerializeField] UnityEvent onCry;
+    // Sky-style call pulse (BirdCryPulse prefab: an expanding glow ring plus a burst of warm motes), played at the bird's
+    // position each cry. Reference any ParticleSystem in the prefab instance; Play()'s default withChildren plays the rest.
+    [SerializeField] ParticleSystem cryPulse;
 
     enum State { Flying, ToPerch, Landing, Perched, Walking }
     // Who moves the bird. Sky and Scripted are for the intro (IntroSequence): Sky is clicks on the flying height, with no perches or
@@ -361,7 +364,12 @@ public class BirdController : MonoBehaviour
     void Update()
     {
         if (control == Control.Scripted)
+        {
+            // The intro's scripted moments (circling, the dive run-up) move the bird on their own, but crying
+            // is still the player's: it only sets off a cooldown/effect, nothing here moves it.
+            TryCry();
             return;
+        }
         // The encyclopedia is open: the game is paused and the mouse belongs to the page.
         if (Encyclopedia.IsOpen)
         {
@@ -371,6 +379,9 @@ public class BirdController : MonoBehaviour
         if (control == Control.Sky)
         {
             FlyInSky();
+            // The intro (above the clouds, before the game proper) still lets the player cry: the only
+            // thing the sky flight doesn't offer is perching/the stage area, not the cry itself.
+            TryCry();
             return;
         }
         altitude = FlightAltitude();
@@ -411,9 +422,7 @@ public class BirdController : MonoBehaviour
             StartClimb();
         }
 
-        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.PlayerLocked;
-        if (cried && Time.time >= nextCryTime)
-            Cry();
+        bool cried = TryCry();
 
         Vector3 before = transform.position;
         switch (state)
@@ -907,12 +916,26 @@ public class BirdController : MonoBehaviour
             visualRoot.localRotation = visualBaseRotation * Quaternion.Euler(bodyPitch, 0f, bankAngle);
     }
 
+    // Right-click, no cutscene playing: shared by Game and Sky control (the intro cries too). Returns whether
+    // the player attempted a cry this frame (counts as activity for the idle-perch timer) even if it was on
+    // cooldown and so didn't actually Cry().
+    bool TryCry()
+    {
+        // A cutscene holding the player still (Lock Player) holds the cry too.
+        bool cried = cryAction.WasPressedThisFrame() && !Cutscene.PlayerLocked;
+        if (cried && Time.time >= nextCryTime)
+            Cry();
+        return cried;
+    }
+
     void Cry()
     {
         nextCryTime = Time.time + GameTuning.Current.birdCryCooldown;
         CryListener.Broadcast(transform.position);
         onCry.Invoke();
         StartCoroutine(CryPulse());
+        if (cryPulse != null)
+            cryPulse.Play();
     }
 
     // Placeholder until the cry animation exists.

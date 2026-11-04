@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-CimInstance*)",
+      "PowerShell(Get-ChildItem*)",
+      "Bash(tasklist*)",
+      "Bash(where *)",
+      "Bash(cmdkey /list*)",
+      "Bash(unity status*)",
+      "Bash(unity list*)",
+      "Bash(unity command console status *)",
+      "Bash(unity command console get *)",
+      "Bash(unity command animation.clip get *)",
+      "Bash(unity command animation.animator get_controller *)",
+      "Bash(unity command asset find *)",
+      "Bash(unity command gameobject find *)"
+    ]
+  }
+}
