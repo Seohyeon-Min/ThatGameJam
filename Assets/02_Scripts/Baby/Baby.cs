@@ -15,6 +15,7 @@ public class Baby : CryListener
     // Asleep under the snow, in the intro until its GetUp: Girl_Intro_Sleep.
     static readonly int IntroSleepState = Animator.StringToHash("IntroSleep");
     static readonly int QuietWaitParam = Animator.StringToHash("QuietWait");
+    static readonly int IdleVariantParam = Animator.StringToHash("IdleVariant");
     static readonly int IdleState = Animator.StringToHash("Idle");
     static readonly int WalkState = Animator.StringToHash("Walk");
     static readonly int BalanceWalkState = Animator.StringToHash("BalanceWalk");
@@ -61,6 +62,15 @@ public class Baby : CryListener
     // 0 to 1: how far the cold tremor has eased in since she set off.
     float shiverFade;
     float curiousPauseCooldown;
+    // Her actual current speed (m/s), eased toward the target speed in StepToward instead of snapping to it:
+    // ramps up from a stop and brakes smoothly approaching the target. Reset to 0 in StandStill so every fresh
+    // start (after waiting, a curious pause, a reaction) ramps up again instead of resuming at the old speed.
+    float currentSpeed;
+    // Stage 0 only: seconds until she may next pause to look up at a nearby bird (NoticeBird).
+    float birdNoticeCooldown;
+    // Standing still, looking up at the bird with just her head (NoticeBird): LateUpdate's gaze system targets
+    // it while this is set, same as sheltering or a PointOfInterest.
+    bool noticingBird;
     // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
     float noiseSeed;
     Quaternion modelBaseRotation;
@@ -84,6 +94,7 @@ public class Baby : CryListener
         noiseSeed = UnityEngine.Random.Range(0f, 100f);
         modelBaseRotation = animator.transform.localRotation;
         curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
+        birdNoticeCooldown = GameTuning.Current.babyBirdNoticeCooldown;
         headBone = animator.transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
     }
 
@@ -120,7 +131,7 @@ public class Baby : CryListener
             gazeTimeRemaining -= Time.deltaTime;
         bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
         // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
-        if (BirdController.Instance.IsSheltering)
+        if (BirdController.Instance.IsSheltering || noticingBird)
             lookPoint = BirdController.Instance.transform.position;
         else if (gazeTarget != null && gazeTimeRemaining > 0f)
             lookPoint = gazeTarget.LookPoint;
@@ -361,10 +372,18 @@ public class Baby : CryListener
                 StandStill();
                 CurrentBlocker = blocker;
                 blocker.BeginWaiting();
+                // Switches idle variant (Idle/Hum/Stretch) every so often so a long wait doesn't just breathe in
+                // place; skipped while observing something specific, which takes full attention instead.
+                float idleVariantCooldown = UnityEngine.Random.Range(tuning.babyIdleVariantIntervalMin, tuning.babyIdleVariantIntervalMax);
                 while (!blocker.IsOpen)
                 {
                     if (stop.ObserveTarget != null)
                         TurnToward(stop.ObserveTarget.position - transform.position);
+                    else if ((idleVariantCooldown -= Time.deltaTime) <= 0f)
+                    {
+                        idleVariantCooldown = UnityEngine.Random.Range(tuning.babyIdleVariantIntervalMin, tuning.babyIdleVariantIntervalMax);
+                        animator.SetInteger(IdleVariantParam, UnityEngine.Random.Range(0, 3));
+                    }
                     yield return null;
                 }
                 CurrentBlocker = null;
@@ -414,6 +433,12 @@ public class Baby : CryListener
                     cryPending = false;
                     yield return ReactToCry();
                 }
+                // The intro only: the bird flying close overhead is itself worth a glance, cry or not.
+                else if (InIntro && (birdNoticeCooldown -= Time.deltaTime) <= 0f && BirdNearby())
+                {
+                    birdNoticeCooldown = GameTuning.Current.babyBirdNoticeCooldown;
+                    yield return NoticeBird();
+                }
                 else if ((curiousPauseCooldown -= Time.deltaTime) <= 0f)
                 {
                     curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
@@ -441,6 +466,19 @@ public class Baby : CryListener
         State = BabyState.Reacting;
         yield return LookUp(GameTuning.Current.babyLookUpDuration);
         State = BabyState.Walking;
+    }
+
+    bool BirdNearby() => BirdController.Instance != null
+        && Vector3.Distance(transform.position, BirdController.Instance.transform.position) <= GameTuning.Current.babyBirdNoticeRadius;
+
+    // Stage 0: the bird flies close by overhead. She pauses and looks up at it with just her head (LateUpdate,
+    // via noticingBird), body left facing the way she was already walking, then goes straight back to that.
+    IEnumerator NoticeBird()
+    {
+        StandStill();
+        noticingBird = true;
+        yield return new WaitForSeconds(GameTuning.Current.babyBirdNoticeDuration);
+        noticingBird = false;
     }
 
     // Pauses the walk to glance around, like a child noticing something nearby rather than marching straight through.
@@ -474,9 +512,16 @@ public class Baby : CryListener
     IEnumerator JumpTo(Vector3 target)
     {
         StandStill();
+        GameTuning tuning = GameTuning.Current;
+        // A brief wind-up, turned toward the landing spot, so the jump doesn't spring out of nowhere.
+        for (float time = 0f; time < tuning.babyJumpAnticipation; time += Time.deltaTime)
+        {
+            TurnToward(target - transform.position);
+            yield return null;
+        }
         animator.CrossFade(JumpState, 0.1f);
         Vector3 start = transform.position;
-        float arcHeight = GameTuning.Current.babyJumpArcHeight;
+        float arcHeight = tuning.babyJumpArcHeight;
         for (float time = 0f; time < jumpClip.length; time += Time.deltaTime)
         {
             // Turning continues every frame (as WalkTo does), not just once at takeoff, so a route that
@@ -497,15 +542,29 @@ public class Baby : CryListener
         animator.SetBool(WalkingParam, true);
         GameTuning tuning = GameTuning.Current;
         Vector3 toTarget = target - transform.position;
+        float distanceRemaining = toTarget.magnitude;
         float wanderYaw = Noise(31f, tuning.babyWanderFrequency) * 2f * tuning.babyWanderAngle;
         TurnToward(Quaternion.Euler(0f, wanderYaw, 0f) * toTarget);
         float speedFactor = 1f + Noise(0f, tuning.babySpeedVariationFrequency) * 2f * tuning.babySpeedVariationAmount;
         // Slower and careful along a log.
         float speed = (onBalanceBeam ? tuning.babyBalanceWalkSpeed : tuning.babyWalkSpeed) * speedFactor;
+        // Held back while not yet roughly facing the target, so a sharp turn reads as turning-then-walking
+        // instead of sliding sideways into it (the floor is never 0: small heading corrections barely slow her).
+        if (distanceRemaining > 0.001f)
+        {
+            float facingAlignment = Vector3.Dot(transform.forward, toTarget / distanceRemaining);
+            float turnSlowdown = Mathf.Clamp01(Mathf.InverseLerp(-0.2f, 0.6f, facingAlignment));
+            speed *= Mathf.Lerp(tuning.babyTurnSlowdownFloor, 1f, turnSlowdown);
+        }
+        // Eases from a stop and brakes toward the target instead of snapping straight to target speed: the
+        // braking speed is capped by the classic stopping-distance curve for babyDecel over what's left to walk.
+        // Floored so the last sliver of distance doesn't shrink the speed (and so the step) to nothing forever.
+        float brakingSpeed = Mathf.Max(0.1f, Mathf.Sqrt(2f * Mathf.Max(tuning.babyDecel, 0.01f) * distanceRemaining));
+        currentSpeed = Mathf.MoveTowards(currentSpeed, Mathf.Min(speed, brakingSpeed), tuning.babyAccel * Time.deltaTime);
         // The walk clip keeps pace with the movement (StandStill and the other states put it back to 1).
         float clipSpeed = onBalanceBeam ? tuning.babyBalanceClipSpeed : tuning.babyWalkClipSpeed;
-        animator.speed = Mathf.Clamp(speed / Mathf.Max(clipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
-        transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+        animator.speed = Mathf.Clamp(currentSpeed / Mathf.Max(clipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
+        transform.position = Vector3.MoveTowards(transform.position, target, currentSpeed * Time.deltaTime);
         return transform.position == target;
     }
 
@@ -514,6 +573,8 @@ public class Baby : CryListener
     {
         animator.SetBool(WalkingParam, false);
         animator.speed = 1f;
+        // So the next walk ramps up from a stop again, instead of resuming at whatever speed she had.
+        currentSpeed = 0f;
     }
 
     // Stands and turns toward the bird. The model has no look-up animation yet.

@@ -1,4 +1,6 @@
 using System.Collections;
+using FMOD.Studio;
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
@@ -22,8 +24,11 @@ public class Cutscene : MonoBehaviour
     [SerializeField, Min(0)] int startDelayFrames;
     [Tooltip("Applied at once when the cutscene starts, with its Volume Profile if it has one, and what was there before comes back at once when it ends. Empty keeps the current look.")]
     [SerializeField] WatercolorLook look;
+    [Tooltip("Starts alongside the Timeline (after the start delay). Stops if the cutscene is cut short. Empty plays nothing.")]
+    [SerializeField] EventReference cutsceneAudio;
 
     PlayableDirector director;
+    EventInstance audioInstance;
     WatercolorManager manager;
     WatercolorManager.Settings before;
     Volume volume;
@@ -89,6 +94,12 @@ public class Cutscene : MonoBehaviour
             SwitchVolume();
         }
 
+        if (!cutsceneAudio.IsNull)
+        {
+            audioInstance = RuntimeManager.CreateInstance(cutsceneAudio);
+            audioInstance.start();
+        }
+
         if (director.playableAsset != null)
         {
             director.time = 0d;
@@ -128,6 +139,11 @@ public class Cutscene : MonoBehaviour
         if (started)
             playing--;
         started = false;
+        if (audioInstance.isValid())
+        {
+            audioInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+            audioInstance.release();
+        }
         if (lookHeld)
         {
             lookHeld = false;

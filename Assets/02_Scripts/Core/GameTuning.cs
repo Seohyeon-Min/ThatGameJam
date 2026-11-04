@@ -21,9 +21,26 @@ public class GameTuning : ScriptableObject
 
     [Header("Baby")]
     public float babyWalkSpeed = 1.2f;
+    // How fast her actual speed (StepToward) ramps toward target speed (m/s per second), both setting off from a
+    // stop and braking to a stop at the target (stopping distance = currentSpeed^2 / (2*babyDecel)), instead of
+    // snapping straight to it.
+    public float babyAccel = 2.5f;
+    public float babyDecel = 3.5f;
+    // While turning sharply (not roughly facing where she's headed), her speed is held down toward this fraction
+    // of normal, so a sharp direction change reads as turn-then-walk instead of sliding sideways into the turn.
+    [Range(0f, 1f)] public float babyTurnSlowdownFloor = 0.35f;
     public float babyLookUpDuration = 1.5f;
     public float babyLookAroundDuration = 1.5f;
     public float babyWakeCryRadius = 8f;
+    // How often (seconds, random between the two) she switches to a new idle variant (Idle/Hum/Stretch) while
+    // standing and waiting, so she doesn't just breathe in place the whole time.
+    public float babyIdleVariantIntervalMin = 3f;
+    public float babyIdleVariantIntervalMax = 6f;
+    // The intro (stage 0): how close the bird must come for her to pause and look up at it with just her head
+    // (NoticeBird), how long she holds the look, and the cooldown before she may notice it again.
+    public float babyBirdNoticeRadius = 5f;
+    public float babyBirdNoticeDuration = 1f;
+    public float babyBirdNoticeCooldown = 6f;
     // Organic walking: gentle speed/heading noise so the route doesn't look ruler-straight.
     [Range(0f, 1f)] public float babySpeedVariationAmount = 0.15f;
     public float babySpeedVariationFrequency = 0.6f;
@@ -44,6 +61,9 @@ public class GameTuning : ScriptableObject
     // Stepping onto/off a balance beam (JumpTo): extra height added at the arc's midpoint, on top of the
     // straight start-to-target rise, so the hop reads as a hop and not a diagonal slide up a ramp.
     public float babyJumpArcHeight = 0.25f;
+    // Seconds she holds still, turned toward the landing spot, before leaping: a brief wind-up so the jump
+    // doesn't spring out of nowhere.
+    public float babyJumpAnticipation = 0.2f;
     // Crossing a log (BalanceWalk): slower and careful than on the ground (m/s).
     public float babyBalanceWalkSpeed = 0.45f;
     // Seconds she stands after hopping down off the far end of a log, before she walks on.
