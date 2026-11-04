@@ -10,6 +10,10 @@
 // 5 Anisotropic8  : 타원 커널, 섹터 8개
 // 6 Anisotropic4  : 타원 커널, 섹터 4개
 // 7 Composite     : 번짐, 안료, 붓결, 종이를 입혀 원본 해상도로 출력
+// 8 Copy          : 원본 그대로 (Characters Only 에서 캐릭터 밖)
+// 9 CompositeCharacters : 7 과 같지만 캐릭터 자리(스텐실 128)에만
+// 10 Strokes      : 4~6 대신 붓질을 새로 얹는다. 결을 따라 놓인 또렷한 색 조각들. 알파는 칠한 곳
+// 11 CharacterMask: 캐릭터 자리(스텐실 128)를 1 로. 붓질이 캐릭터에서 시작해 밖으로 삐져나가게 한다
 Shader "Hidden/ThatGameJam/WatercolorKuwahara"
 {
     SubShader
@@ -37,6 +41,13 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
         float4 _Style;       // 필터 강도, 색 단순화, 안료 얼룩, 번짐 거리(원본 px)
         float4 _Style2;      // 가장자리 어둡게, 종이 강도, 종이 크기, 붓결 강도
         float4 _Style3;      // 종이 텍스처 사용(0/1), 원본 px 스케일(높이/1080)
+        float4 _Strokes;     // 붓질 간격(1080p px), 길이 비율, 너비 비율, 가장자리 거칠기
+        float4 _Strokes2;    // 명도 흔들림, 색조 흔들림(라디안), 채도 흔들림, 형태 따르기
+        float4 _Strokes3;    // 덮는 비율, 강한 붓질 비율, 강한 붓질 배수, 디테일 남기기
+        float4 _Strokes4;    // 캐릭터 마스크 사용(0/1), 밖으로 삐져나가는 정도, 단색 면 매끄럽게
+        float4 _StrokeAnchor; // 붓질 배치의 기준점(1080p px), 그곳의 1 m 당 px, 기준 있음(0/1)
+        float4 _StrokeAxis;   // 기준의 오른쪽(화면, 단위 벡터)
+        TEXTURE2D(_CharacterMaskTex);
 
         // 평탄한 곳의 작은 기울기 잡음이 방향을 흔들지 않도록 텐서 합에 더하는 값.
         #define ANISOTROPY_EPSILON 0.002
@@ -53,7 +64,8 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
         // 원근과 직교 카메라 모두에서 눈 공간 깊이를 낸다.
         float SceneEyeDepth(float2 uv)
         {
-            float raw = SampleSceneDepth(uv);
+            // LOD 0 으로 읽는다. 붓질 패스는 반복문 안에서 읽어서 미분값이 정의되지 않는다.
+            float raw = SAMPLE_TEXTURE2D_X_LOD(_CameraDepthTexture, sampler_PointClamp, UnityStereoTransformScreenSpaceTex(uv), 0).r;
             if (unity_OrthoParams.w > 0.5)
             {
                 #if UNITY_REVERSED_Z
@@ -347,6 +359,176 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
         float4 FragAnisotropic8(Varyings input) : SV_Target { return AnisotropicKuwahara(input.texcoord, 8); }
         float4 FragAnisotropic4(Varyings input) : SV_Target { return AnisotropicKuwahara(input.texcoord, 4); }
 
+        // ---------- 10: 붓질 ----------
+
+        float4 StrokeHash(float2 p)
+        {
+            float4 p4 = frac(p.xyxy * float4(0.1031, 0.1030, 0.0973, 0.1099));
+            p4 += dot(p4, p4.wzxy + 33.33);
+            return frac((p4.xxyz + p4.yzzw) * p4.zywx);
+        }
+
+        // YIQ 공간에서 색조만 돌린다. 명도는 그대로다.
+        float3 HueTurn(float3 c, float angle)
+        {
+            float y = dot(c, float3(0.299, 0.587, 0.114));
+            float i = dot(c, float3(0.596, -0.274, -0.322));
+            float q = dot(c, float3(0.211, -0.523, 0.312));
+            float s = sin(angle), co = cos(angle);
+            float2 iq = float2(i * co - q * s, i * s + q * co);
+            return float3(y + 0.956 * iq.x + 0.621 * iq.y, y - 0.272 * iq.x - 0.647 * iq.y, y - 1.106 * iq.x + 1.703 * iq.y);
+        }
+
+        // 붓질이 놓이는 방향(부호 없는 단위 벡터, 화면 px 기준).
+        // 형태: 깊이 등고선을 따라간다. 머리카락이 머리를 감싸 돌듯 면을 돌아간다.
+        // 색: 구조 텐서의 접선. 평평한 색에서는 약해서, 그런 곳은 형태 쪽을 쓴다.
+        float2 StrokeTangent(float2 uv)
+        {
+            float2 step = _SourceSize.zw * _Style3.y * 2.0;
+            float depth = SceneEyeDepth(uv);
+            float gx = SceneEyeDepth(uv + float2(step.x, 0)) - SceneEyeDepth(uv - float2(step.x, 0));
+            float gy = SceneEyeDepth(uv + float2(0, step.y)) - SceneEyeDepth(uv - float2(0, step.y));
+            float2 g = float2(gx, gy) / max(depth, 1e-3);
+            float formStrength = saturate(length(g) * 400.0);
+            float2 alongForm = length(g) > 1e-7 ? normalize(float2(-g.y, g.x)) : float2(1, 0);
+
+            float4 orient = SAMPLE_TEXTURE2D_LOD(_OrientTex, sampler_LinearClamp, uv, 0);
+            float2 alongColour = TangentFromDoubleAngle(orient.xy);
+            float colourStrength = saturate(length(orient.xy));
+
+            float formWeight = _Strokes2.w * formStrength;
+            float colourWeight = (1.0 - _Strokes2.w) * colourStrength;
+            if (formWeight + colourWeight < 1e-3)
+                return formStrength > colourStrength ? alongForm : alongColour;
+            if (dot(alongForm, alongColour) < 0)
+                alongColour = -alongColour;
+            return normalize(alongForm * formWeight + alongColour * colourWeight);
+        }
+
+        float3 StrokeColour(float2 centreUv, float2 tangentUv, float2 id)
+        {
+            // 붓에 묻은 물감: 중심과 붓질 양쪽의 평균. 가는 선 하나가 붓질 전체를 물들이지 않게 한다.
+            float3 mid = SampleSource(centreUv);
+            float3 ahead = SampleSource(centreUv + tangentUv);
+            float3 behind = SampleSource(centreUv - tangentUv);
+            // 붓질 옆으로 반 붓 길이(화소로 돌려 직각을 맞춘다).
+            float2 tangentPx = tangentUv * _SourceSize.xy;
+            float2 normalUv = float2(-tangentPx.y, tangentPx.x) * _SourceSize.zw * 0.5;
+            float3 side = SampleSource(centreUv + normalUv);
+            float3 c = (mid * 2.0 + ahead + behind) * 0.25;
+            // 피부처럼 넓게 한 색인 곳: 붓질끼리 덜 달라서 한 면으로 녹아든다.
+            float variation = max(max(length(ahead - mid), length(behind - mid)), length(side - mid));
+            float vary = lerp(1.0 - _Strokes4.z, 1.0, saturate(variation * 8.0));
+            float4 h = StrokeHash(id + 37.1);
+            float boost = (h.w < _Strokes3.y ? _Strokes3.z : 1.0) * vary;
+            c *= 1.0 + (h.x * 2.0 - 1.0) * _Strokes2.x * boost;
+            c = HueTurn(c, (h.y * 2.0 - 1.0) * _Strokes2.y * boost);
+            float luma = Luminance(c);
+            c = lerp(luma.xxx, c, 1.0 + (h.z * 2.0 - 1.0) * _Strokes2.z * boost);
+            return saturate(c);
+        }
+
+        // 화면(1080p px)과 붓질 배치 공간(캐릭터 위 cm)을 오간다. 배치가 캐릭터를 따라 움직이고 커지고 돌아서,
+        // 붓질이 화면에 붙지 않고 캐릭터에 붙어 있다.
+        float2 ToStrokeSpace(float2 pixel)
+        {
+            float2 d = pixel - _StrokeAnchor.xy;
+            float2 axisUp = float2(-_StrokeAxis.y, _StrokeAxis.x);
+            return float2(dot(d, _StrokeAxis.xy), dot(d, axisUp)) * (100.0 / _StrokeAnchor.z);
+        }
+
+        float2 FromStrokeSpace(float2 q)
+        {
+            float2 axisUp = float2(-_StrokeAxis.y, _StrokeAxis.x);
+            return _StrokeAnchor.xy + (q.x * _StrokeAxis.xy + q.y * axisUp) * (_StrokeAnchor.z / 100.0);
+        }
+
+        float CharacterMask(float2 uv)
+        {
+            if (_Strokes4.x < 0.5)
+                return 1.0;
+            return SAMPLE_TEXTURE2D_LOD(_CharacterMaskTex, sampler_LinearClamp, uv, 0).r;
+        }
+
+        float4 FragStrokes(Varyings input) : SV_Target
+        {
+            float2 uv = input.texcoord;
+            float2 pixel = uv * _SourceSize.xy / _Style3.y;
+            float2 pixelToUv = _Style3.y * _SourceSize.zw;
+            float2 q = ToStrokeSpace(pixel);
+            float cmToPixel = _StrokeAnchor.z / 100.0;
+            float size = _Strokes.x;
+            float halfLength = size * _Strokes.y * 0.5;
+            float halfWidth = size * _Strokes.z * 0.5;
+            // 밖으로 나가는 붓질은 자기 방향으로 이만큼 늘어난다.
+            float stretch = max(_Strokes4.y, 1.0);
+            float reachSq = (halfLength * 1.4 * stretch) * (halfLength * 1.4 * stretch);
+            float depth = SceneEyeDepth(uv);
+            float3 under = SampleSource(uv);
+            bool inside = CharacterMask(uv) > 0.5;
+
+            float2 cell = floor(q / size);
+            float best = -1.0;
+            float3 colour = under;
+            [loop]
+            for (int y = -3; y <= 3; y++)
+            {
+                [loop]
+                for (int x = -3; x <= 3; x++)
+                {
+                    float2 id = cell + float2(x, y);
+                    float4 h = StrokeHash(id);
+                    if (h.w > _Strokes3.x)
+                        continue;
+                    float2 centre = (id + h.xy) * size;
+                    float2 d = q - centre;
+                    if (dot(d, d) > reachSq)
+                        continue;
+                    float priority = StrokeHash(id + 91.7).x;
+                    if (priority <= best)
+                        continue;
+                    float2 centreUv = FromStrokeSpace(centre) * pixelToUv;
+                    if (any(centreUv < 0.0) || any(centreUv > 1.0))
+                        continue;
+                    // 붓질은 캐릭터 위에서만 시작한다.
+                    if (CharacterMask(centreUv) < 0.5)
+                        continue;
+                    // 캐릭터 안에서는 다른 면(앞에 놓인 팔 등)에서 시작한 붓질이 넘어오지 않는다.
+                    if (inside && abs(SceneEyeDepth(centreUv) - depth) > depth * 0.05)
+                        continue;
+                    float2 t = StrokeTangent(centreUv);
+                    float2 tq = normalize(float2(dot(t, _StrokeAxis.xy), dot(t, float2(-_StrokeAxis.y, _StrokeAxis.x))));
+                    float2 n = float2(-tq.y, tq.x);
+                    float lengthScale = lerp(0.6, 1.4, h.z);
+                    float u = dot(d, tq) / (halfLength * lengthScale);
+                    float v = dot(d, n) / halfWidth;
+                    // 가장자리를 붓털 자국처럼 들쭉날쭉하게. 잡음도 캐릭터에 붙어 있어서 움직여도 끓지 않는다.
+                    float rough = (Noise(q * (24.0 / size) + id * 13.7, 2.5).r - 0.5) * _Strokes.w * 1.5;
+                    // 밖에서는 붓질 방향으로만 Spill 만큼 늘인 모양으로 잰다. 1 아래면 붓질 일부만 나간다.
+                    if (inside ? u * u + v * v > 1.0 + rough
+                               : (u / stretch) * (u / stretch) + v * v > min(_Strokes4.y, 1.0) * (1.0 + rough))
+                        continue;
+                    best = priority;
+                    colour = StrokeColour(centreUv, t * pixelToUv * halfLength * cmToPixel * 0.5, id);
+                }
+            }
+
+            // 눈, 꽃처럼 붓질과 확연히 다른 가는 자국은 비쳐 보이게 남긴다.
+            if (inside && _Strokes3.w > 0)
+            {
+                float threshold = lerp(1.0, 0.12, _Strokes3.w);
+                float differs = smoothstep(threshold, threshold + 0.08, abs(Luminance(under) - Luminance(colour)));
+                colour = lerp(colour, under, differs);
+            }
+            // 알파: 칠한 곳. 캐릭터 밖에서 붓질이 닿지 않은 곳은 합성에서 원래대로 둔다.
+            return float4(colour, inside || best >= 0.0 ? 1.0 : 0.0);
+        }
+
+        float4 FragCharacterMask(Varyings input) : SV_Target
+        {
+            return 1;
+        }
+
         // ---------- 7: 수채화 합성 ----------
 
         float3 SampleFiltered(float2 uv)
@@ -358,6 +540,11 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
         float3 ApplyDensity(float3 c, float d)
         {
             return c * (1.0 - (1.0 - c) * (d - 1.0));
+        }
+
+        float4 FragCopy(Varyings input) : SV_Target
+        {
+            return SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_PointClamp, input.texcoord, 0);
         }
 
         float4 FragComposite(Varyings input) : SV_Target
@@ -377,6 +564,8 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
             float2 warpA = Noise(pixel, 37.0).rg * 2.0 - 1.0;
             float2 warpB = Noise(pixel + 71.0, 13.0).ba * 2.0 - 1.0;
             float3 color = 0.5 * (SampleFiltered(uv + warpA * bleedPx) + SampleFiltered(uv + warpB * bleedPx * 0.5));
+            // 필터가 칠한 곳(Kuwahara 는 어디나 1, 붓질은 칠한 곳만 1).
+            float painted = SAMPLE_TEXTURE2D_LOD(_FilteredTex, sampler_LinearClamp, uv, 0).a;
 
             color = lerp(original, color, _Style.x);
             // 실루엣, 눈, 가는 가지를 읽을 수 있게 경계에서 원본을 조금 되살린다.
@@ -434,7 +623,7 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
             color = lerp(Luminance(color).xxx, color, 1.0 + _Style.z * 0.3 * saturationNoise);
             color *= 1.0 - _Style2.y * 0.06 * (1.0 - paper);
 
-            return float4(saturate(color), originalSample.a);
+            return float4(lerp(original, saturate(color), painted), originalSample.a);
         }
         ENDHLSL
 
@@ -500,6 +689,40 @@ Shader "Hidden/ThatGameJam/WatercolorKuwahara"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment FragComposite
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "Copy"
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragCopy
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "CompositeCharacters"
+            Stencil { Ref 128 ReadMask 128 Comp Equal }
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragComposite
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "Strokes"
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragStrokes
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "CharacterMask"
+            Stencil { Ref 128 ReadMask 128 Comp Equal }
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragCharacterMask
             ENDHLSL
         }
     }

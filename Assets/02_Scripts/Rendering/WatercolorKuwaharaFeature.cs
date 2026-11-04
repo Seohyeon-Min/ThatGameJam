@@ -125,6 +125,12 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
     const int PassAnisotropic8 = 5;
     const int PassAnisotropic4 = 6;
     const int PassComposite = 7;
+    // Characters Only: the picture copied as it is, then the composite over the characters' pixels (stencil bit 128) alone.
+    const int PassCopy = 8;
+    const int PassCompositeCharacters = 9;
+    const int PassStrokes = 10;
+    // Characters Only with strokes: the characters' pixels (stencil bit 128) as a texture, so strokes can start on them and reach past them.
+    const int PassCharacterMask = 11;
 
     // Upper bound on the half-width of the sample grid, so a large radius at full resolution cannot stall the GPU.
     const int MaxGridExtent = 16;
@@ -149,6 +155,13 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
     static readonly int StyleId = Shader.PropertyToID("_Style");
     static readonly int Style2Id = Shader.PropertyToID("_Style2");
     static readonly int Style3Id = Shader.PropertyToID("_Style3");
+    static readonly int StrokesId = Shader.PropertyToID("_Strokes");
+    static readonly int Strokes2Id = Shader.PropertyToID("_Strokes2");
+    static readonly int Strokes3Id = Shader.PropertyToID("_Strokes3");
+    static readonly int Strokes4Id = Shader.PropertyToID("_Strokes4");
+    static readonly int StrokeAnchorId = Shader.PropertyToID("_StrokeAnchor");
+    static readonly int StrokeAxisId = Shader.PropertyToID("_StrokeAxis");
+    static readonly int CharacterMaskTexId = Shader.PropertyToID("_CharacterMaskTex");
 
     // Property blocks are copied when the draw is recorded, so each draw keeps its own values even though
     // the material is shared by every camera.
@@ -156,7 +169,7 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
 
     struct ShaderParams
     {
-        public Vector4 workSize, sourceSize, kuwahara, kuwahara2, style, style2, style3;
+        public Vector4 workSize, sourceSize, kuwahara, kuwahara2, style, style2, style3, strokes, strokes2, strokes3, strokes4, strokeAnchor, strokeAxis;
         public Texture paper;
         public Texture noise;
     }
@@ -165,10 +178,13 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
     {
         public Material material;
         public int pass;
+        // Drawn first when set (>= 0): the copy under a characters-only composite.
+        public int firstPass;
         public ShaderParams p;
         public TextureHandle input;
         public TextureHandle orient;
         public TextureHandle filtered;
+        public TextureHandle mask;
     }
 
     readonly Material m_Material;
@@ -238,6 +254,13 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
         int workHeight = half ? (sourceHeight + 1) / 2 : sourceHeight;
 
         ShaderParams p = BuildParams(sourceWidth, sourceHeight, workWidth, workHeight, spacing, sectors);
+        bool strokes = m_Volume.filterMode.value == WatercolorFilterMode.Strokes;
+        // Characters Only needs the camera's stencil, read only. Without one it paints the whole picture.
+        bool charactersOnly = m_Volume.charactersOnly.value && resourceData.activeDepthTexture.IsValid();
+        // Strokes keep to the characters through a mask instead of the stencil, so they can reach past the outline.
+        bool strokeMask = strokes && charactersOnly;
+        p.strokes4.x = strokeMask ? 1f : 0f;
+        AnchorStrokes(ref p, cameraData.camera, sourceHeight);
 
         TextureHandle source = resourceData.activeColorTexture;
         TextureDesc sourceDesc = renderGraph.GetTextureDesc(source);
@@ -246,7 +269,8 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
         TextureHandle tensorRaw = renderGraph.CreateTexture(WorkDesc(workWidth, workHeight, GraphicsFormat.R16G16B16A16_SFloat, "_WatercolorTensor"));
         TextureHandle tensorBlur = renderGraph.CreateTexture(WorkDesc(workWidth, workHeight, GraphicsFormat.R16G16B16A16_SFloat, "_WatercolorTensorBlur"));
         TextureHandle orient = renderGraph.CreateTexture(WorkDesc(workWidth, workHeight, GraphicsFormat.R16G16B16A16_SFloat, "_WatercolorOrient"));
-        TextureHandle filtered = renderGraph.CreateTexture(WorkDesc(workWidth, workHeight, sourceDesc.format, "_WatercolorFiltered"));
+        // With alpha: the strokes say which pixels they painted, and the composite leaves the rest as they were.
+        TextureHandle filtered = renderGraph.CreateTexture(WorkDesc(workWidth, workHeight, strokes ? GraphicsFormat.R8G8B8A8_UNorm : sourceDesc.format, "_WatercolorFiltered"));
 
         var destinationDesc = sourceDesc;
         destinationDesc.name = "_WatercolorOutput";
@@ -255,6 +279,7 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
 
         bool useNormals = m_Settings.useNormalsForEdges && resourceData.cameraNormalsTexture.IsValid();
         int kuwaharaPass = m_Volume.filterMode.value == WatercolorFilterMode.Classic ? PassClassic
+            : m_Volume.filterMode.value == WatercolorFilterMode.Strokes ? PassStrokes
             : sectors == 4 ? PassAnisotropic4 : PassAnisotropic8;
 
         // Structure tensor and geometric edges, computed once and shared by the Kuwahara and composite passes.
@@ -274,25 +299,47 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
         AddSimplePass(renderGraph, BlurHSampler, PassBlurH, p, tensorRaw, tensorBlur);
         AddSimplePass(renderGraph, BlurVSampler, PassBlurV, p, tensorBlur, orient);
 
+        TextureHandle mask = TextureHandle.nullHandle;
+        if (strokeMask)
+        {
+            var maskDesc = WorkDesc(sourceWidth, sourceHeight, GraphicsFormat.R8_UNorm, "_WatercolorCharacterMask");
+            maskDesc.clearBuffer = true;
+            maskDesc.clearColor = Color.clear;
+            mask = renderGraph.CreateTexture(maskDesc);
+            using var builder = renderGraph.AddRasterRenderPass<PassData>(KuwaharaSampler.name + " Mask", out var data, KuwaharaSampler);
+            Fill(data, PassCharacterMask, p, source);
+            builder.UseTexture(source);
+            builder.SetRenderAttachment(mask, 0, AccessFlags.Write);
+            builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+            builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) => Draw(d, ctx.cmd));
+        }
+
         using (var builder = renderGraph.AddRasterRenderPass<PassData>(KuwaharaSampler.name, out var data, KuwaharaSampler))
         {
             Fill(data, kuwaharaPass, p, source);
             data.orient = orient;
+            data.mask = mask;
             builder.UseTexture(source);
             builder.UseTexture(orient);
+            if (strokeMask)
+                builder.UseTexture(mask);
             builder.SetRenderAttachment(filtered, 0, AccessFlags.WriteAll);
             builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) => Draw(d, ctx.cmd));
         }
 
         using (var builder = renderGraph.AddRasterRenderPass<PassData>(CompositeSampler.name, out var data, CompositeSampler))
         {
-            Fill(data, PassComposite, p, source);
+            bool stencilOnly = charactersOnly && !strokeMask;
+            Fill(data, stencilOnly ? PassCompositeCharacters : PassComposite, p, source);
+            data.firstPass = stencilOnly ? PassCopy : -1;
             data.orient = orient;
             data.filtered = filtered;
             builder.UseTexture(source);
             builder.UseTexture(orient);
             builder.UseTexture(filtered);
             builder.SetRenderAttachment(destination, 0, AccessFlags.WriteAll);
+            if (stencilOnly)
+                builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
             builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) => Draw(d, ctx.cmd));
         }
 
@@ -327,9 +374,44 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
             style = new Vector4(v.filterIntensity.value, v.colorSimplification.value, v.pigmentVariation.value, bleedPixels),
             style2 = new Vector4(v.edgeDarkening.value, v.paperTextureStrength.value, v.paperTextureScale.value, v.brushTextureStrength.value),
             style3 = new Vector4(paper != null ? 1f : 0f, sourceScale, 0f, 0f),
+            strokes = new Vector4(v.strokeSize.value, v.strokeLength.value, v.strokeWidth.value, v.strokeRoughness.value),
+            strokes2 = new Vector4(v.strokeValueJitter.value, v.strokeHueJitter.value * Mathf.Deg2Rad, v.strokeSaturationJitter.value, v.strokeFollowForm.value),
+            strokes3 = new Vector4(v.strokeCoverage.value, v.strongStrokeShare.value, v.strongStrokeBoost.value, v.strokeKeepDetail.value),
+            strokes4 = new Vector4(0f, v.strokeSpill.value, v.strokeSmoothFlat.value, 0f),
             paper = paper,
             noise = m_Noise,
         };
+    }
+
+    // Where the strokes' layout sits on the screen this frame (PaintStrokeAnchor), in pixels at 1080p: its point, how many pixels a
+    // metre there is, and which way its right points. Without one, the layout is fixed to the screen at 20 pixels a centimetre.
+    static void AnchorStrokes(ref ShaderParams p, Camera camera, int sourceHeight)
+    {
+        float sourceScale = sourceHeight / 1080f;
+        p.strokeAnchor = new Vector4(0f, 0f, 2000f, 0f);
+        p.strokeAxis = new Vector4(1f, 0f, 0f, 0f);
+        PaintStrokeAnchor anchor = PaintStrokeAnchor.Current;
+        if (anchor == null || camera == null)
+            return;
+        Transform follow = anchor.Follow;
+        Vector3 at = camera.WorldToViewportPoint(follow.position);
+        if (at.z <= camera.nearClipPlane)
+            return;
+        float height = sourceHeight / sourceScale;
+        float width = camera.pixelWidth > 0 ? height * camera.pixelWidth / camera.pixelHeight : height;
+        float pixelsPerMetre = camera.orthographic ? height / (2f * camera.orthographicSize)
+            : height / (2f * at.z * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad));
+        // The head's right as seen on the screen; its up, turned a quarter, when the right points at the camera.
+        Vector2 right = (Vector2)(camera.WorldToViewportPoint(follow.position + follow.right * 0.1f) - at);
+        Vector2 up = (Vector2)(camera.WorldToViewportPoint(follow.position + follow.up * 0.1f) - at);
+        right.x *= width; right.y *= height;
+        up.x *= width; up.y *= height;
+        Vector2 axis = right.sqrMagnitude >= up.sqrMagnitude ? right : new Vector2(up.y, -up.x);
+        if (axis.sqrMagnitude < 1e-8f)
+            return;
+        axis.Normalize();
+        p.strokeAnchor = new Vector4(at.x * width, at.y * height, pixelsPerMetre, 1f);
+        p.strokeAxis = new Vector4(axis.x, axis.y, 0f, 0f);
     }
 
     static TextureDesc WorkDesc(int width, int height, GraphicsFormat format, string name)
@@ -348,10 +430,12 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
     {
         data.material = m_Material;
         data.pass = pass;
+        data.firstPass = -1;
         data.p = p;
         data.input = input;
         data.orient = TextureHandle.nullHandle;
         data.filtered = TextureHandle.nullHandle;
+        data.mask = TextureHandle.nullHandle;
     }
 
     void AddSimplePass(RenderGraph renderGraph, ProfilingSampler sampler, int pass, in ShaderParams p, TextureHandle input, TextureHandle output)
@@ -373,6 +457,7 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
             props.SetTexture(OrientTexId, (Texture)d.orient);
         if (d.filtered.IsValid())
             props.SetTexture(FilteredTexId, (Texture)d.filtered);
+        props.SetTexture(CharacterMaskTexId, d.mask.IsValid() ? (Texture)d.mask : Texture2D.whiteTexture);
         props.SetTexture(PaperTexId, d.p.paper != null ? d.p.paper : Texture2D.grayTexture);
         props.SetTexture(NoiseTexId, d.p.noise);
         props.SetVector(WorkSizeId, d.p.workSize);
@@ -382,6 +467,14 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
         props.SetVector(StyleId, d.p.style);
         props.SetVector(Style2Id, d.p.style2);
         props.SetVector(Style3Id, d.p.style3);
+        props.SetVector(StrokesId, d.p.strokes);
+        props.SetVector(Strokes2Id, d.p.strokes2);
+        props.SetVector(Strokes3Id, d.p.strokes3);
+        props.SetVector(Strokes4Id, d.p.strokes4);
+        props.SetVector(StrokeAnchorId, d.p.strokeAnchor);
+        props.SetVector(StrokeAxisId, d.p.strokeAxis);
+        if (d.firstPass >= 0)
+            cmd.DrawProcedural(Matrix4x4.identity, d.material, d.firstPass, MeshTopology.Triangles, 3, 1, props);
         cmd.DrawProcedural(Matrix4x4.identity, d.material, d.pass, MeshTopology.Triangles, 3, 1, props);
     }
 }
