@@ -180,6 +180,7 @@ public class Baby : CryListener
         gettingUp = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
+        animator.speed = 1f;
         // Already lying: no lying-down animation after the move. Under the snow in the intro, until it is shaken off.
         animator.Play(InIntro && !snowShaken ? IntroSleepState : SleepState, 0, 0f);
         CurrentBlocker = null;
@@ -211,6 +212,8 @@ public class Baby : CryListener
     IEnumerator LieDown()
     {
         State = BabyState.Resting;
+        // Timed by the clip's length below: at its normal rate.
+        animator.speed = 1f;
         // One frame standing, so the animator goes through its lying-down transition.
         yield return null;
         animator.SetBool(WalkingParam, false);
@@ -232,6 +235,8 @@ public class Baby : CryListener
         this.route = route;
         CurrentBlocker = null;
         State = BabyState.Sleeping;
+        // The GetUp that follows is timed by its clip's length: at its normal rate.
+        animator.speed = 1f;
         animator.SetBool(WalkingParam, false);
         animator.SetBool(LookAroundParam, false);
         animator.SetBool(QuietWaitParam, false);
@@ -318,6 +323,12 @@ public class Baby : CryListener
             {
                 jumpNextSegment = false;
                 yield return JumpTo(route[i].position);
+                // Down off the far end of a log (not onto one): she stands a moment on the ground before walking on.
+                if (!onBalanceBeam && tuning.babyLandPause > 0f)
+                {
+                    animator.CrossFade(IdleState, 0.2f);
+                    yield return new WaitForSeconds(tuning.babyLandPause);
+                }
                 animator.CrossFade(onBalanceBeam ? BalanceWalkState : WalkState, 0.25f);
             }
             else
@@ -477,9 +488,9 @@ public class Baby : CryListener
         transform.position = target;
     }
 
-    // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog trail).
-    // Heading wanders a little and pace breathes a little around babyWalkSpeed, purely cosmetic: transform.position still
-    // closes in on the exact target, so arrival (and anything retracing this path, e.g. the fog trail) is unaffected.
+    // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog maze).
+    // Heading wanders a little and pace breathes a little around babyWalkSpeed (babyBalanceWalkSpeed on a log), and the walk
+    // clip plays at a matching rate: transform.position still closes in on the exact target, so arrival is unaffected.
     public bool StepToward(Vector3 target)
     {
         animator.SetBool(QuietWaitParam, false);
@@ -489,12 +500,21 @@ public class Baby : CryListener
         float wanderYaw = Noise(31f, tuning.babyWanderFrequency) * 2f * tuning.babyWanderAngle;
         TurnToward(Quaternion.Euler(0f, wanderYaw, 0f) * toTarget);
         float speedFactor = 1f + Noise(0f, tuning.babySpeedVariationFrequency) * 2f * tuning.babySpeedVariationAmount;
-        transform.position = Vector3.MoveTowards(transform.position, target, tuning.babyWalkSpeed * speedFactor * Time.deltaTime);
+        // Slower and careful along a log.
+        float speed = (onBalanceBeam ? tuning.babyBalanceWalkSpeed : tuning.babyWalkSpeed) * speedFactor;
+        // The walk clip keeps pace with the movement (StandStill and the other states put it back to 1).
+        float clipSpeed = onBalanceBeam ? tuning.babyBalanceClipSpeed : tuning.babyWalkClipSpeed;
+        animator.speed = Mathf.Clamp(speed / Mathf.Max(clipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
+        transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
         return transform.position == target;
     }
 
     // Standing still while a blocker leads the baby.
-    public void StandStill() => animator.SetBool(WalkingParam, false);
+    public void StandStill()
+    {
+        animator.SetBool(WalkingParam, false);
+        animator.speed = 1f;
+    }
 
     // Stands and turns toward the bird. The model has no look-up animation yet.
     IEnumerator LookUp(float duration)

@@ -44,6 +44,19 @@ public class GameTuning : ScriptableObject
     // Stepping onto/off a balance beam (JumpTo): extra height added at the arc's midpoint, on top of the
     // straight start-to-target rise, so the hop reads as a hop and not a diagonal slide up a ramp.
     public float babyJumpArcHeight = 0.25f;
+    // Crossing a log (BalanceWalk): slower and careful than on the ground (m/s).
+    public float babyBalanceWalkSpeed = 0.45f;
+    // Seconds she stands after hopping down off the far end of a log, before she walks on.
+    public float babyLandPause = 0.8f;
+    // Walk and BalanceWalk play faster or slower with how fast she is actually moving, so her steps keep up with the ground.
+    // Each value is the speed (m/s) at which that clip plays at its normal rate. The art notes (README_Animations_KO.md) give the
+    // speeds at which the feet do not slide: Walk about 0.1 m/s, BalanceWalk about 0.05 m/s at model scale 1, twice that on Main's
+    // scale-2 baby. These defaults keep both clips at about their normal rate, as before; lower them toward those to cut the sliding.
+    public float babyWalkClipSpeed = 0.9f;
+    public float babyBalanceClipSpeed = 0.45f;
+    // Limits on that playback rate, so a big mismatch never turns the legs into a blur or a crawl.
+    public float babyClipRateMin = 0.5f;
+    public float babyClipRateMax = 2.5f;
     // Cold shiver: small additive tremor on the model while awake (design doc: winter, following the bird).
     // 2.5deg/9Hz on both axes at once read as the whole body buzzing, not a cold shiver; toned down.
     public float babyShiverAngle = 0.8f;
