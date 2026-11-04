@@ -343,6 +343,12 @@ public class BirdController : MonoBehaviour
     {
         if (control == Control.Scripted)
             return;
+        // The encyclopedia is open: the game is paused and the mouse belongs to the page.
+        if (Encyclopedia.IsOpen)
+        {
+            ShowPerchCursor(false);
+            return;
+        }
         if (control == Control.Sky)
         {
             FlyInSky();

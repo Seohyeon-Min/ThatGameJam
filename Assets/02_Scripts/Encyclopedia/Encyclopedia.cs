@@ -106,7 +106,8 @@ public class Encyclopedia : MonoBehaviour
     void Update()
     {
         Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.backquoteKey.wasPressedThisFrame)
+        // It does not open during the intro or a cutscene.
+        if (keyboard != null && keyboard.backquoteKey.wasPressedThisFrame && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
             SetOpen(!IsOpen);
 
         float target = IsOpen ? 1f : 0f;

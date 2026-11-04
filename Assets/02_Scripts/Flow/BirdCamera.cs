@@ -114,7 +114,7 @@ public class BirdCamera : MonoBehaviour
     void LateUpdate()
     {
         GameTuning tuning = GameTuning.Current;
-        float scroll = scrollAction.ReadValue<Vector2>().y;
+        float scroll = Encyclopedia.IsOpen ? 0f : scrollAction.ReadValue<Vector2>().y;
         float next = Mathf.Clamp(targetZoom - Mathf.Sign(scroll) * tuning.cameraZoomStep, tuning.cameraZoomMin, tuning.cameraZoomMax);
         if (scroll != 0f && next != targetZoom)
         {

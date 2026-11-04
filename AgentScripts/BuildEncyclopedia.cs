@@ -10,6 +10,7 @@ using UnityEngine.UI;
 // Builds the encyclopedia: one EncyclopediaEntry asset (its name) per interaction in Assets/04_Data/Encyclopedia/, the blur Volume profile,
 // and Assets/03_Prefabs/UI/Encyclopedia.prefab (page, cards, discovery popup). Existing assets are updated in place.
 // If Sam_model_test is the open scene, also puts the prefab and a test rabbit (click it to find the next entry) in it and saves it.
+// If Main is the open scene, puts only the prefab under 01_SYSTEM and saves it.
 // Run after BuildSamModelTest, which rebuilds that scene without them:
 // unity command script run --file AgentScripts/BuildEncyclopedia.cs --entry BuildEncyclopedia.Run
 public static class BuildEncyclopedia
@@ -18,6 +19,7 @@ public static class BuildEncyclopedia
     const string BlurProfilePath = "Assets/04_Data/EncyclopediaBlur.asset";
     const string PrefabPath = "Assets/03_Prefabs/UI/Encyclopedia.prefab";
     const string ModelTestScene = "Assets/00_Scenes/Sam_model_test.unity";
+    const string MainScene = "Assets/00_Scenes/Main.unity";
     const string RabbitModelPath = "Assets/01_Arts/Models/Rabbits/Rabbit-Animated.fbx";
     const string RabbitControllerPath = "Assets/01_Arts/Models/Rabbits/Rabbit.controller";
     static readonly Vector3 RabbitPosition = new Vector3(2.5f, 0f, -2.5f);
@@ -54,10 +56,13 @@ public static class BuildEncyclopedia
         AssetDatabase.SaveAssets();
 
         Scene scene = SceneManager.GetActiveScene();
-        if (scene.path != ModelTestScene)
-            return "built " + PrefabPath + "; open " + ModelTestScene + " and run again to place it there";
-        PlaceInModelTest(scene, prefab);
-        return EditorSceneManager.SaveScene(scene) ? "built " + PrefabPath + " and saved " + ModelTestScene : "FAILED to save " + ModelTestScene;
+        if (scene.path == ModelTestScene)
+            PlaceInModelTest(scene, prefab);
+        else if (scene.path == MainScene)
+            PlaceInMain(scene, prefab);
+        else
+            return "built " + PrefabPath + "; open " + ModelTestScene + " or " + MainScene + " and run again to place it there";
+        return EditorSceneManager.SaveScene(scene) ? "built " + PrefabPath + " and saved " + scene.path : "FAILED to save " + scene.path;
     }
 
     // Entry assets in the folder that are no longer in the list above.
@@ -136,7 +141,8 @@ public static class BuildEncyclopedia
             canvasObject.transform.SetParent(root.transform, false);
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 100;
+            // Above Main's intro canvas (title, white fade), which is at 100.
+            canvas.sortingOrder = 110;
             var scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
@@ -225,6 +231,16 @@ public static class BuildEncyclopedia
             so.FindProperty("title").objectReferenceValue = title;
         });
         return popup;
+    }
+
+    // Under 01_SYSTEM. No test rabbit: Main gets only the encyclopedia until the easter eggs exist.
+    static void PlaceInMain(Scene scene, GameObject prefab)
+    {
+        Transform system = scene.GetRootGameObjects().First(g => g.name == "01_SYSTEM").transform;
+        Transform old = system.Find("Encyclopedia");
+        if (old != null)
+            Object.DestroyImmediate(old.gameObject);
+        PrefabUtility.InstantiatePrefab(prefab, system);
     }
 
     static void PlaceInModelTest(Scene scene, GameObject prefab)
