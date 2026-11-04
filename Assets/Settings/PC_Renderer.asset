@@ -1,5 +1,21 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6909916961520376234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 014dfd54d56d2c142be5675160d2265a, type: 3}
+  m_Name: OcclusionFade
+  m_EditorClassIdentifier: Assembly-CSharp::OcclusionFadeFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 2695ffe4b13c62a4aaf167c1d81cdfca, type: 3}
+  fadeRadius: 2
+  fadeSoftness: 1.5
 --- !u!114 &-4074364379582627839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -73,7 +89,8 @@ MonoBehaviour:
   - {fileID: 1706596297977497664}
   - {fileID: -4074364379582627839}
   - {fileID: 2830710763801503158}
-  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b44827
+  - {fileID: -6909916961520376234}
+  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b4482756a62141220b1ba0
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

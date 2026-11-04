@@ -470,21 +470,29 @@ Shader "ThatGameJam/WatercolorFlat"
             #endif
         }
 
-        // Closest distance from positionWS to the segment between the camera and targetWS: the part of a tree
-        // that actually stands in the view between the camera and the bird/baby, not off to the side or past it.
-        half DistanceToViewAxis(float3 positionWS, float3 targetWS)
+        // How visible this point stays for one target (0 = gone, 1 = as it is): a soft round window on the screen around where the
+        // bird or the baby is seen, _CameraFadeDistance wide at their depth and easing back over _CameraFadeRange, through
+        // whatever stands closer to the camera than they do. Things beside or behind them are left alone.
+        half OcclusionVisible(float3 positionWS, float4 targetWS)
         {
-            float3 cameraWS = GetCameraPositionWS();
-            float3 axis = targetWS - cameraWS;
-            float t = saturate(dot(positionWS - cameraWS, axis) / max(dot(axis, axis), 1e-6));
-            return distance(positionWS, cameraWS + axis * t);
+            if (targetWS.w < 0.5)
+                return 1.0;
+            float4 target = TransformWorldToHClip(targetWS.xyz);
+            float4 here = TransformWorldToHClip(positionWS);
+            // Only in front of the target, with a little room so the branch it stands in doesn't thin out.
+            if (target.w <= 0.0 || here.w > target.w - 0.3)
+                return 1.0;
+            float2 pixels = (here.xy / here.w - target.xy / target.w) * 0.5 * _ScreenParams.xy;
+            float pixelsPerMetre = 0.5 * _ScreenParams.y * abs(UNITY_MATRIX_P[1][1]) / (unity_OrthoParams.w > 0.5 ? 1.0 : target.w);
+            float metres = length(pixels) / max(pixelsPerMetre, 1e-4);
+            return saturate((metres - _CameraFadeDistance) / max(_CameraFadeRange, 1e-4));
         }
 
-        // Thins out to speckles, instead of turning glassy, wherever it sits within _CameraFadeDistance of the
-        // line from the camera to the bird or the baby (eased back to fully visible over _CameraFadeRange
-        // beyond that) — a tree blocking the view of either, not just one that is close to the camera itself.
-        // Stays in the opaque queue (Blend/ZWrite untouched), so depth, shadows and SSAO from other passes are
-        // unaffected. Off by default; only materials with _CameraFade on (the trees) pay for it.
+        // Thins out wherever it stands in front of the bird or the baby, inside OcclusionVisible's round window — a tree blocking
+        // the view of either. Pixels drop out in an even 4x4 pattern rather than at random; OcclusionFadeFeature then softens the
+        // window, so the tree reads as smoothly see-through instead of speckled. Stays in the opaque queue (Blend/ZWrite untouched),
+        // so depth, shadows and SSAO from other passes are unaffected. Off by default; only materials with _CameraFade on (the trees)
+        // pay for it.
         void CameraFadeClip(float3 positionWS, float2 screenPos)
         {
             if (_CameraFade < 0.5)
@@ -496,16 +504,14 @@ Shader "ThatGameJam/WatercolorFlat"
             // so that specific tree/branch never fades, whatever else around it does.
             if (_CameraFadeExempt > 0.5)
                 return;
-            half d = 1e8;
-            if (_WC_OcclusionTarget0.w > 0.5)
-                d = min(d, DistanceToViewAxis(positionWS, _WC_OcclusionTarget0.xyz));
-            if (_WC_OcclusionTarget1.w > 0.5)
-                d = min(d, DistanceToViewAxis(positionWS, _WC_OcclusionTarget1.xyz));
-            half visible = saturate((d - _CameraFadeDistance) / max(_CameraFadeRange, 1e-4));
+            half visible = min(OcclusionVisible(positionWS, _WC_OcclusionTarget0), OcclusionVisible(positionWS, _WC_OcclusionTarget1));
             if (visible >= 1.0)
                 return;
-            half noise = frac(sin(dot(screenPos, float2(12.9898, 78.233))) * 43758.5453);
-            clip(visible - noise);
+            // 4x4 Bayer: sixteen even steps.
+            uint2 p = (uint2)screenPos & 3u;
+            uint index = p.x + p.y * 4u;
+            const float bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+            clip(visible - (bayer[index] + 0.5) / 16.0);
         }
         ENDHLSL
 

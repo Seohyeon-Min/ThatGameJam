@@ -80,8 +80,24 @@ public static class SeasonWipe
     // Drawn again over the photo. Set by Capture.
     public static Renderer[] Live = { };
 
+    // The ring has started since the photo was taken.
+    static bool ringSeen;
+    public static bool RingSeen => ringSeen;
+
     public static bool RingPlaying => Shader.GetGlobalVector(SpringRingId).w > 0f;
-    public static bool Busy => CaptureCamera != null || (Captured && RingPlaying);
+
+    // From the photo until the ring has run. The ring starts a frame or two after the season changes: until then the photo covers
+    // the whole picture, so the new season (its look, what HiddenUntilSeason and the trees bring out) never shows for a frame
+    // before the ring does.
+    public static bool Busy
+    {
+        get
+        {
+            if (Captured && RingPlaying)
+                ringSeen = true;
+            return CaptureCamera != null || (Captured && (RingPlaying || !ringSeen));
+        }
+    }
 
     // Renders the background now, in the current look, with these renderers hidden. False if no photo came, which means the
     // renderer has no SeasonWipeFeature.
@@ -120,6 +136,7 @@ public static class SeasonWipe
         Photo?.Release();
         Photo = null;
         Captured = false;
+        ringSeen = false;
         Live = System.Array.Empty<Renderer>();
     }
 }

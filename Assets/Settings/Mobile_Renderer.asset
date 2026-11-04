@@ -137,6 +137,22 @@ MonoBehaviour:
     sectorCount: 8
     useNormalsForEdges: 0
   shader: {fileID: 4800000, guid: 5f4f671a3b6ed0140945615d50c61155, type: 3}
+--- !u!114 &-2189873071619459965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 014dfd54d56d2c142be5675160d2265a, type: 3}
+  m_Name: OcclusionFade
+  m_EditorClassIdentifier: Assembly-CSharp::OcclusionFadeFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 2695ffe4b13c62a4aaf167c1d81cdfca, type: 3}
+  fadeRadius: 2
+  fadeSoftness: 1.5
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -167,7 +183,8 @@ MonoBehaviour:
   - {fileID: -3881289934963426081}
   - {fileID: -3422908632515747798}
   - {fileID: -8869442305284128853}
-  m_RendererFeatureMap: 05838fea6e4001dda910d060a3c917dadfbc343c5ee322ca2ae047ecbb627fd0abbfb7353769e984
+  - {fileID: -2189873071619459965}
+  m_RendererFeatureMap: 05838fea6e4001dda910d060a3c917dadfbc343c5ee322ca2ae047ecbb627fd0abbfb7353769e98483b4ed360b029ce1
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

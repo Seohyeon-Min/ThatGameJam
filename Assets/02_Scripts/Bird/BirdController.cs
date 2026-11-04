@@ -569,6 +569,15 @@ public class BirdController : MonoBehaviour
             return;
         }
 
+        // Sitting (or about to) and sent past where the way is still closed again: it doesn't set off just to refuse again at the line,
+        // it stays and shakes its head once more, however often the player clicks there.
+        if (hit.point.z > bounds.max.z && state is State.Perched or State.Landing or State.ToPerch)
+        {
+            following = false;
+            ShakeHead();
+            return;
+        }
+
         if (state != State.Walking)
             LeavePerch();
         // The target itself is not clamped: the bird presses against the edge of its area,
@@ -757,6 +766,15 @@ public class BirdController : MonoBehaviour
     }
 
     // Heading past the far end of its area, it has reached the line where the way is closed (ADR 0016).
+    // Shakes its head where it sits: now if it has landed, or as soon as it does. Clicks during a shake queue one more, not many.
+    void ShakeHead()
+    {
+        if (state == State.Perched)
+            animator.SetTrigger(RefuseParam);
+        else
+            refusePending = true;
+    }
+
     void RefuseAtClosedWay(Vector3 flat)
     {
         if (target.z > bounds.max.z && flat.z >= bounds.max.z - 0.01f)

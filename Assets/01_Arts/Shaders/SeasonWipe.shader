@@ -2,6 +2,8 @@
 // the opaque scene once, in the old look (_BlitTexture), then draws this before the transparents each frame while the ring plays:
 // the live picture underneath is already in the new look. Snow, wisps and the ring are transparents, so they stay live on top.
 // The camera may move: each pixel finds its point on the ground, then where that point was in the photo (_SeasonWipeVP).
+// The ring's edge is a circle on the screen, around where the ring's centre is seen and as wide as the ring looks at that depth,
+// so everything inside it changes at once whatever its height: a treetop no longer waits for the ground far behind it.
 Shader "Hidden/ThatGameJam/SeasonWipe"
 {
     SubShader
@@ -40,10 +42,17 @@ Shader "Hidden/ThatGameJam/SeasonWipe"
                 if (any(photoUV < 0.0) || any(photoUV > 1.0))
                     return 0;
 
-                // Outside the ring only, with a lumpy edge rather than a clean circle.
-                float2 lumpAt = ground.xz / max(_SeasonWipe.z, 1e-3);
+                // Outside the ring only, on the screen: the centre where it's seen, and how many pixels a metre is there.
+                float2 screen = _ScaledScreenParams.xy;
+                float2 centre = ComputeNormalizedDeviceCoordinates(_SpringRing.xyz, UNITY_MATRIX_VP);
+                float2 metreAway = ComputeNormalizedDeviceCoordinates(_SpringRing.xyz + UNITY_MATRIX_V[0].xyz, UNITY_MATRIX_VP);
+                float pixelsPerMetre = max(length((metreAway - centre) * screen), 1e-3);
+                // The rest in metres at the ring's depth, so the edge and its lumps keep their sizes.
+                float2 offset = (uv - centre) * screen / pixelsPerMetre;
+                // A lumpy edge rather than a clean circle.
+                float2 lumpAt = offset / max(_SeasonWipe.z, 1e-3);
                 float lumps = SunPoolNoise(lumpAt) * 0.6 + SunPoolNoise(lumpAt * 2.3 + 5.1) * 0.4;
-                float fromEdge = length(ground.xz - _SpringRing.xz) - _SpringRing.w + (lumps - 0.5) * _SeasonWipe.y;
+                float fromEdge = length(offset) - _SpringRing.w + (lumps - 0.5) * _SeasonWipe.y;
                 half outside = smoothstep(-_SeasonWipe.x, _SeasonWipe.x, fromEdge);
                 half fade = 1.0 - smoothstep(_SeasonWipeFade.x, _SeasonWipeFade.y, _SpringRing.w);
 

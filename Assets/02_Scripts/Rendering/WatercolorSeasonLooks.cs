@@ -9,8 +9,8 @@ using UnityEngine.Rendering;
 // A look's Volume Profile crossfades over Blend Seconds on the whole screen, since post-processing comes after the ring's mask.
 public class WatercolorSeasonLooks : MonoBehaviour
 {
-    // The ring starts within this many frames of the season's change, so before then "no ring" doesn't mean it ended.
-    const int RingStartFrames = 2;
+    // If no ring has started this many frames after the season's change, none is coming: the photo is let go.
+    const int RingStartFrames = 60;
 
     [Tooltip("One look per season level, starting at level 0. Leave a slot empty to keep the look from before.")]
     [SerializeField] WatercolorLook[] looks = { };
@@ -132,7 +132,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
         UpdateVolumeFade();
 
         // The ring has ended (or never came): free the photo, so a ring played later doesn't show it again.
-        if (wipeCheckFrom > 0 && Time.frameCount >= wipeCheckFrom && !SeasonWipe.RingPlaying)
+        if (wipeCheckFrom > 0 && !SeasonWipe.RingPlaying && (SeasonWipe.RingSeen || Time.frameCount >= wipeCheckFrom))
         {
             SeasonWipe.Release();
             wipeCheckFrom = 0;
