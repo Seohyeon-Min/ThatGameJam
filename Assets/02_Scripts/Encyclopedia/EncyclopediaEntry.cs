@@ -5,5 +5,4 @@ using UnityEngine;
 public class EncyclopediaEntry : ScriptableObject
 {
     public string title;
-    [TextArea] public string description;
 }

@@ -7,7 +7,7 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Builds the encyclopedia: one EncyclopediaEntry asset per interaction in Assets/04_Data/Encyclopedia/, the blur Volume profile,
+// Builds the encyclopedia: one EncyclopediaEntry asset (its name) per interaction in Assets/04_Data/Encyclopedia/, the blur Volume profile,
 // and Assets/03_Prefabs/UI/Encyclopedia.prefab (page, cards, discovery popup). Existing assets are updated in place.
 // If Sam_model_test is the open scene, also puts the prefab and a test rabbit (click it to find the next entry) in it and saves it.
 // Run after BuildSamModelTest, which rebuilds that scene without them:
@@ -24,29 +24,31 @@ public static class BuildEncyclopedia
     const float RabbitYaw = 135f;
 
     // The director's list (order_from_director.md), in its order.
-    static readonly (string file, string title, string description)[] Entries =
+    static readonly (string file, string title)[] Entries =
     {
-        ("01_IcicleXylophone", "Icicle Xylophone", "Peck the icicles on a tree and they ring as they fall. Peck them in order to play the main melody."),
-        ("02_HollowSquirrel", "Squirrel in the Hollow", "Cry near a tree hollow and a squirrel peeks out, then hides again."),
-        ("03_FrozenRiver", "Frozen River and Trout", "Peck the frozen river until the ice cracks. Wait, and a trout appears."),
-        ("04_MigratingBirds", "Migrating Birds", "Far away, migrating birds fly in, their shadows sliding over the ground."),
-        ("05_SnowFlower", "Flower in the Snow", "Peck the snow to find a flower blooming underneath."),
-        ("06_Swallowtail", "Swallowtail Butterfly", "Once the snow has melted, click a flower and a swallowtail flies to it."),
-        ("07_CornelianCherry", "Cornelian Cherries", "Eat the cornelian cherries in the bush and the bird puffs up its chest."),
-        ("08_PuddleReflection", "Puddle Reflection", "Pass over a meltwater puddle and something other than yourself looks back."),
-        ("09_SnowOnTheBird", "Snow on the Bird", "Keep still and snow piles up on the bird. Move to shake it off and fly."),
-        ("10_StumpLadybug", "Ladybug in the Stump", "Peck the stump of the fallen tree and a ladybug crawls out."),
-        ("11_CliffEcho", "Cliff Echo", "Cry at the edge of the cliff and hear your echo."),
-        ("12_SnowWhirl", "Snow Whirl", "Circle round and round over the snow to stir up a whirl."),
-        ("13_FeatherForTheBaby", "Feather for the Baby", "Turn sharply near the baby. A feather falls, and she reaches for it."),
+        ("01_IcicleXylophone", "Icicle Xylophone"),
+        ("02_HollowSquirrel", "Squirrel in the Hollow"),
+        ("03_FrozenRiver", "Frozen River and Trout"),
+        ("04_MigratingBirds", "Migrating Birds"),
+        ("05_SnowFlower", "Flower in the Snow"),
+        ("06_Swallowtail", "Swallowtail Butterfly"),
+        ("07_CornelianCherry", "Cornelian Cherries"),
+        ("08_PuddleReflection", "Puddle Reflection"),
+        ("09_StumpLadybug", "Ladybug in the Stump"),
+        ("10_CliffEcho", "Cliff Echo"),
+        ("11_SnowWhirl", "Snow Whirl"),
     };
+
+    const float CardWidth = 394f;
+    const float LabelHeight = 48f;
 
     static Font font;
 
     public static string Run()
     {
         font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        EncyclopediaEntry[] entries = Entries.Select(e => Entry(e.file, e.title, e.description)).ToArray();
+        DeleteDroppedEntries();
+        EncyclopediaEntry[] entries = Entries.Select(e => Entry(e.file, e.title)).ToArray();
         VolumeProfile blurProfile = BlurProfile();
         GameObject prefab = BuildPrefab(entries, blurProfile);
         AssetDatabase.SaveAssets();
@@ -58,7 +60,20 @@ public static class BuildEncyclopedia
         return EditorSceneManager.SaveScene(scene) ? "built " + PrefabPath + " and saved " + ModelTestScene : "FAILED to save " + ModelTestScene;
     }
 
-    static EncyclopediaEntry Entry(string file, string title, string description)
+    // Entry assets in the folder that are no longer in the list above.
+    static void DeleteDroppedEntries()
+    {
+        if (!AssetDatabase.IsValidFolder(EntryFolder))
+            return;
+        foreach (string guid in AssetDatabase.FindAssets("t:EncyclopediaEntry", new[] { EntryFolder }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!Entries.Any(e => path == EntryFolder + "/" + e.file + ".asset"))
+                AssetDatabase.DeleteAsset(path);
+        }
+    }
+
+    static EncyclopediaEntry Entry(string file, string title)
     {
         string path = EntryFolder + "/" + file + ".asset";
         var entry = AssetDatabase.LoadAssetAtPath<EncyclopediaEntry>(path);
@@ -70,7 +85,6 @@ public static class BuildEncyclopedia
             AssetDatabase.CreateAsset(entry, path);
         }
         entry.title = title;
-        entry.description = description;
         EditorUtility.SetDirty(entry);
         return entry;
     }
@@ -112,6 +126,12 @@ public static class BuildEncyclopedia
             blur.weight = 0f;
             blur.sharedProfile = blurProfile;
 
+            var photoObject = new GameObject("PhotoCamera");
+            photoObject.transform.SetParent(root.transform, false);
+            var photoCamera = photoObject.AddComponent<Camera>();
+            photoCamera.enabled = false;
+            photoObject.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
+
             var canvasObject = new GameObject("Canvas", typeof(RectTransform));
             canvasObject.transform.SetParent(root.transform, false);
             var canvas = canvasObject.AddComponent<Canvas>();
@@ -125,17 +145,13 @@ public static class BuildEncyclopedia
 
             RectTransform page = Rect("Page", canvasObject.transform, Vector2.zero, Vector2.one, new Vector2(96f, 54f), new Vector2(-96f, -54f));
             AddImage(page, new Color(0.08f, 0.1f, 0.14f, 0.88f));
-            Label("Header", page, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(60f, -110f), new Vector2(-60f, -30f), "Encyclopedia", 56, FontStyle.Bold, TextAnchor.MiddleLeft);
-            Text counter = Label("Counter", page, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(60f, -110f), new Vector2(-60f, -30f), "0 / 0", 36, FontStyle.Normal, TextAnchor.MiddleRight);
-            Label("Hint", page, Vector2.zero, new Vector2(1f, 0f), new Vector2(60f, 20f), new Vector2(-60f, 70f), "Press ` to close", 24, FontStyle.Italic, TextAnchor.MiddleCenter);
-
-            RectTransform grid = Rect("Grid", page, Vector2.zero, Vector2.one, new Vector2(40f, 90f), new Vector2(-40f, -130f));
+            RectTransform grid = Rect("Grid", page, Vector2.zero, Vector2.one, new Vector2(40f, 40f), new Vector2(-40f, -40f));
             var layout = grid.gameObject.AddComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(310f, 230f);
+            layout.cellSize = new Vector2(CardWidth, LabelHeight + CardWidth * 9f / 16f);
             layout.spacing = new Vector2(24f, 24f);
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 5;
-            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.constraintCount = 4;
+            layout.childAlignment = TextAnchor.MiddleCenter;
             EncyclopediaCard[] cards = entries.Select((_, i) => Card(grid, i)).ToArray();
 
             DiscoveryPopup popup = Popup(canvasObject.transform);
@@ -147,8 +163,8 @@ public static class BuildEncyclopedia
                 Objects(so.FindProperty("cards"), cards);
                 so.FindProperty("popup").objectReferenceValue = popup;
                 so.FindProperty("page").objectReferenceValue = page;
-                so.FindProperty("counter").objectReferenceValue = counter;
                 so.FindProperty("blur").objectReferenceValue = blur;
+                so.FindProperty("photoCamera").objectReferenceValue = photoCamera;
             });
             page.gameObject.SetActive(false);
 
@@ -162,27 +178,26 @@ public static class BuildEncyclopedia
         }
     }
 
+    // Number and name on one line, the 16:9 photo below.
     static EncyclopediaCard Card(Transform grid, int index)
     {
         RectTransform rect = Rect($"Card_{index + 1:00}", grid, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-        Image background = AddImage(rect, Color.gray);
-        Text number = Label("Number", rect, new Vector2(0f, 1f), Vector2.one, new Vector2(18f, -46f), new Vector2(-18f, -12f), $"No. {index + 1:00}", 22, FontStyle.Normal, TextAnchor.MiddleLeft);
-        number.color = new Color(1f, 1f, 1f, 0.6f);
-        Text title = Label("Title", rect, new Vector2(0f, 1f), Vector2.one, new Vector2(18f, -90f), new Vector2(-18f, -44f), "???", 28, FontStyle.Bold, TextAnchor.MiddleLeft);
-        title.resizeTextForBestFit = true;
-        title.resizeTextMinSize = 18;
-        title.resizeTextMaxSize = 28;
-        Text description = Label("Description", rect, Vector2.zero, Vector2.one, new Vector2(18f, 12f), new Vector2(-18f, -96f), "", 22, FontStyle.Normal, TextAnchor.UpperLeft);
-        description.resizeTextForBestFit = true;
-        description.resizeTextMinSize = 16;
-        description.resizeTextMaxSize = 22;
+        AddImage(rect, new Color(0.17f, 0.19f, 0.23f, 1f));
+        Text label = Label("Label", rect, new Vector2(0f, 1f), Vector2.one, new Vector2(14f, -LabelHeight), new Vector2(-14f, 0f), $"No. {index + 1:00}  ???", 28, FontStyle.Bold, TextAnchor.MiddleLeft);
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 16;
+        label.resizeTextMaxSize = 28;
+        RectTransform frame = Rect("PhotoFrame", rect, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(0f, -LabelHeight));
+        AddImage(frame, new Color(0.1f, 0.11f, 0.14f, 1f));
+        RectTransform photoRect = Rect("Photo", frame, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        var photo = photoRect.gameObject.AddComponent<RawImage>();
+        photo.raycastTarget = false;
+        photo.enabled = false;
         var card = rect.gameObject.AddComponent<EncyclopediaCard>();
         Set(card, so =>
         {
-            so.FindProperty("number").objectReferenceValue = number;
-            so.FindProperty("title").objectReferenceValue = title;
-            so.FindProperty("description").objectReferenceValue = description;
-            so.FindProperty("background").objectReferenceValue = background;
+            so.FindProperty("label").objectReferenceValue = label;
+            so.FindProperty("photo").objectReferenceValue = photo;
         });
         return card;
     }
@@ -230,8 +245,20 @@ public static class BuildEncyclopedia
         collider.center = bounds.center;
         collider.size = bounds.size;
         rabbit.transform.SetPositionAndRotation(RabbitPosition, Quaternion.Euler(0f, RabbitYaw, 0f));
+        // An example photo view: low, from the rabbit's side. Move or turn it in the editor; clear the field to frame it from the game camera's angle.
+        var view = new GameObject("PhotoView").AddComponent<Camera>();
+        view.enabled = false;
+        view.fieldOfView = 40f;
+        view.transform.SetParent(rabbit.transform, false);
+        Vector3 centre = rabbit.transform.TransformPoint(bounds.center);
+        view.transform.position = centre + Quaternion.Euler(0f, RabbitYaw + 60f, 0f) * new Vector3(0f, 0.5f, 2.6f);
+        view.transform.LookAt(centre);
         var target = rabbit.AddComponent<DiscoveryTestTarget>();
-        Set(target, so => so.FindProperty("encyclopedia").objectReferenceValue = encyclopedia.GetComponent<Encyclopedia>());
+        Set(target, so =>
+        {
+            so.FindProperty("encyclopedia").objectReferenceValue = encyclopedia.GetComponent<Encyclopedia>();
+            so.FindProperty("photoView").objectReferenceValue = view;
+        });
     }
 
     static RectTransform Rect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
