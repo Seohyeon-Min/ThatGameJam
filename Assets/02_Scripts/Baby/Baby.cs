@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Resting }
+public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Resting, Ending }
 
 // The baby: sleeps until the cry or its wake timer, walks its route, waits at blockers,
 // and looks up at the bird whenever the bird was the one who helped (design doc §2.2, §4).
@@ -22,6 +22,8 @@ public class Baby : CryListener
     // Played directly (CrossFade), as the jump: the fog maze has her run to the bird (ADR 0028).
     static readonly int RunState = Animator.StringToHash("Run");
     static readonly int IntroWakeParam = Animator.StringToHash("IntroWake");
+    // Played directly as the ending, which has no animation of its own yet.
+    static readonly int IntroGetUpState = Animator.StringToHash("IntroGetUp");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -96,7 +98,7 @@ public class Baby : CryListener
     // carries it alone. Once she sets off it eases in over babyShiverFadeIn, so it never starts with a jolt.
     void Update()
     {
-        if (State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking || gettingUp)
+        if (State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking or BabyState.Ending || gettingUp)
         {
             shiverFade = 0f;
             animator.transform.localRotation = modelBaseRotation;
@@ -539,6 +541,30 @@ public class Baby : CryListener
     {
         StandStill();
         TurnToward(point - transform.position);
+    }
+
+    // One frame of resting on the stone at the cliff, turning toward the point. The model has no sit animation yet: she stands
+    // and only breathes.
+    public void SitFacing(Vector3 point)
+    {
+        StandStill();
+        animator.SetBool(QuietWaitParam, true);
+        TurnToward(point - transform.position);
+    }
+
+    // The ending. Its animation isn't made yet: she gets up as she first did in the intro (Girl_Intro_GetUp), then stands.
+    public void PlayEnding()
+    {
+        StopAllCoroutines();
+        running = false;
+        lookingAround = false;
+        CurrentBlocker = null;
+        State = BabyState.Ending;
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(QuietWaitParam, false);
+        animator.SetBool(LookAroundParam, false);
+        animator.SetBool(AsleepParam, false);
+        animator.CrossFade(IntroGetUpState, 0.25f);
     }
 
     // Stands and turns toward the bird. The model has no look-up animation yet.

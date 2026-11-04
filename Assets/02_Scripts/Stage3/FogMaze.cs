@@ -129,6 +129,9 @@ public class FogMaze : PathBlocker
 
     void OnCry(Vector3 bird)
     {
+        // Past the maze nothing answers, and she no longer comes to the bird (CliffEnding).
+        if (IsOpen)
+            return;
         Bounds area = stage.area;
         if (bird.x < area.min.x || bird.x > area.max.x || bird.z < area.min.z || bird.z > area.max.z)
             return;
