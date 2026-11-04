@@ -32,6 +32,10 @@ public class GameTuning : ScriptableObject
     public float babyLookUpDuration = 1.5f;
     public float babyLookAroundDuration = 1.5f;
     public float babyWakeCryRadius = 8f;
+    // A cry doesn't interrupt her stride the instant it arrives: she keeps walking for a random beat in
+    // this range first, so the reaction reads as noticing rather than an instant, frame-perfect flinch.
+    public float babyReactionDelayMin = 0.15f;
+    public float babyReactionDelayMax = 0.4f;
     // How often (seconds, random between the two) she switches to a new idle variant (Idle/Hum/Stretch) while
     // standing and waiting, so she doesn't just breathe in place the whole time.
     public float babyIdleVariantIntervalMin = 3f;

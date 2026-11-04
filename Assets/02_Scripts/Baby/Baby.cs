@@ -53,6 +53,8 @@ public class Baby : CryListener
 
     BabyRoute route;
     bool cryPending;
+    // Counts down once cryPending is set, so she reacts after a brief natural beat instead of on the exact frame the cry arrives.
+    float cryReactionDelay;
     // Crossing a balance beam (a LeaningLog blocker, or a route point marked BalanceBeamStart):
     // BalanceWalk plays instead of Walk, and the baby ignores curious pauses/cries until BalanceBeamEnd.
     bool onBalanceBeam;
@@ -71,6 +73,9 @@ public class Baby : CryListener
     // Standing still, looking up at the bird with just her head (NoticeBird): LateUpdate's gaze system targets
     // it while this is set, same as sheltering or a PointOfInterest.
     bool noticingBird;
+    // Standing (or waking, or mid-reaction) looking up at the bird via LookUp: same head-only gaze as noticingBird,
+    // just covering the other moments she looks it up rather than merely passing overhead (design doc §3).
+    bool lookingUpAtBird;
     // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
     float noiseSeed;
     Quaternion modelBaseRotation;
@@ -130,8 +135,15 @@ public class Baby : CryListener
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
         bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
+        // A deliberate look at the bird (NoticeBird, or LookUp reacting to a cry / an opened blocker / waking)
+        // always turns just the head, whatever she's doing otherwise.
+        if (noticingBird || lookingUpAtBird)
+        {
+            lookPoint = BirdController.Instance.transform.position;
+            active = true;
+        }
         // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
-        if (BirdController.Instance.IsSheltering || noticingBird)
+        else if (BirdController.Instance.IsSheltering)
             lookPoint = BirdController.Instance.transform.position;
         else if (gazeTarget != null && gazeTimeRemaining > 0f)
             lookPoint = gazeTarget.LookPoint;
@@ -277,8 +289,12 @@ public class Baby : CryListener
     {
         if (State == BabyState.Sleeping)
             wakeTimer.ResolveByBird();
-        else if (State == BabyState.Walking)
+        else if (State == BabyState.Walking && !cryPending)
+        {
             cryPending = true;
+            GameTuning tuning = GameTuning.Current;
+            cryReactionDelay = UnityEngine.Random.Range(tuning.babyReactionDelayMin, tuning.babyReactionDelayMax);
+        }
     }
 
     // A glint on each eye when the flowers appear in the GetUp clip.
@@ -428,7 +444,7 @@ public class Baby : CryListener
             // Full attention on the crossing while balancing: no glancing around or reacting to cries.
             if (!onBalanceBeam)
             {
-                if (cryPending)
+                if (cryPending && (cryReactionDelay -= Time.deltaTime) <= 0f)
                 {
                     cryPending = false;
                     yield return ReactToCry();
@@ -475,7 +491,7 @@ public class Baby : CryListener
     // via noticingBird), body left facing the way she was already walking, then goes straight back to that.
     IEnumerator NoticeBird()
     {
-        StandStill();
+        yield return EaseToStop();
         noticingBird = true;
         yield return new WaitForSeconds(GameTuning.Current.babyBirdNoticeDuration);
         noticingBird = false;
@@ -485,7 +501,7 @@ public class Baby : CryListener
     IEnumerator CuriousPause()
     {
         GameTuning tuning = GameTuning.Current;
-        StandStill();
+        yield return EaseToStop();
         // Looks around even under the sheltering bird: LateUpdate leaves the head to the animation meanwhile.
         lookingAround = true;
         animator.SetBool(LookAroundParam, true);
@@ -568,6 +584,24 @@ public class Baby : CryListener
         return transform.position == target;
     }
 
+    // Brakes to a stop in place over babyDecel, instead of snapping straight from walking speed to Idle:
+    // used wherever a mid-walk reaction (a cry, noticing the bird, a curious pause) takes over the stride,
+    // so her feet brake like a real stop instead of planting dead under the animator's blend-out. A no-op
+    // (falls straight through to StandStill) when she isn't moving, so it's safe to call unconditionally.
+    IEnumerator EaseToStop()
+    {
+        GameTuning tuning = GameTuning.Current;
+        while (currentSpeed > 0.01f)
+        {
+            currentSpeed = Mathf.MoveTowards(currentSpeed, 0f, tuning.babyDecel * Time.deltaTime);
+            float clipSpeed = onBalanceBeam ? tuning.babyBalanceClipSpeed : tuning.babyWalkClipSpeed;
+            animator.speed = Mathf.Clamp(currentSpeed / Mathf.Max(clipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
+            transform.position += transform.forward * currentSpeed * Time.deltaTime;
+            yield return null;
+        }
+        StandStill();
+    }
+
     // Standing still while a blocker leads the baby.
     public void StandStill()
     {
@@ -577,15 +611,14 @@ public class Baby : CryListener
         currentSpeed = 0f;
     }
 
-    // Stands and turns toward the bird. The model has no look-up animation yet.
+    // Stands and looks up at the bird with just her head/neck (LateUpdate, via lookingUpAtBird), body left
+    // facing whatever way it already was. The model has no look-up animation yet.
     IEnumerator LookUp(float duration)
     {
-        StandStill();
-        for (float time = 0f; time < duration; time += Time.deltaTime)
-        {
-            TurnToward(BirdController.Instance.transform.position - transform.position);
-            yield return null;
-        }
+        yield return EaseToStop();
+        lookingUpAtBird = true;
+        yield return new WaitForSeconds(duration);
+        lookingUpAtBird = false;
     }
 
     void TurnToward(Vector3 direction)
