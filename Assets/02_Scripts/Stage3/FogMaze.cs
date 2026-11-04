@@ -14,9 +14,10 @@ public class FogMaze : PathBlocker
     // Children in order, from where the girl stops at the start of the straight way to the first fork.
     [SerializeField] Transform approach;
     [SerializeField] FogFork[] forks;
-    // The fog lies thinner over the ways, so both ways of a fork show through it: this wide, down to this share of the rest.
+    // The fog lies thinner over the ways, so both ways of a fork show through it: this wide, down to this share of the rest
+    // (a quarter of 0.9 is about the light fog of ADR 0027).
     [SerializeField, Min(0.1f)] float wayFogRadius = 2.8f;
-    [SerializeField, Range(0f, 1f)] float wayFogShare = 0.1f;
+    [SerializeField, Range(0f, 1f)] float wayFogShare = 0.25f;
 
     // No natural resolution: without help she still gets through, by chance.
     public override NaturalTimer Timer => null;
