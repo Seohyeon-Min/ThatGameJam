@@ -34,23 +34,69 @@ MonoBehaviour:
   babyGazeDuration: 1.5
   babyGazeMaxAngle: 60
   babyGazeBlendTime: 0.35
+  babyJumpArcHeight: 0.25
   babyShiverAngle: 0.8
   babyShiverFrequency: 3.5
   babyShiverIntensityVariation: 0.7
   babyShiverIntensityFrequency: 0.35
+  babyShiverFadeIn: 3
+  fogForkWaitTime: 3
+  fogWallPauseTime: 1
   birdSpeed: 5
   birdAltitudeSpeed: 2.8
   birdPerchDuration: 1.2
   birdCryCooldown: 0.8
   birdIdlePerchDelay: 2
+  birdIdlePerchRadius: 2.5
   birdAcceleration: 10
   birdLandingDeceleration: 12
   birdTakeoffHoldTimeout: 1
   birdTurnSpeed: 300
+  birdShelterAhead: 0.6
+  birdShelterHeight: 2.8
+  birdShelterCatchUp: 0.5
+  birdZoomedOutHeightScale: 1.5
+  birdLowFlightHeight: 0.6
+  birdLandMaxSlope: 25
+  birdClimbDuration: 1
+  birdWalkClipRate: 2
+  birdWalkSpeedScale: 4
+  birdWalkTurnSpeed: 720
+  birdHopSeconds: {x: 1, y: 3}
   birdMaxBankAngle: 25
   birdBankSensitivity: 0.15
   birdBankSpeed: 150
   cameraZoomStep: 0.1
   cameraZoomMin: 0.5
   cameraZoomMax: 1.25
-  cameraZoomSpeed: 3
+  cameraZoomDuration: 0.6
+  cameraTogetherNearDistance: 4
+  cameraTogetherFarDistance: 14
+  cameraTogetherMaxBirdScreen: 0.8
+  cameraTogetherBabyShare: 0.5
+  cameraTogetherDeadZone: 1.5
+  cameraTogetherFollowTime: 0.2
+  motionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

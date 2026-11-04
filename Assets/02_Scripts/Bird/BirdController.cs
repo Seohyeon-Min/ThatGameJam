@@ -21,6 +21,9 @@ public class BirdController : MonoBehaviour
     static readonly int DivingParam = Animator.StringToHash("Diving");
     static readonly int WalkingParam = Animator.StringToHash("Walking");
     static readonly int WalkRateParam = Animator.StringToHash("WalkRate");
+    static readonly int HoppingParam = Animator.StringToHash("Hopping");
+    // How fast Bird_Hop goes forward without its feet sliding, in the model's units per second (the bird's export notes).
+    const float HopClipSpeed = 0.44f;
     // How fast Bird_Walk steps forward without its feet sliding, in the model's units per second (the bird's export notes).
     const float WalkClipSpeed = 0.26f;
     // In the sky, going back on screen: how much of the camera's speed it may lose.
@@ -393,8 +396,8 @@ public class BirdController : MonoBehaviour
         animator.SetBool(MovingParam, moved);
         animator.SetBool(PerchedParam, state is State.Landing or State.Perched or State.Walking);
         animator.SetBool(WalkingParam, state == State.Walking && moved);
-        // Bird_Walk sped up or slowed to the walking speed, so its feet don't slide.
-        animator.SetFloat(WalkRateParam, GameTuning.Current.birdWalkSpeed / (WalkClipSpeed * animator.transform.lossyScale.x));
+        animator.SetBool(HoppingParam, state == State.Walking && moved && hopping);
+        animator.SetFloat(WalkRateParam, GameTuning.Current.birdWalkClipRate);
 
         idleTime = state == State.Flying && !moved && !moveAction.IsPressed() && !cried ? idleTime + Time.deltaTime : 0f;
         if (idleTime >= GameTuning.Current.birdIdlePerchDelay)
@@ -648,6 +651,8 @@ public class BirdController : MonoBehaviour
         {
             state = State.Walking;
             currentSpeed = 0f;
+            wasWalking = false;
+            hopping = false;
         }
     }
 
@@ -674,17 +679,36 @@ public class BirdController : MonoBehaviour
 
     // On the ground, it walks to the target. Zoomed back out, or reaching what it can't stand on, it takes off (and Fly brings it
     // down again past it).
+    // The speed its steps carry the bird at, hopping or walking, as the clip plays (birdWalkClipRate) at the model's size, so its feet
+    // don't slide.
+    float WalkSpeed => (hopping ? HopClipSpeed : WalkClipSpeed) * animator.transform.lossyScale.x * GameTuning.Current.birdWalkClipRate
+        * GameTuning.Current.birdWalkSpeedScale;
+    // On the ground: hopping for now (it set off a moment ago), and whether it was going anywhere last frame.
+    bool hopping;
+    float hopUntil;
+    bool wasWalking;
+
     void Walk()
     {
         Vector3 position = transform.position;
-        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), Limit(new Vector3(target.x, 0f, target.z)),
-            GameTuning.Current.birdWalkSpeed * Time.deltaTime);
+        Vector3 goal = Limit(new Vector3(target.x, 0f, target.z));
+        // Setting off from standing, it hops for a moment before it settles into walking.
+        bool going = (goal - new Vector3(position.x, 0f, position.z)).sqrMagnitude > 1e-6f;
+        if (going && !wasWalking)
+        {
+            Vector2 seconds = GameTuning.Current.birdHopSeconds;
+            hopUntil = Time.time + Random.Range(Mathf.Min(seconds.x, seconds.y), Mathf.Max(seconds.x, seconds.y));
+        }
+        wasWalking = going;
+        hopping = going && Time.time < hopUntil;
+        Vector3 flat = Vector3.MoveTowards(new Vector3(position.x, 0f, position.z), goal, WalkSpeed * Time.deltaTime);
         if (!OnGroundZoom || !Landable(flat, out float ground))
         {
             LeavePerch();
             return;
         }
-        Face(flat - position, false);
+        // Toward where it is walking to, not this frame's step: walking slowly, a step is too short for Face to count it, so it never turned.
+        Face(goal - position, false, GameTuning.Current.birdWalkTurnSpeed);
         transform.position = new Vector3(flat.x, ground, flat.z);
         RefuseAtClosedWay(flat);
     }
@@ -786,14 +810,16 @@ public class BirdController : MonoBehaviour
     }
 
     // Banked into the turn in the air; level on the ground.
-    void Face(Vector3 direction, bool bank = true)
+    void Face(Vector3 direction, bool bank = true, float turnSpeed = -1f)
     {
+        if (turnSpeed < 0f)
+            turnSpeed = GameTuning.Current.birdTurnSpeed;
         direction.y = 0f;
         // Turns at a limited rate instead of snapping to point straight at wherever the target just moved to;
         // the nose lagging slightly behind a sudden direction change is what reads as a turn rather than a snap.
         float desiredYaw = direction.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(direction).eulerAngles.y : facingYaw;
         float previousYaw = facingYaw;
-        facingYaw = Mathf.MoveTowardsAngle(facingYaw, desiredYaw, GameTuning.Current.birdTurnSpeed * Time.deltaTime);
+        facingYaw = Mathf.MoveTowardsAngle(facingYaw, desiredYaw, turnSpeed * Time.deltaTime);
         float turnRate = Mathf.DeltaAngle(previousYaw, facingYaw) / Mathf.Max(Time.deltaTime, 0.0001f);
         transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
         // Positive bankAngle banks right wing down on this rig (verified in Play Mode), and positive turnRate

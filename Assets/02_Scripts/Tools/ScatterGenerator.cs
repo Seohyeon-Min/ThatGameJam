@@ -48,6 +48,12 @@ public abstract class ScatterGenerator : MonoBehaviour
     [Tooltip("Size of a patch, in metres")]
     [SerializeField, Min(0.1f)] protected float patchSize = 4f;
     [SerializeField] protected Vector2 scaleRange = new(0.8f, 1.2f);
+    [Tooltip("How many grow together at each spot, as a bunch: a number between these, picked for each spot. 1 and 1 = each one alone. Density counts the spots, so a bunch of 3 makes three times as many")]
+    [SerializeField] protected Vector2Int clusterCount = new(1, 1);
+    [Tooltip("How far the rest of a bunch stands from its first one, at most, in metres")]
+    [SerializeField, Min(0f)] protected float clusterRadius = 0.3f;
+    [Tooltip("Every one in a bunch is the same prefab, as a bunch of one kind of flower. Off: each picks its own")]
+    [SerializeField] protected bool clusterSameKind = true;
     [Tooltip("How much each one leans with the slope of the ground. 0 = straight up")]
     [SerializeField, Range(0f, 1f)] protected float followSlope = 0.5f;
     [Tooltip("None where the ground is steeper than this, in degrees")]
@@ -184,21 +190,36 @@ public abstract class ScatterGenerator : MonoBehaviour
                     continue;
 
                 Remember(spots, local);
-                Quaternion lean = Quaternion.FromToRotation(Vector3.up, Vector3.Slerp(Vector3.up, normal, followSlope));
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[which], areaGroups[a].transform);
-                instance.transform.SetPositionAndRotation(world, lean * Quaternion.Euler(0f, yaw, 0f));
-                instance.transform.localScale = Vector3.one * scale;
-                if (area.whiten != Vector2.zero || area.hueRange > 0f)
+                placed.Add(Spawn(areaGroups[a].transform, area, which, world, normal, yaw, scale, white, hue));
+
+                // The rest of the bunch, around the first one. Its numbers are drawn whether or not each stands, so the next spot
+                // doesn't shift with the ground under this one.
+                // Left at 1 and 1, nothing more is drawn, so a generator without bunches makes what it made before.
+                int fewest = Mathf.Max(1, Mathf.Min(clusterCount.x, clusterCount.y)), most = Mathf.Max(1, Mathf.Max(clusterCount.x, clusterCount.y));
+                int members = most > 1 ? random.Next(fewest, most + 1) : 1;
+                for (int m = 1; m < members; m++)
                 {
-                    // From the less white end to the whitest, whichever way round they were typed.
-                    float least = Mathf.Min(area.whiten.x, area.whiten.y), most = Mathf.Max(area.whiten.x, area.whiten.y);
-                    var tint = instance.AddComponent<WatercolorTint>();
-                    tint.whiten = Mathf.Lerp(least, most, white);
-                    tint.hueShift = hue * area.hueRange;
-                    WatercolorPaintedModel.ApplyUserValue(instance);
+                    float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+                    float reach = Mathf.Sqrt((float)random.NextDouble()) * clusterRadius;
+                    int memberKind = random.Next(prefabs.Length);
+                    float memberYaw = (float)random.NextDouble() * 360f;
+                    float memberScale = Mathf.Lerp(scaleRange.x, scaleRange.y, (float)random.NextDouble());
+                    float memberWhite = 1f - Mathf.Pow(1f - (float)random.NextDouble(), WhiteBias);
+                    float memberHue = (float)random.NextDouble() * 2f - 1f;
+                    Vector2 memberLocal = local + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * reach;
+                    Vector3 memberPoint = transform.TransformPoint(new Vector3(memberLocal.x, 0f, memberLocal.y));
+                    if (!OnTerrain(terrain, memberPoint, out Vector3 memberWorld, out Vector3 memberNormal)
+                        || Vector3.Angle(Vector3.up, memberNormal) > maxSlope)
+                        continue;
+                    Remember(spots, memberLocal);
+                    placed.Add(Spawn(areaGroups[a].transform, area, clusterSameKind ? which : memberKind, memberWorld, memberNormal,
+                        memberYaw, memberScale, memberWhite, memberHue));
                 }
-                Undo.RegisterCreatedObjectUndo(instance, $"Generate {kind}");
-                placed.Add(instance);
+                if (placed.Count > MaxObjects)
+                {
+                    Debug.LogWarning($"{kind}: over {MaxObjects} made. Lower the density, the bunches or the areas.", this);
+                    break;
+                }
             }
         }
         // After the objects: registering a created object flushes a pending change to the list.
@@ -207,6 +228,26 @@ public abstract class ScatterGenerator : MonoBehaviour
         groups = areaGroups;
         Undo.SetCurrentGroupName($"Generate {kind}");
         Undo.CollapseUndoOperations(group);
+    }
+
+    // One placed on the ground there, leaning with it, tinted as its area says.
+    GameObject Spawn(Transform parent, Area area, int which, Vector3 world, Vector3 normal, float yaw, float scale, float white, float hue)
+    {
+        Quaternion lean = Quaternion.FromToRotation(Vector3.up, Vector3.Slerp(Vector3.up, normal, followSlope));
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[which], parent);
+        instance.transform.SetPositionAndRotation(world, lean * Quaternion.Euler(0f, yaw, 0f));
+        instance.transform.localScale = Vector3.one * scale;
+        if (area.whiten != Vector2.zero || area.hueRange > 0f)
+        {
+            // From the less white end to the whitest, whichever way round they were typed.
+            float least = Mathf.Min(area.whiten.x, area.whiten.y), most = Mathf.Max(area.whiten.x, area.whiten.y);
+            var tint = instance.AddComponent<WatercolorTint>();
+            tint.whiten = Mathf.Lerp(least, most, white);
+            tint.hueShift = hue * area.hueRange;
+            WatercolorPaintedModel.ApplyUserValue(instance);
+        }
+        Undo.RegisterCreatedObjectUndo(instance, $"Generate {GetType().Name}");
+        return instance;
     }
 
     // One empty child per area, named after it, to hold what is made there.

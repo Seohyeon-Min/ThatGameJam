@@ -287,7 +287,7 @@ public class TreeGenerator : MonoBehaviour
         foreach (WatercolorPaintedModel model in painted.Values)
         {
             WatercolorBaker.Bake(model);
-            FadeWhenBlocking(model);
+            TreeLook(model);
         }
         // After the bake, which gives every tree of a kind the same materials: an oak version of every bark the birches use.
         birchBark.Clear();
@@ -470,17 +470,23 @@ public class TreeGenerator : MonoBehaviour
             zone.ShiftBeyond(joinZ, size);
     }
 
-    // A tree between the camera and the bird or the baby turns see-through (WatercolorFlat's Camera Fade). The bake makes its materials
-    // with it off, so it is turned on for every tree it paints, bark and leaves alike.
-    static void FadeWhenBlocking(WatercolorPaintedModel model)
+    // What every painted tree's materials need, bark and leaves alike, which the bake makes otherwise: a tree between the camera and the
+    // bird or the baby turns see-through (Camera Fade on), and trees take no shadows from each other (Receive Cast Shadows off). Taken,
+    // they paint the leaves in deep blue shade, and a leaf card's shadow, cast from the card as it was modelled, lands as a big square.
+    // Leaves also keep their colour on the lit side (Leave Paper off): the crown shades as one mass, and whole cards went paper white.
+    static void TreeLook(WatercolorPaintedModel model)
     {
         foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
             foreach (Material material in renderer.sharedMaterials)
-                if (material != null && material.HasProperty("_CameraFade") && material.GetFloat("_CameraFade") < 0.5f)
-                {
-                    material.SetFloat("_CameraFade", 1f);
-                    EditorUtility.SetDirty(material);
-                }
+            {
+                if (material == null || !material.HasProperty("_CameraFade"))
+                    continue;
+                material.SetFloat("_CameraFade", 1f);
+                material.SetFloat("_ReceiveCastShadows", 0f);
+                if (material.HasProperty("_LeafCard") && material.GetFloat("_LeafCard") > 0.5f)
+                    material.SetFloat("_LeavePaper", 0f);
+                EditorUtility.SetDirty(material);
+            }
     }
 
     static bool AllPrefabs(GameObject[] prefabs) =>

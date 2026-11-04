@@ -96,7 +96,14 @@ public class GameTuning : ScriptableObject
     public float birdLandMaxSlope = 25f;
     // Seconds a change of height takes along motionCurve: taking off, coming down to the ground, a new stage's altitude.
     public float birdClimbDuration = 1f;
-    public float birdWalkSpeed = 1.2f;
+    // How fast Bird_Walk plays (1 = as made). The walking speed follows from it so the feet never slide: slower steps, slower walk.
+    public float birdWalkClipRate = 2f;
+    // On top of that, how much faster it actually goes than its steps carry it (1 = feet never slide). The clips keep their pace.
+    public float birdWalkSpeedScale = 4f;
+    // Degrees a second it turns to face the way it walks: quicker than in the air, so it faces where it steps.
+    public float birdWalkTurnSpeed = 720f;
+    // Setting off on the ground, it hops (Bird_Hop, faster) for a while between these many seconds, then walks.
+    public Vector2 birdHopSeconds = new(1f, 3f);
     [Header("Bird bank (visual only)")]
     public float birdMaxBankAngle = 25f;
     // Bank degrees per degree/second of turn rate.

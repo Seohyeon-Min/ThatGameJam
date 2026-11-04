@@ -178,6 +178,17 @@ Shader "ThatGameJam/WatercolorFlat"
             return originWS + UNITY_MATRIX_V[0].xyz * flat.x + UNITY_MATRIX_V[1].xyz * flat.y;
         }
 
+        // A leaf card always shows its camera side, so its normal is kept on the camera's half. The bake gives the cards the normals of
+        // the whole crown (one rounded mass), which point away on the far side of it: mirrored across the view instead of turned round,
+        // they keep their lean to the left, right, up or down, so the crown still shades as one round mass, lit on the light's side.
+        // Turned round, the far side would face the camera head on and the near side's outline would show on every card.
+        float3 LeafCardNormalWS(float3 normalWS, float3 positionWS)
+        {
+            float3 view = normalize(GetWorldSpaceViewDir(positionWS));
+            float facing = dot(normalWS, view);
+            return facing < 0 ? normalWS - 2.0 * facing * view : normalWS;
+        }
+
         // Where a vertex is drawn (and its depth taken): a leaf card turned to the camera, or the model swaying in the wind.
         float3 DrawnPositionWS(float3 positionOS)
         {
@@ -629,9 +640,8 @@ Shader "ThatGameJam/WatercolorFlat"
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                // A two-sided leaf card shows the side facing the camera.
-                if (_LeafCard > 0.5 && dot(output.normalWS, GetWorldSpaceViewDir(positionWS)) < 0)
-                    output.normalWS = -output.normalWS;
+                if (_LeafCard > 0.5)
+                    output.normalWS = LeafCardNormalWS(output.normalWS, positionWS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.patternUV = TwistPatternUV(input.patternUV);
                 output.positionOS = input.positionOS.xyz;
@@ -1311,8 +1321,8 @@ Shader "ThatGameJam/WatercolorFlat"
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                if (_LeafCard > 0.5 && dot(output.normalWS, GetWorldSpaceViewDir(positionWS)) < 0)
-                    output.normalWS = -output.normalWS;
+                if (_LeafCard > 0.5)
+                    output.normalWS = LeafCardNormalWS(output.normalWS, positionWS);
                 return output;
             }
 
