@@ -2,7 +2,9 @@
 // WatercolorFlat 의 나무는 새나 아기 앞, 화면 원 안에서 4x4 규칙 무늬로 화소를 뺀다(CameraFadeClip). 여기서 그 자리만
 // 4x4 화소를 평균내 뺀 화소와 남은 화소를 섞는다. 무늬가 사라지고 나무가 반투명하게 보인다.
 // 깊이 텍스처에는 나무가 빠지지 않고 다 있어서(DepthOnly 는 자르지 않는다) 뺀 구멍 자리도 나무로 잡힌다.
-// 0 Copy, 1 Resolve(새 스텐실 64 와 아기 128 은 빼고)
+// 섞는 건 실제로 화소가 빠진 자리 근처만이다. 창 안에 있어도 페이드를 안 쓰는 것(꽃, 풀, 땅)은 그대로 둔다.
+// 빠진 자리는 카메라 깊이 버퍼(잘린 결과, 뒤의 것이 보인다)가 깊이 텍스처(나무 그대로)보다 먼 곳이다.
+// 0 Copy, 1 Resolve(새 스텐실 64 와 아기 128 은 빼고), 2 Dropped(빠진 화소 표시)
 Shader "Hidden/ThatGameJam/OcclusionFade"
 {
     SubShader
@@ -18,6 +20,29 @@ Shader "Hidden/ThatGameJam/OcclusionFade"
             float4 _WC_OcclusionTarget0;
             float4 _WC_OcclusionTarget1;
             float4 _OcclusionFade; // 반경(m), 부드러움(m) — 나무 머티리얼의 Fade Radius / Fade Softness 와 같게
+            TEXTURE2D_X_FLOAT(_OcclusionDepthBuffer); // 카메라 깊이 버퍼(잘린 나무). Dropped 패스에서 읽는다
+            TEXTURE2D_X(_OcclusionDropped);           // Dropped 패스 결과: 1 = 이 화소는 빠졌다
+
+            float EyeDepth(float raw)
+            {
+                if (unity_OrthoParams.w > 0.5)
+                {
+                    #if UNITY_REVERSED_Z
+                    raw = 1.0 - raw;
+                    #endif
+                    return lerp(_ProjectionParams.y, _ProjectionParams.z, raw);
+                }
+                return LinearEyeDepth(raw, _ZBufferParams);
+            }
+
+            // 1 = 나무 화소가 빠져 뒤의 것이 보이는 자리.
+            float4 FragDropped(Varyings input) : SV_Target
+            {
+                float2 uv = input.texcoord;
+                float whole = EyeDepth(SampleSceneDepth(uv));
+                float drawn = EyeDepth(SAMPLE_TEXTURE2D_X_LOD(_OcclusionDepthBuffer, sampler_PointClamp, uv, 0).r);
+                return drawn - whole > 0.05 + whole * 0.002 ? 1.0 : 0.0;
+            }
 
             // WatercolorFlat 의 OcclusionVisible 과 같은 계산. 0 = 다 빠짐, 1 = 그대로.
             float Visible(float3 positionWS, float4 targetWS)
@@ -53,15 +78,23 @@ Shader "Hidden/ThatGameJam/OcclusionFade"
                     return colour;
 
                 // 이 화소가 든 4x4 칸의 평균: 규칙 무늬 한 주기를 정확히 덮어 무늬가 남지 않는다.
+                // 칸 안에 빠진 화소가 하나도 없으면 페이드하는 나무가 아니다(꽃, 풀, 땅). 흐리지 않는다.
                 float2 texel = 1.0 / _ScreenParams.xy;
                 float3 sum = 0;
+                float dropped = 0;
                 [unroll]
                 for (int y = -2; y < 2; y++)
                 {
                     [unroll]
                     for (int x = -2; x < 2; x++)
-                        sum += SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_PointClamp, uv + float2(x, y) * texel, 0).rgb;
+                    {
+                        float2 at = uv + float2(x, y) * texel;
+                        sum += SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_PointClamp, at, 0).rgb;
+                        dropped = max(dropped, SAMPLE_TEXTURE2D_X_LOD(_OcclusionDropped, sampler_PointClamp, at, 0).r);
+                    }
                 }
+                if (dropped < 0.5)
+                    return colour;
                 // 가장자리(거의 안 빠진 곳)까지 부드럽게 이어지도록 빠진 만큼보다 조금 넉넉히 섞는다.
                 colour.rgb = lerp(colour.rgb, sum / 16.0, saturate(thinned * 3.0));
                 return colour;
@@ -83,6 +116,14 @@ Shader "Hidden/ThatGameJam/OcclusionFade"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment FragResolve
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "Dropped"
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragDropped
             ENDHLSL
         }
     }

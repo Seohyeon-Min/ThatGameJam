@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Collections;
 using UnityEngine;
@@ -82,6 +83,12 @@ public class Baby : CryListener
     // Standing (or waking, or mid-reaction) looking up at the bird via LookUp: same head-only gaze as noticingBird,
     // just covering the other moments she looks it up rather than merely passing overhead (design doc §3).
     bool lookingUpAtBird;
+    // The ending: she stays as she sits and follows the bird with her head, blinking now and then.
+    bool watchingBird;
+    // The eyes' Blink blend shapes (the flower eyes and the closed-eye chips), and the next blink.
+    readonly List<(SkinnedMeshRenderer renderer, int shape)> blinkShapes = new();
+    float nextBlinkAt;
+    float blinkStartedAt = -1f;
     // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
     float noiseSeed;
     Quaternion modelBaseRotation;
@@ -107,6 +114,12 @@ public class Baby : CryListener
         curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
         birdNoticeCooldown = GameTuning.Current.babyBirdNoticeCooldown;
         headBone = animator.transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
+        foreach (SkinnedMeshRenderer skinned in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+        {
+            int shape = skinned.sharedMesh != null ? skinned.sharedMesh.GetBlendShapeIndex("Blink") : -1;
+            if (shape >= 0)
+                blinkShapes.Add((skinned, shape));
+        }
     }
 
     // Cold tremor on the model only (never on transform, which drives movement/arrival checks elsewhere).
@@ -141,9 +154,11 @@ public class Baby : CryListener
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
         bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
-        // A deliberate look at the bird (NoticeBird, or LookUp reacting to a cry / an opened blocker / waking)
+        if (watchingBird)
+            Blink();
+        // A deliberate look at the bird (NoticeBird, or LookUp reacting to a cry / an opened blocker / waking, the ending)
         // always turns just the head, whatever she's doing otherwise.
-        if (noticingBird || lookingUpAtBird)
+        if (noticingBird || lookingUpAtBird || watchingBird)
         {
             lookPoint = BirdController.Instance.transform.position;
             active = true;
@@ -207,6 +222,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
+        watchingBird = false;
         running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
@@ -228,6 +244,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
+        watchingBird = false;
         running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
@@ -254,6 +271,32 @@ public class Baby : CryListener
         ReachedRest?.Invoke();
     }
 
+#if UNITY_EDITOR
+    // Dev tool (the toolbar's stage end start): awake and standing on this point of the route, she walks on from it, as if she had
+    // come that far. Stops before it are skipped.
+    public void WalkOnFrom(BabyRoute route, int index)
+    {
+        StopAllCoroutines();
+        gettingUp = false;
+        watchingBird = false;
+        running = false;
+        lookingAround = false;
+        this.route = route;
+        CurrentBlocker = null;
+        transform.position = route[index].position;
+        animator.speed = 1f;
+        animator.SetBool(AsleepParam, false);
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(LookAroundParam, false);
+        animator.SetBool(QuietWaitParam, false);
+        animator.Play(IdleState, 0, 0f);
+        snowShaken = true;
+        ShowSnow();
+        wakeTimer.ResetTimer();
+        StartCoroutine(WalkRoute(index));
+    }
+#endif
+
     // Stays asleep with its wake timer stopped, until Sleep starts it.
     public void HoldAsleep() => wakeTimer.ResetTimer();
 
@@ -262,6 +305,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
+        watchingBird = false;
         // Run has no transitions, so asleep would not take her out of it.
         if (running)
             animator.Play(SleepState, 0, 0f);
@@ -349,13 +393,20 @@ public class Baby : CryListener
 
         if (cutscene != null)
             yield return new WaitUntil(() => !cutscene.IsPlaying);
+        yield return WalkRoute(0);
+    }
+
+    // Along the route from this point on, through its stops, to lying down at its end.
+    IEnumerator WalkRoute(int from)
+    {
+        GameTuning tuning = GameTuning.Current;
         // Set whenever a BalanceBeamStart/End marker or a freshly-opened LeaningLog is reached: the step up onto
         // (or down off) the beam is the *next* route segment, not the point just arrived at, so it's the next
         // segment that plays as a jump instead of an ordinary walk (design doc request: the climb itself should
         // be the jump, not a jump played in place after already having walked up to height).
         bool jumpNextSegment = false;
 
-        for (int i = 0; i < route.Count; i++)
+        for (int i = from; i < route.Count; i++)
         {
             State = BabyState.Walking;
             if (jumpNextSegment)
@@ -632,7 +683,8 @@ public class Baby : CryListener
         TurnToward(point - transform.position);
     }
 
-    // The ending. Its animation isn't made yet: she gets up as she first did in the intro (Girl_Intro_GetUp), then stands.
+    // The ending: she stays as she sits by the stump, breathing quietly, and only her head follows the bird as it flies off and
+    // up, her eyes blinking now and then.
     public void PlayEnding()
     {
         StopAllCoroutines();
@@ -640,11 +692,34 @@ public class Baby : CryListener
         lookingAround = false;
         CurrentBlocker = null;
         State = BabyState.Ending;
+        StandStill();
         animator.SetBool(WalkingParam, false);
-        animator.SetBool(QuietWaitParam, false);
         animator.SetBool(LookAroundParam, false);
         animator.SetBool(AsleepParam, false);
-        animator.CrossFade(IntroGetUpState, 0.25f);
+        animator.SetBool(QuietWaitParam, true);
+        watchingBird = true;
+        nextBlinkAt = Time.time + UnityEngine.Random.Range(0.8f, 2f);
+    }
+
+    // Now and then a quick blink: the Blink shapes close and open again, over what the animation has them at.
+    void Blink()
+    {
+        GameTuning tuning = GameTuning.Current;
+        if (blinkStartedAt < 0f && Time.time >= nextBlinkAt)
+            blinkStartedAt = Time.time;
+        if (blinkStartedAt < 0f)
+            return;
+        float t = (Time.time - blinkStartedAt) / Mathf.Max(tuning.babyBlinkDuration, 0.01f);
+        if (t >= 1f)
+        {
+            blinkStartedAt = -1f;
+            nextBlinkAt = Time.time + UnityEngine.Random.Range(tuning.babyBlinkIntervalMin, tuning.babyBlinkIntervalMax);
+            return;
+        }
+        // Closes faster than it opens.
+        float closed = t < 0.35f ? t / 0.35f : 1f - (t - 0.35f) / 0.65f;
+        foreach ((SkinnedMeshRenderer renderer, int shape) in blinkShapes)
+            renderer.SetBlendShapeWeight(shape, Mathf.Max(renderer.GetBlendShapeWeight(shape), closed * 100f));
     }
 
     // Brakes to a stop in place over babyDecel, instead of snapping straight from walking speed to Idle:

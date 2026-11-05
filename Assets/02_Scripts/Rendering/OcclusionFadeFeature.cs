@@ -5,7 +5,8 @@ using UnityEngine.Rendering.Universal;
 
 // Smooths the camera occlusion fade: trees standing in front of the bird or the baby drop pixels in an even pattern
 // (WatercolorFlat's CameraFadeClip), and this blends that window before the post-processing, so they read as see-through instead
-// of speckled. The bird (stencil bit 64) and the baby (bit 128) are left as they are. Game and Scene view both.
+// of speckled. Only where pixels were actually dropped: the flowers, grass and ground inside the window don't fade, so they stay
+// sharp. The bird (stencil bit 64) and the baby (bit 128) are left as they are. Game and Scene view both.
 public class OcclusionFadeFeature : ScriptableRendererFeature
 {
     const string ShaderName = "Hidden/ThatGameJam/OcclusionFade";
@@ -65,12 +66,15 @@ public class OcclusionFadePass : ScriptableRenderPass
 
     const int PassCopy = 0;
     const int PassResolve = 1;
+    const int PassDropped = 2;
 
     static readonly int BlitTextureId = Shader.PropertyToID("_BlitTexture");
     static readonly int BlitScaleBiasId = Shader.PropertyToID("_BlitScaleBias");
     static readonly int OcclusionFadeId = Shader.PropertyToID("_OcclusionFade");
     static readonly int Target0Id = Shader.PropertyToID("_WC_OcclusionTarget0");
     static readonly int Target1Id = Shader.PropertyToID("_WC_OcclusionTarget1");
+    static readonly int DepthBufferId = Shader.PropertyToID("_OcclusionDepthBuffer");
+    static readonly int DroppedId = Shader.PropertyToID("_OcclusionDropped");
 
     // Copied when the draw is recorded, so each camera keeps its own values on the shared material.
     static readonly MaterialPropertyBlock s_Props = new MaterialPropertyBlock();
@@ -79,7 +83,14 @@ public class OcclusionFadePass : ScriptableRenderPass
     {
         public Material material;
         public TextureHandle source;
+        public TextureHandle dropped;
         public Vector4 fade;
+    }
+
+    class DroppedData
+    {
+        public Material material;
+        public TextureHandle depthBuffer;
     }
 
     readonly Material m_Material;
@@ -104,6 +115,32 @@ public class OcclusionFadePass : ScriptableRenderPass
             return;
 
         TextureHandle source = resourceData.activeColorTexture;
+
+        // Where the trees' pixels were dropped: the camera's depth buffer (cut) lies farther than the depth texture (whole trees).
+        var droppedDesc = renderGraph.GetTextureDesc(source);
+        droppedDesc.name = "_OcclusionDropped";
+        droppedDesc.format = UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm;
+        droppedDesc.clearBuffer = false;
+        TextureHandle dropped = renderGraph.CreateTexture(droppedDesc);
+        using (var droppedBuilder = renderGraph.AddRasterRenderPass<DroppedData>("Occlusion Fade Dropped", out var droppedData))
+        {
+            droppedData.material = m_Material;
+            droppedData.depthBuffer = resourceData.activeDepthTexture;
+            droppedBuilder.UseTexture(resourceData.activeDepthTexture);
+            // Without a depth prepass the two are the same texture: nothing reads as dropped then.
+            if (!resourceData.cameraDepthTexture.Equals(resourceData.activeDepthTexture))
+                droppedBuilder.UseTexture(resourceData.cameraDepthTexture);
+            droppedBuilder.SetRenderAttachment(dropped, 0, AccessFlags.WriteAll);
+            droppedBuilder.SetRenderFunc(static (DroppedData d, RasterGraphContext ctx) =>
+            {
+                var props = s_Props;
+                props.Clear();
+                props.SetTexture(DepthBufferId, (Texture)d.depthBuffer);
+                props.SetVector(BlitScaleBiasId, new Vector4(1f, 1f, 0f, 0f));
+                ctx.cmd.DrawProcedural(Matrix4x4.identity, d.material, PassDropped, MeshTopology.Triangles, 3, 1, props);
+            });
+        }
+
         var destinationDesc = renderGraph.GetTextureDesc(source);
         destinationDesc.name = "_OcclusionFadeOutput";
         destinationDesc.clearBuffer = false;
@@ -113,8 +150,10 @@ public class OcclusionFadePass : ScriptableRenderPass
         {
             data.material = m_Material;
             data.source = source;
+            data.dropped = dropped;
             data.fade = m_Fade;
             builder.UseTexture(source);
+            builder.UseTexture(dropped);
             // The shader reads the depth through URP's global binding; declaring it keeps the graph ordering right.
             builder.UseTexture(resourceData.cameraDepthTexture);
             builder.SetRenderAttachment(destination, 0, AccessFlags.WriteAll);
@@ -125,6 +164,7 @@ public class OcclusionFadePass : ScriptableRenderPass
                 var props = s_Props;
                 props.Clear();
                 props.SetTexture(BlitTextureId, (Texture)d.source);
+                props.SetTexture(DroppedId, (Texture)d.dropped);
                 props.SetVector(BlitScaleBiasId, new Vector4(1f, 1f, 0f, 0f));
                 props.SetVector(OcclusionFadeId, d.fade);
                 ctx.cmd.DrawProcedural(Matrix4x4.identity, d.material, PassCopy, MeshTopology.Triangles, 3, 1, props);

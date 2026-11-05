@@ -3,18 +3,12 @@ using UnityEngine;
 // The dream fog over a fog section (DreamFogFeature draws it): a warm pink-to-orange glowing fog filling the whole picture, everything
 // but the bird a shadow in it, nearer ones darker. It comes in as the bird goes into the fog, along the field's own ramp (the first
 // straight stretch). It lies evenly over everything: the field's cells (the maze's ways, the spots cleared) don't show through, so the
-// way through the maze can't be read off the screen. Only these values are set, as shader globals, every frame; nothing is made or
+// way through the maze can't be read off the screen. Its colours are in the Look material; the other values are set as shader globals every frame. Nothing is made or
 // changed in the scene.
 public class DreamFog : MonoBehaviour
 {
     static readonly int WeightId = Shader.PropertyToID("_DreamFogWeight");
-    static readonly int LowId = Shader.PropertyToID("_DreamLow");
-    static readonly int HighId = Shader.PropertyToID("_DreamHigh");
-    static readonly int SunColorId = Shader.PropertyToID("_DreamSunColor");
     static readonly int SunId = Shader.PropertyToID("_DreamSun");
-    static readonly int BlobId = Shader.PropertyToID("_DreamBlob");
-    static readonly int ShadowId = Shader.PropertyToID("_DreamShadow");
-    static readonly int DepthId = Shader.PropertyToID("_DreamDepth");
     static readonly int RaysId = Shader.PropertyToID("_DreamRays");
     static readonly int SilkId = Shader.PropertyToID("_DreamSilk");
     static readonly int SilkWindId = Shader.PropertyToID("_DreamSilkWind");
@@ -23,9 +17,18 @@ public class DreamFog : MonoBehaviour
     static readonly int SilkFloatId = Shader.PropertyToID("_DreamSilkFloat");
     static readonly int MaskId = Shader.PropertyToID("_DreamFogMask");
     static readonly int AreaId = Shader.PropertyToID("_DreamFogArea");
+    static readonly int FocusDepthId = Shader.PropertyToID("_DreamFocusDepth");
+    static readonly int BirdId = Shader.PropertyToID("_DreamBird");
+    static readonly int BabyId = Shader.PropertyToID("_DreamBaby");
+    static readonly int PrismAmountId = Shader.PropertyToID("_PrismAmount");
+
+    // The layer the baby's body is on: PC_Renderer's BabyPrism feature draws it again over the fog, glowing white (PrismOverlay).
+    public const string BabyLayer = "Baby";
 
     // How far in the fog is now, for DreamFogFeature: 0 = not drawn at all.
     public static float Weight { get; private set; }
+    // The material DreamFogFeature draws with: this one's Look, while it is on.
+    public static Material Look { get; private set; }
 
     // What shows through the dream fog besides the bird: the cries (the bird's and the animals' pulses) are on this layer, which
     // PC_Renderer leaves out of its usual drawing and draws by itself after the fog (its AboveFog Render Objects feature).
@@ -37,34 +40,18 @@ public class DreamFog : MonoBehaviour
     [Tooltip("Seconds it takes to follow the bird in or out of the fog.")]
     [SerializeField, Min(0.01f)] float ease = 1.5f;
 
-    [Header("Fog")]
-    [Tooltip("Fog colour at the bottom of the picture.")]
-    [SerializeField] Color low = new(1f, 0.72f, 0.5f);
-    [Tooltip("Fog colour at the top of the picture.")]
-    [SerializeField] Color high = new(1f, 0.66f, 0.68f);
-    [Tooltip("Colour of the soft patches that drift through the fog, and how strong they are (alpha).")]
-    [SerializeField] Color patches = new(1f, 0.55f, 0.6f, 0.35f);
+    [Tooltip("The fog's colours (Hidden/ThatGameJam/DreamFog): the fog top and bottom, the drifting patches, the light, and the shadows: their colour, how dark, how far they reach, how soft. Edit it in Play Mode and the change shows at once, and stays.")]
+    [SerializeField] Material look;
+    [Tooltip("Height over the baby's feet where the shade behind her centres, in metres.")]
+    [SerializeField, Min(0f)] float babyMiddleHeight = 0.45f;
 
     [Header("Light")]
     [Tooltip("Where the light glows on the screen, 0 to 1 (0, 0 is the bottom left).")]
     [SerializeField] Vector2 lightOnScreen = new(0.22f, 0.92f);
-    [Tooltip("Colour of the light's glow, and how bright (alpha above 1 is brighter).")]
-    [SerializeField, ColorUsage(false, true)] Color lightColor = new(1f, 0.93f, 0.72f, 1f);
-    [SerializeField, Min(0f)] float lightBrightness = 1f;
     [Tooltip("Size of the light's bright core and of its wide halo, as shares of the screen's height.")]
     [SerializeField] Vector2 lightSize = new(0.18f, 0.45f);
     [Tooltip("How much light streams between the shadows, toward the light.")]
     [SerializeField, Range(0f, 2f)] float rays = 0.8f;
-    [Tooltip("How much the light eats the shadows near it.")]
-    [SerializeField, Range(0f, 2f)] float lightBleed = 1f;
-
-    [Header("Shadows")]
-    [Tooltip("Colour of the shadows everything but the bird becomes, and how dark they get up close (alpha).")]
-    [SerializeField] Color shadow = new(0.55f, 0.27f, 0.25f, 0.9f);
-    [Tooltip("Metres from the camera that stay full shadow, then the metres over which shadows melt into the fog.")]
-    [SerializeField] Vector2 shadowDepth = new(8f, 14f);
-    [Tooltip("How soft the shadows' edges are, in pixels.")]
-    [SerializeField, Min(0f)] float edgeSoftness = 3f;
 
     [Header("Silk")]
     [Tooltip("How strong the sheer silk veils drifting through the fog are: the shine on their folds.")]
@@ -101,8 +88,13 @@ public class DreamFog : MonoBehaviour
 
     float weight;
 
+    void OnEnable() => Look = look;
+
     void OnDisable()
     {
+        Shader.SetGlobalFloat(PrismAmountId, 0f);
+        if (Look == look)
+            Look = null;
         weight = 0f;
         Weight = 0f;
         Shader.SetGlobalFloat(WeightId, 0f);
@@ -117,15 +109,9 @@ public class DreamFog : MonoBehaviour
         Weight = Mathf.SmoothStep(0f, 1f, weight);
 
         Shader.SetGlobalFloat(WeightId, Weight);
-        Shader.SetGlobalVector(LowId, low.linear);
-        Shader.SetGlobalVector(HighId, high.linear);
-        Shader.SetGlobalVector(BlobId, new Vector4(patches.linear.r, patches.linear.g, patches.linear.b, patches.a));
-        Color glow = lightColor.linear;
-        Shader.SetGlobalVector(SunColorId, new Vector4(glow.r, glow.g, glow.b, lightBrightness));
+        // The baby's white glow comes in with the fog.
+        Shader.SetGlobalFloat(PrismAmountId, Weight);
         Shader.SetGlobalVector(SunId, new Vector4(lightOnScreen.x, lightOnScreen.y, lightSize.x, lightSize.y));
-        Color dark = shadow.linear;
-        Shader.SetGlobalVector(ShadowId, new Vector4(dark.r, dark.g, dark.b, shadow.a));
-        Shader.SetGlobalVector(DepthId, new Vector4(shadowDepth.x, shadowDepth.y, edgeSoftness, lightBleed));
         // A cleared floor of 1 leaves the dream fog full everywhere, whatever the cells say.
         Shader.SetGlobalVector(RaysId, new Vector4(rays, grain, showClearing ? clearedLeft : 1f, 0f));
         Shader.SetGlobalVector(SilkId, new Vector4(silk, silkFoldsPerMetre, silkWindMetresPerSecond, iridescence));
@@ -133,6 +119,27 @@ public class DreamFog : MonoBehaviour
         float ground = field != null ? field.transform.position.y : 0f;
         Shader.SetGlobalVector(SilkPlanesId, new Vector4(ground, silkDepths.x, silkFoldCloseness, silkDepths.y));
         Shader.SetGlobalVector(SilkFloatId, new Vector4(silkFloats.x, silkFloats.y, 0f, 0f));
+        // The bird's depth from the camera: the shadows' perspective is measured past it (DreamFog.mat), whatever the zoom.
+        Camera view = Camera.main;
+        if (view != null && BirdController.Instance != null)
+        {
+            Transform eye = view.transform;
+            Vector3 bird = BirdController.Instance.transform.position;
+            float depth = Vector3.Dot(bird - eye.position, eye.forward);
+            Shader.SetGlobalFloat(FocusDepthId, depth);
+            Vector3 onScreen = view.WorldToViewportPoint(bird);
+            float screenHeight = 2f * Mathf.Max(depth, 0.01f) * Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            Shader.SetGlobalVector(BirdId, new Vector4(onScreen.x, onScreen.y, 1f / screenHeight, 0f));
+            if (Baby.Instance != null)
+            {
+                Vector3 baby = Baby.Instance.transform.position + Vector3.up * babyMiddleHeight;
+                float babyDepth = Vector3.Dot(baby - eye.position, eye.forward);
+                Vector3 babyOnScreen = view.WorldToViewportPoint(baby);
+                float babyScreenHeight = 2f * Mathf.Max(babyDepth, 0.01f) * Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                // w: 0 when she is behind the camera.
+                Shader.SetGlobalVector(BabyId, new Vector4(babyOnScreen.x, babyOnScreen.y, 1f / babyScreenHeight, babyDepth > 0f ? 1f : 0f));
+            }
+        }
         Shader.SetGlobalVector(SparkleId, new Vector4(sparkles, sparkleCellSize, sparkleSpeed, sparkleBrightness));
         if (field != null && field.Mask != null)
         {

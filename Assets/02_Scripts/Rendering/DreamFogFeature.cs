@@ -31,6 +31,8 @@ public class DreamFogFeature : ScriptableRendererFeature
     {
         if (m_Pass == null || DreamFog.Weight <= 0.001f || renderingData.cameraData.camera != Camera.main)
             return;
+        // The scene's DreamFog Look holds the colours; without one, the shader's default colours.
+        m_Pass.material = DreamFog.Look != null ? DreamFog.Look : m_Material;
         m_Pass.ConfigureInput(ScriptableRenderPassInput.Depth);
         renderer.EnqueuePass(m_Pass);
     }
@@ -65,11 +67,11 @@ public class DreamFogPass : ScriptableRenderPass
         public TextureHandle source;
     }
 
-    readonly Material m_Material;
+    public Material material;
 
     public DreamFogPass(Material material)
     {
-        m_Material = material;
+        this.material = material;
         // It reads the picture so far, which is impossible from the back buffer.
         requiresIntermediateTexture = true;
     }
@@ -91,7 +93,7 @@ public class DreamFogPass : ScriptableRenderPass
         renderGraph.AddBlitPass(color, source, Vector2.one, Vector2.zero, passName: "Dream Fog Copy");
 
         using var builder = renderGraph.AddRasterRenderPass<PassData>(Sampler.name, out var data, Sampler);
-        data.material = m_Material;
+        data.material = material;
         data.source = source;
         builder.UseTexture(source);
         builder.SetRenderAttachment(color, 0, AccessFlags.Write);

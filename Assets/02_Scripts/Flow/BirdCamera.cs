@@ -46,8 +46,16 @@ public class BirdCamera : MonoBehaviour
     // (CameraZone without a device) keeps it in view.
     Vector3? restPoint;
     float restWeight;
+    // While set (CliffEnding, once the girl sits by the stump), the camera eases onto this point and stays near it, drifting
+    // after the bird by viewFollow only. Eased in and out like a zone; the point is kept while easing out.
+    Vector3? viewPoint;
+    bool viewHeld;
+    float viewWeight;
+    float viewFollow;
 
     public bool IsLocked => lockedPoint.HasValue;
+    // Set by Freeze: the camera stays exactly where it is, height too.
+    bool frozen;
 
     void Awake()
     {
@@ -158,6 +166,31 @@ public class BirdCamera : MonoBehaviour
             restPoint = null;
     }
 
+    // Eases onto this point and stays near it, drifting after the bird by this much (0 = held still, 1 = free); null eases off it.
+    public void HoldView(Vector3? point, float follow)
+    {
+        viewHeld = point.HasValue;
+        if (point.HasValue)
+        {
+            if (!viewPoint.HasValue)
+                viewWeight = 0f;
+            viewPoint = point;
+            viewFollow = follow;
+        }
+    }
+
+    void UpdateViewHold()
+    {
+        if (!viewPoint.HasValue)
+            return;
+        viewWeight = Mathf.MoveTowards(viewWeight, viewHeld ? 1f : 0f, Time.deltaTime / zoneEaseTime);
+        if (!viewHeld && viewWeight <= 0f)
+            viewPoint = null;
+    }
+
+    // The ending: stays exactly where it is from now on, whatever the bird does (it flies out of the picture).
+    public void Freeze() => frozen = true;
+
     // Puts the camera where it frames at once instead of sweeping there.
     public void Cut()
     {
@@ -168,6 +201,8 @@ public class BirdCamera : MonoBehaviour
 
     void LateUpdate()
     {
+        if (frozen)
+            return;
         GameTuning tuning = GameTuning.Current;
         // A cutscene holding the player still (Lock Player) holds the zoom too: the wheel would move the bird's height.
         // So does the open encyclopedia, which takes the mouse.
@@ -188,7 +223,8 @@ public class BirdCamera : MonoBehaviour
 
         Vector3 bird = BirdController.Instance.transform.position;
         Bounds area = GameFlow.Instance.FlyArea;
-        Vector3 point = ClampXZ(Framed(bird, tuning), area.min, area.max);
+        Bounds cameraArea = GameFlow.Instance.CameraArea;
+        Vector3 point = ClampXZ(Framed(bird, tuning), cameraArea.min, cameraArea.max);
         for (int i = 0; i < zones.Length; i++)
         {
             CameraZone zone = zones[i];
@@ -200,6 +236,12 @@ public class BirdCamera : MonoBehaviour
         {
             UpdateHold();
             point = heldPoint ?? point;
+        }
+        UpdateViewHold();
+        if (viewPoint.HasValue)
+        {
+            Vector3 view = new(viewPoint.Value.x, point.y, viewPoint.Value.z);
+            point = Vector3.Lerp(point, Vector3.Lerp(view, point, viewFollow), Mathf.SmoothStep(0f, 1f, viewWeight));
         }
         UpdateRestHold();
         if (restPoint.HasValue)

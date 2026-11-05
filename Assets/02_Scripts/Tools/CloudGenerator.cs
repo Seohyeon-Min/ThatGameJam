@@ -34,7 +34,7 @@ public class CloudGenerator : MonoBehaviour
     // Draw order per centimetre along Draw Order View. All of it above 0, so the clouds draw over the snow and other see-through things
     // below them. Whatever must show over the clouds (the bird's particles) is ordered higher still.
     const float OrderPerMetre = 100f;
-    const int MiddleOrder = 10000;
+    public const int MiddleOrder = 10000;
 
 #if UNITY_EDITOR
     public int PuffCount

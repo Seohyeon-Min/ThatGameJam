@@ -62,6 +62,10 @@ public class GameTuning : ScriptableObject
     public float babyGazeMaxAngle = 60f;
     // Seconds for the head's turn-toward-target blend to ramp fully in (and, separately, fully out).
     public float babyGazeBlendTime = 0.35f;
+    // The ending, as she watches the bird go: seconds one blink takes, and the seconds between blinks (picked between these).
+    public float babyBlinkDuration = 0.18f;
+    public float babyBlinkIntervalMin = 2f;
+    public float babyBlinkIntervalMax = 4.5f;
     // Stepping onto/off a balance beam (JumpTo): extra height added at the arc's midpoint, on top of the
     // straight start-to-target rise, so the hop reads as a hop and not a diagonal slide up a ramp.
     public float babyJumpArcHeight = 0.25f;

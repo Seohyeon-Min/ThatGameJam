@@ -20,29 +20,63 @@ public class GameFlow : MonoBehaviour
     public Stage CurrentStage => stages[current];
     // The authored stage order (StageEditor's spacing tool cascades along this, not scene hierarchy order).
     public IReadOnlyList<Stage> Stages => stages;
+    public BirdCamera BirdCamera => birdCamera;
+
+    // Per stage, its cliff at the end (the fog stage's CliffEnding), or null.
+    CliffEnding[] cliffs;
 
     // Where the bird may fly: every stage's area up to the current one, and ahead no further than the current stage's area ends, a little
     // past its sunlit spot so the bird can wait around the light (the director's call, over ADR 0012's stop at the spot itself).
-    // The stages' areas follow each other along +Z.
-    public Bounds FlyArea
+    // The stages' areas follow each other along +Z. A stage with a cliff at its end ends at the edge until the girl sits there.
+    public Bounds FlyArea => Area(cliff => cliff.BirdFarEnd);
+
+    // Where the camera's aim may go: the fly area, but before the girl sits at a cliff, no further than a little before its edge.
+    public Bounds CameraArea => Area(cliff => cliff.CameraFarEnd);
+
+    Bounds Area(System.Func<CliffEnding, float> cliffFarEnd)
     {
-        get
-        {
-            Bounds area = stages[0].area;
-            for (int i = 1; i <= current; i++)
-                area.Encapsulate(stages[i].area);
-            Vector3 max = area.max;
-            max.z = CurrentStage.area.max.z;
-            area.SetMinMax(area.min, max);
-            return area;
-        }
+        Bounds area = stages[0].area;
+        for (int i = 1; i <= current; i++)
+            area.Encapsulate(stages[i].area);
+        Vector3 max = area.max;
+        max.z = CurrentStage.area.max.z;
+        CliffEnding cliff = cliffs != null ? cliffs[current] : null;
+        if (cliff != null)
+            max.z = Mathf.Min(max.z, cliffFarEnd(cliff));
+        area.SetMinMax(area.min, max);
+        return area;
     }
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        Instance = this;
+        cliffs = new CliffEnding[stages.Length];
+        for (int i = 0; i < stages.Length; i++)
+            cliffs[i] = stages[i].GetComponentInChildren<CliffEnding>(true);
+    }
+
+#if UNITY_EDITOR
+    // Set by the toolbar's stage start (StageStartToolbar) just before Play Mode, and read once here.
+    public const string StartStageKey = "GameFlow.StartStage";
+    // Set with it: start at the stage's end instead, at its last stop (the fog stage: just out of the fog, before the cliff).
+    public const string StartAtEndKey = "GameFlow.StartAtEnd";
+#endif
 
     void Start()
     {
         Baby.Instance.ReachedRest += OnReachedRest;
+#if UNITY_EDITOR
+        int startStage = UnityEditor.SessionState.GetInt(StartStageKey, -1);
+        UnityEditor.SessionState.EraseInt(StartStageKey);
+        bool atEnd = UnityEditor.SessionState.GetBool(StartAtEndKey, false);
+        UnityEditor.SessionState.EraseBool(StartAtEndKey);
+        if (startStage > 0 && startStage < stages.Length)
+        {
+            Debug.Log($"Stage start: skipping the intro, starting at {(atEnd ? "the end of " : "")}stage {startStage} ({stages[startStage].name}).", stages[startStage]);
+            StartCoroutine(StartAtStage(startStage, atEnd));
+            return;
+        }
+#endif
         Stage first = stages[0];
         Baby.Instance.PlaceAsleep(first.babyStart, first.route);
         BirdController.Instance.Teleport(first.birdStart.position);
@@ -56,6 +90,37 @@ public class GameFlow : MonoBehaviour
             intro.Play();
         }
     }
+
+#if UNITY_EDITOR
+    // Dev tool (the toolbar's stage start): skips the intro and the stages before this one. The season is the stage's own, the baby lies
+    // asleep at the stage's start with the bird at its start, and she wakes right away, so the stage's wake cutscene plays from the
+    // beginning. Devices of the stages skipped stay closed.
+    // At its end instead: no waking, she stands at the route's last stop and goes on from there, the bird a little behind her.
+    System.Collections.IEnumerator StartAtStage(int index, bool atEnd)
+    {
+        Stage stage = stages[index];
+        BeginStage(index);
+        season.SetSeason(season.Level + index);
+        Baby.Instance.PlaceAsleep(stage.babyStart, stage.route);
+        BirdController.Instance.Teleport(stage.birdStart.position);
+        BirdController.Instance.SetAltitude(stage.birdAltitude, true);
+        birdCamera.Cut();
+        if (atEnd)
+        {
+            int last = stage.route.Count - 1;
+            while (last > 0 && !stage.route[last].TryGetComponent(out StopPoint _))
+                last--;
+            Transform from = stage.route[last];
+            Baby.Instance.WalkOnFrom(stage.route, last);
+            BirdController.Instance.Teleport(from.position + new Vector3(1.5f, stage.birdAltitude, -2f));
+            birdCamera.Cut();
+            yield break;
+        }
+        // One frame for the animator and the camera to settle there before she gets up.
+        yield return null;
+        Baby.Instance.WakeTimer.ResolveNaturally();
+    }
+#endif
 
     // The intro has ended, and the baby can wake from here on. The bird is at the first stage's start, or above the tree it will
     // drop onto, with the camera framed as if it were at the start.

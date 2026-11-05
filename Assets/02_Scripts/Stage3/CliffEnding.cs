@@ -2,28 +2,59 @@ using System.Collections;
 using UnityEngine;
 
 // The end of the fog stage (3-3, rough first version by the director's order of 2026-11-04). Past the maze there is no sunlit
-// spot: the girl walks on through the thinning forest to the big stone before the cliff and rests there. She no longer comes
-// to the bird's cry. When the bird has flown out over the cliff nearly to the edge of the screen, the ending plays.
-// It never opens, so the girl never lies down here and the season stays.
+// spot: the girl walks on through the thinning forest to the stump before the cliff and sits there. She no longer comes to the
+// bird's cry; a small bird on the stump (GuideBird) answers it instead, and once it has, she hurries toward it, running the first
+// part of the way left and walking the rest. When she comes close it flies away, and she sits by the stump in its place.
+// Until she sits, the way over the cliff is closed: the bird flies no further than the edge (GameFlow.FlyArea), refusing there
+// like at any closed way (it lands on a tree nearby and shakes its head), and the camera's aim comes no further than a little
+// before it. Once she sits, the way opens, the camera eases over to show more of the drop, and when the bird has flown a little
+// way out past the edge the ending plays. It never opens as a blocker, so the girl never lies down here and the season stays.
 public class CliffEnding : PathBlocker
 {
-    // Children in order, from the end of the maze to where she rests by the stone.
+    // Children in order, from the end of the maze to where she sits by the stump.
     [SerializeField] Transform path;
-    // She faces this while she rests: out over the cliff.
+    // She faces this while she sits: out over the cliff.
     [SerializeField] Transform view;
-    // The cliff's edge; its forward points out over the drop.
+    // The cliff's edge; its forward points out over the drop, along +Z (the fly area's far end is a Z).
     [SerializeField] Transform edge;
-    // The ending plays when the bird, past the edge, is this close to a side of the screen (a share of the screen).
-    // BirdController keeps the bird screenMargin (0.08) inside, so keep this above that.
-    [SerializeField, Range(0f, 0.5f)] float screenEdge = 0.1f;
+    // The ending plays once the bird itself has flown this far out past the edge (metres along its forward), not as soon as it
+    // crosses. The fly area ends 40 m past the edge and the ClickPlane below takes the clicks out there, so it can get this far.
+    [SerializeField, Min(0f)] float pastEdge = 3f;
 
-    // Set while she is here: walking to the stone, then resting by it.
+    [Header("Guide")]
+    [Tooltip("The small bird on the stump. Empty: she just walks to the stump.")]
+    [SerializeField] GuideBird guide;
+    [Tooltip("Once the guide has answered, she runs this share of the way she has left, then walks.")]
+    [SerializeField, Range(0f, 1f)] float runShare = 0.5f;
+    [Tooltip("The guide sees her coming and flies away when she is this close to it, in metres (seen from above).")]
+    [SerializeField, Min(0f)] float guideFliesAt = 6f;
+
+    [Header("Camera")]
+    [Tooltip("Until she sits, the camera's aim comes no further than this past the edge, in metres (below 0: before it).")]
+    [SerializeField] float cameraReach = -1f;
+    [Tooltip("Once she sits, the camera eases onto this point, so more of the drop shows.")]
+    [SerializeField] Transform sittingView;
+    [Tooltip("While she sits, how much the camera still drifts after the bird, off the Sitting View (0 = held still, 1 = free).")]
+    [SerializeField, Range(0f, 1f)] float sittingFollow = 0.3f;
+
+    [Header("Ending")]
+    [Tooltip("The ending (the bird flies out and up, seen from the air, then from far off). Empty: only the girl's ending animation plays.")]
+    [SerializeField] EndingFlight ending;
+
+    // Set while she is here: walking to the stump, then sitting by it.
     Baby baby;
     Coroutine walking;
     bool resting;
     bool ended;
 
     public override NaturalTimer Timer => null;
+
+    // The way over the cliff opens when she sits and stays open through the ending.
+    bool WayOpen => resting || ended;
+    // How far the bird may fly along +Z (GameFlow.FlyArea).
+    public float BirdFarEnd => WayOpen ? float.PositiveInfinity : edge.position.z;
+    // How far the camera's aim may come along +Z (GameFlow.CameraArea).
+    public float CameraFarEnd => WayOpen ? float.PositiveInfinity : edge.position.z + cameraReach;
 
     public override void BeginWaiting()
     {
@@ -33,16 +64,70 @@ public class CliffEnding : PathBlocker
             StopCoroutine(walking);
         resting = false;
         ended = false;
-        walking = StartCoroutine(WalkToStone());
+        HoldSittingView(false);
+        if (guide != null && guide.HasFlown)
+            guide.ResetToStump();
+        walking = StartCoroutine(WalkToStump());
     }
 
-    IEnumerator WalkToStone()
+    IEnumerator WalkToStump()
     {
-        foreach (Transform point in path)
-            while (!baby.StepToward(point.position))
+        // Metres still to run, once the guide has answered.
+        float runLeft = 0f;
+        bool hurried = false;
+        for (int i = 0; i < path.childCount; i++)
+        {
+            Vector3 point = path.GetChild(i).position;
+            while (true)
+            {
+                if (!hurried && guide != null && guide.HasAnswered)
+                {
+                    hurried = true;
+                    runLeft = runShare * DistanceLeft(i);
+                }
+                Vector3 before = baby.transform.position;
+                bool arrived = runLeft > 0f ? baby.RunToward(point) : baby.StepToward(point);
+                runLeft -= Vector3.Distance(before, baby.transform.position);
+                LetGuideFly();
+                if (arrived)
+                    break;
                 yield return null;
+            }
+        }
         walking = null;
         resting = true;
+        HoldSittingView(true);
+    }
+
+    // Along the path from where she is, through the points from this one on.
+    float DistanceLeft(int next)
+    {
+        float distance = 0f;
+        Vector3 from = baby.transform.position;
+        for (int i = next; i < path.childCount; i++)
+        {
+            Vector3 to = path.GetChild(i).position;
+            distance += Vector3.Distance(from, to);
+            from = to;
+        }
+        return distance;
+    }
+
+    void LetGuideFly()
+    {
+        if (guide == null || guide.HasFlown)
+            return;
+        Vector3 apart = guide.transform.position - baby.transform.position;
+        apart.y = 0f;
+        if (apart.sqrMagnitude <= guideFliesAt * guideFliesAt)
+            guide.FlyAway();
+    }
+
+    void HoldSittingView(bool hold)
+    {
+        BirdCamera birdCamera = GameFlow.Instance != null ? GameFlow.Instance.BirdCamera : null;
+        if (birdCamera != null)
+            birdCamera.HoldView(hold && sittingView != null ? sittingView.position : null, sittingFollow);
     }
 
     void Update()
@@ -56,29 +141,26 @@ public class CliffEnding : PathBlocker
                 StopCoroutine(walking);
             walking = null;
             resting = false;
+            HoldSittingView(false);
             baby = null;
             return;
         }
         if (!resting)
             return;
         baby.SitFacing(view.position);
-        if (BirdNearScreenEdgePastCliff())
+        if (BirdOutPastCliff())
         {
             ended = true;
             baby.PlayEnding();
+            if (ending != null)
+                ending.Play(edge.forward);
         }
     }
 
-    bool BirdNearScreenEdgePastCliff()
+    bool BirdOutPastCliff()
     {
         Vector3 bird = BirdController.Instance.transform.position;
-        if (Vector3.Dot(bird - edge.position, edge.forward) <= 0f)
-            return false;
-        Vector3 viewport = Camera.main.WorldToViewportPoint(bird);
-        // Off the screen only when a dev tool holds the camera elsewhere.
-        if (viewport.z <= 0f || viewport.x < 0f || viewport.x > 1f || viewport.y < 0f || viewport.y > 1f)
-            return false;
-        return viewport.x <= screenEdge || viewport.x >= 1f - screenEdge || viewport.y <= screenEdge || viewport.y >= 1f - screenEdge;
+        return Vector3.Dot(bird - edge.position, edge.forward) >= pastEdge;
     }
 
     void OnDrawGizmos()
@@ -94,8 +176,20 @@ public class CliffEnding : PathBlocker
                 Gizmos.DrawLine(from, point.position);
             previous = point.position;
         }
-        Gizmos.color = Color.red;
         Vector3 across = Vector3.Cross(Vector3.up, edge.forward) * 30f;
+        // Red: the edge, the bird's far end until she sits. Cyan: the camera's far end until then. Yellow: where the bird sets the ending off.
+        Gizmos.color = Color.red;
         Gizmos.DrawLine(edge.position - across, edge.position + across);
+        Gizmos.color = Color.cyan;
+        Vector3 reach = edge.position + edge.forward * cameraReach;
+        Gizmos.DrawLine(reach - across, reach + across);
+        Gizmos.color = Color.yellow;
+        Vector3 trigger = edge.position + edge.forward * pastEdge;
+        Gizmos.DrawLine(trigger - across, trigger + across);
+        if (sittingView != null)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(sittingView.position, 0.5f);
+        }
     }
 }

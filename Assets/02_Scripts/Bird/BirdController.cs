@@ -23,6 +23,7 @@ public class BirdController : MonoBehaviour
     static readonly int WalkRateParam = Animator.StringToHash("WalkRate");
     static readonly int HoppingParam = Animator.StringToHash("Hopping");
     static readonly int HoverRateParam = Animator.StringToHash("HoverRate");
+    static readonly int FlapState = Animator.StringToHash("Flap");
     // How fast Bird_Hop goes forward without its feet sliding, in the model's units per second (the bird's export notes).
     const float HopClipSpeed = 0.44f;
     // How fast Bird_Walk steps forward without its feet sliding, in the model's units per second (the bird's export notes).
@@ -134,6 +135,9 @@ public class BirdController : MonoBehaviour
     Vector3 lastBabyPosition;
     // Degrees the head tips over the animation, down positive (headBone).
     float headPitch;
+    // FlyScripted: this share of the body's tilt is taken back off the wings, so tilted up to climb, its strokes still push down.
+    float wingStrokeDown;
+    Transform[] wingRoots = { };
     // Seconds of hovering left after the height last changed, and the rise smoothed over the wheel's ticks.
     float climbHold;
     float smoothRise;
@@ -146,6 +150,13 @@ public class BirdController : MonoBehaviour
     {
         if (headBone != null && Mathf.Abs(headPitch) > 0.01f)
             headBone.rotation = Quaternion.AngleAxis(headPitch, transform.right) * headBone.rotation;
+        // After the animation: the wings turned back about the body's pitch axis, by a share of its tilt.
+        if (wingStrokeDown > 0.001f && Mathf.Abs(bodyPitch) > 0.01f && visualRoot != null)
+        {
+            Quaternion back = Quaternion.AngleAxis(-bodyPitch * wingStrokeDown, visualRoot.right);
+            foreach (Transform wing in wingRoots)
+                wing.rotation = back * wing.rotation;
+        }
     }
 
     void Awake()
@@ -155,6 +166,11 @@ public class BirdController : MonoBehaviour
         altitude = baseAltitude = transform.position.y;
         baseScale = transform.localScale;
         facingYaw = transform.eulerAngles.y;
+        var wings = new List<Transform>();
+        foreach (Transform bone in GetComponentsInChildren<Transform>(true))
+            if (bone.name.StartsWith("WingUpper"))
+                wings.Add(bone);
+        wingRoots = wings.ToArray();
         if (visualRoot != null)
         {
             visualBaseRotation = visualRoot.localRotation;
@@ -329,6 +345,32 @@ public class BirdController : MonoBehaviour
         animator.SetBool(MovingParam, true);
         animator.SetBool(PerchedParam, false);
     }
+
+    // Flies by script (the ending): it faces the way it goes, turning fast enough to keep up with a curve and banking into it, its
+    // whole body tilted by this much (above 0: nose up, on this rig), gliding between wingbeats. Beat starts one wingbeat (the flap
+    // clip from its start); left alone, the flap plays out and it glides on. Stroke Down is the share of the tilt taken back off the
+    // wings (0 to 1), so climbing steeply its wingbeats still push down rather than back.
+    public void FlyScripted(Vector3 position, Vector3 heading, float pitch, bool beat, float strokeDown)
+    {
+        bodyPitch = pitch;
+        wingStrokeDown = strokeDown;
+        Face(heading, true, ScriptedTurnSpeed);
+        transform.position = position;
+        animator.SetBool(MovingParam, true);
+        animator.SetBool(PerchedParam, false);
+        if (beat)
+            animator.CrossFadeInFixedTime(FlapState, 0.08f, 0, 0f);
+    }
+
+    // The ending's far shot: smaller by this share from now on (its cry's pulse keeps to the new size).
+    public void ScaleBy(float share)
+    {
+        baseScale *= share;
+        transform.localScale = baseScale;
+    }
+
+    // Degrees per second: quick enough to follow a scripted curve, so it never flies sideways or tail first.
+    const float ScriptedTurnSpeed = 540f;
 
     // Hovers level where it is, until the script moves it again or EndIntro.
     public void HoldStill()

@@ -8,9 +8,30 @@
 //   돌며, 빛 쪽일수록 더 환하다. 결 위와 빛 무리 안에서는 작은 빛 알갱이가 반짝였다 사라진다. 천은 그림자 위로도 지나간다.
 // - 필름 같은 잔 알갱이를 얹는다.
 // - 세기: _DreamFogWeight(구역에 들어선 정도) × 그 자리 안개 밀도(FogField 의 칸, 아이와 새가 걷어 낸 곳은 옅다).
-// 값은 DreamFog 가 전역으로 준다.
+// 색은 머티리얼(DreamFog.mat, DreamFog 컴포넌트의 Look)에서 고친다. 나머지 값은 DreamFog 가 전역으로 준다.
 Shader "Hidden/ThatGameJam/DreamFog"
 {
+    Properties
+    {
+        _DreamLow ("Fog Bottom", Color) = (1, 0.87, 0.8, 1)
+        _DreamHigh ("Fog Top", Color) = (0.99, 0.86, 0.9, 1)
+        _DreamBlob ("Drifting Patches (alpha = strength)", Color) = (0.93, 0.84, 0.97, 0.3)
+        [HDR] _DreamSunColor ("Light", Color) = (1, 0.96, 0.86, 1)
+        _DreamSunBrightness ("Light Brightness", Float) = 1.1
+        _DreamShadow ("Shadows (alpha = how dark up close)", Color) = (0.8, 0.64, 0.7, 0.55)
+        _DreamShadowNear ("Shadows Stay Full Within (metres of the bird's depth)", Float) = 0
+        _DreamShadowMelt ("Then Vanish Into Fog Over (metres)", Float) = 5
+        _DreamShadowFront ("In Front Of Bird, Vanish Over (metres toward camera)", Float) = 3
+        _DreamShadowSoftness ("Shadow Edge Softness (pixels)", Range(0, 8)) = 3
+        _DreamLightBleed ("Light Eats Nearby Shadows", Range(0, 2)) = 1
+        _DreamBirdShade ("Shade Behind Bird And Baby (alpha = how dark)", Color) = (0.42, 0.28, 0.42, 0.45)
+        _DreamBirdShadeSize ("Shade Behind Bird And Baby Size (metres)", Float) = 0.9
+        _DreamFarBlur ("Blur Behind (pixels, at full distance)", Range(0, 40)) = 10
+        _DreamTallShadow ("Tall Things Shadow (alpha = how dark)", Color) = (0.52, 0.36, 0.52, 0.8)
+        _DreamTallFrom ("Tall Things From Height (metres over the ground)", Float) = 0.8
+        _DreamTallTo ("Tall Things Full At Height (metres)", Float) = 3
+    }
+
     SubShader
     {
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
@@ -36,12 +57,25 @@ Shader "Hidden/ThatGameJam/DreamFog"
             float _DreamFogWeight;     // 0 = off, 1 = full
             float4 _DreamLow;          // rgb fog colour at the bottom of the picture
             float4 _DreamHigh;         // rgb fog colour at the top
-            float4 _DreamSunColor;     // rgb light colour, a strength
+            float4 _DreamSunColor;     // rgb light colour
+            float _DreamSunBrightness; // the light's strength
             float4 _DreamSun;          // xy light on the screen (0..1), z core size, w halo size (shares of the screen height)
             float4 _DreamBlob;         // rgb drifting colour patches, a strength
             float4 _DreamShadow;       // rgb shadow colour, a strength
-            float4 _DreamDepth;        // x metres from the camera that stay fully shadow, y metres over which shadows melt into the fog,
-                                       // z edge softness (pixels), w how much the light eats nearby shadows
+            float _DreamShadowNear;    // metres past the bird (in depth) that stay fully shadow
+            float _DreamFocusDepth;    // the bird's depth from the camera (DreamFog), so the perspective holds at any zoom
+            float4 _DreamBird;         // xy the bird on the screen (0..1), z one metre at the bird's depth as a share of the screen's height
+            float4 _DreamBaby;         // the same for the baby's middle, w 0 when she is behind the camera
+            float4 _DreamBirdShade;    // rgb the soft shade behind the bird, a how dark
+            float _DreamBirdShadeSize; // its radius, metres
+            float _DreamShadowFront;   // metres over which shadows in front of the bird melt away toward the camera
+            float _DreamShadowMelt;    // metres over which shadows melt into the fog after that
+            float _DreamShadowSoftness;// edge softness (pixels)
+            float _DreamLightBleed;    // how much the light eats nearby shadows
+            float _DreamFarBlur;       // extra blur (pixels) for what lies far past the bird
+            float4 _DreamTallShadow;   // rgb colour of what stands up out of the ground (the trees), a how dark
+            float _DreamTallFrom;      // height over the ground (metres) where that starts
+            float _DreamTallTo;        // and where it is full
             float4 _DreamRays;         // x strength of the light streaming between shadows, y grain, z cleared-fog floor, w unused
             float4 _DreamSilk;         // x strength of the silk veils, y folds per metre, z how fast the wind carries them (metres a second), w iridescence
             float4 _DreamSilkWind;     // xy which way the wind blows the silk in the world (x, z)
@@ -60,6 +94,15 @@ Shader "Hidden/ThatGameJam/DreamFog"
                 #endif
             }
 
+            // How strongly something at this depth is a shadow: full around the bird's depth, melting into the fog behind it (Melt) and,
+            // more gently, in front of it toward the camera (Front Fade), so near leaves don't stand as dark walls before the camera.
+            float DepthFade(float distance)
+            {
+                float behind = exp(-max(distance - _DreamFocusDepth - _DreamShadowNear, 0.0) / max(_DreamShadowMelt, 1e-3));
+                float front = exp(-max(_DreamFocusDepth - _DreamShadowNear - distance, 0.0) / max(_DreamShadowFront, 1e-3));
+                return behind * front;
+            }
+
             // How much of a shadow there is at this pixel: 1 near, melting into the fog with distance, 0 for the sky.
             float ShadowAt(float2 uv)
             {
@@ -67,7 +110,24 @@ Shader "Hidden/ThatGameJam/DreamFog"
                 if (IsSky(raw))
                     return 0.0;
                 float distance = LinearEyeDepth(raw, _ZBufferParams);
-                return exp(-max(distance - _DreamDepth.x, 0.0) / max(_DreamDepth.y, 1e-3));
+                return DepthFade(distance);
+            }
+
+            // x: the shadow, as ShadowAt. y: that shadow again where something stands up out of the fog field's ground (a tree),
+            // by its height over it (Tall Things), 0 on the ground itself.
+            float2 ShadeAt(float2 uv)
+            {
+                float raw = SampleSceneDepth(uv);
+                if (IsSky(raw))
+                    return 0.0;
+                float distance = LinearEyeDepth(raw, _ZBufferParams);
+                float shadow = DepthFade(distance);
+                #if !UNITY_REVERSED_Z
+                raw = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, raw);
+                #endif
+                float3 world = ComputeWorldSpacePosition(uv, raw, UNITY_MATRIX_I_VP);
+                float tall = smoothstep(_DreamTallFrom, max(_DreamTallTo, _DreamTallFrom + 0.01), world.y - _DreamSilkPlanes.x);
+                return float2(shadow, shadow * tall);
             }
 
             float Hash(float2 p)
@@ -117,18 +177,27 @@ Shader "Hidden/ThatGameJam/DreamFog"
                 float sunDistance = length(toSun);
                 float core = exp(-sunDistance * sunDistance / max(_DreamSun.z * _DreamSun.z, 1e-5));
                 float halo = exp(-sunDistance / max(_DreamSun.w, 1e-4));
-                fog += _DreamSunColor.rgb * _DreamSunColor.a * (core * 1.2 + halo * 0.45);
+                fog += _DreamSunColor.rgb * _DreamSunBrightness * (core * 1.2 + halo * 0.45);
 
-                // Shadows, their edges blurred a little: the middle and eight around it.
-                float2 texel = _DreamDepth.z / _ScreenParams.xy;
-                float shadow = ShadowAt(uv) * 0.2;
-                [unroll] for (int i = 0; i < 8; i++)
+                // Shadows, and what stands up out of the ground darker on top of them (ShadeAt). Blurred, the more the further past the
+                // bird: near edges stay crisp, what is behind goes soft and then melts away. Sixteen taps on a spiral filling the disc,
+                // turned differently at each pixel, so a wide blur reads as a soft smear with a little grain instead of copies of the shape.
+                float2 centre = ShadeAt(uv);
+                float2 texel = (_DreamShadowSoftness + _DreamFarBlur * (1.0 - centre.x)) / _ScreenParams.xy;
+                float turn = Hash(uv * _ScreenParams.xy) * 6.283185;
+                float2 shade = centre * (1.0 / 17.0);
+                [unroll] for (int i = 0; i < 16; i++)
                 {
-                    float angle = i * 0.785398;
-                    shadow += ShadowAt(uv + float2(cos(angle), sin(angle)) * texel) * 0.1;
+                    float radius = sqrt((i + 0.5) / 16.0);
+                    float angle = i * 2.399963 + turn;
+                    shade += ShadeAt(uv + float2(cos(angle), sin(angle)) * radius * texel) * (1.0 / 17.0);
                 }
+                float shadow = shade.x;
+                float tallShadow = shade.y;
                 // Near the light the shadows are eaten by it.
-                shadow *= 1.0 - saturate(core * _DreamDepth.w + halo * _DreamDepth.w * 0.3);
+                float eaten = 1.0 - saturate(core * _DreamLightBleed + halo * _DreamLightBleed * 0.3);
+                shadow *= eaten;
+                tallShadow *= eaten;
 
                 // Light streaming between the shadows: how open the way to the light is, a few steps toward it.
                 float open = 0.0;
@@ -136,9 +205,24 @@ Shader "Hidden/ThatGameJam/DreamFog"
                 [unroll] for (int s = 1; s <= 10; s++)
                     open += 1.0 - ShadowAt(uv + step * s);
                 open /= 10.0;
-                fog *= lerp(1.0 - _DreamRays.x * 0.5, 1.0 + _DreamRays.x * halo, open);
+                // Only brightens where the way is open: darkening where it's blocked drew a dirty dark tail behind everything, away
+                // from the light.
+                fog *= 1.0 + _DreamRays.x * halo * open;
 
                 half3 dream = lerp(fog, _DreamShadow.rgb, saturate(shadow * _DreamShadow.a));
+
+                // What stands up out of the ground (the trees) darker still: the ground itself keeps the soft shadow above.
+                dream = lerp(dream, _DreamTallShadow.rgb, saturate(tallShadow) * _DreamTallShadow.a);
+
+                // A soft shade behind the bird, so the white bird reads against the bright fog. The bird itself is skipped by the stencil,
+                // so this shows only round it.
+                float2 fromBird = (uv - _DreamBird.xy) * float2(aspect, 1.0);
+                float shadeRadius = max(_DreamBirdShadeSize * _DreamBird.z, 1e-4);
+                dream = lerp(dream, _DreamBirdShade.rgb, exp(-dot(fromBird, fromBird) / (shadeRadius * shadeRadius)) * _DreamBirdShade.a);
+                // And behind the baby, who glows white over the fog (PrismOverlay).
+                float2 fromBaby = (uv - _DreamBaby.xy) * float2(aspect, 1.0);
+                float babyRadius = max(_DreamBirdShadeSize * _DreamBaby.z, 1e-4);
+                dream = lerp(dream, _DreamBirdShade.rgb, exp(-dot(fromBaby, fromBaby) / (babyRadius * babyRadius)) * _DreamBirdShade.a * _DreamBaby.w);
 
                 // Silk and sparkles float in the world, not on the screen: the silk is a field of curved folds in the air, read at three
                 // depths along this pixel's line of sight. So it stays put as the camera moves (the near slice sliding past faster than
@@ -231,7 +315,12 @@ Shader "Hidden/ThatGameJam/DreamFog"
                     if (all(cell >= 0.0) && all(cell <= 1.0))
                         local = lerp(_DreamRays.z, 1.0, SAMPLE_TEXTURE2D_LOD(_DreamFogMask, sampler_LinearClamp, cell, 0).r);
                 }
-                return half4(lerp(scene, dream, saturate(_DreamFogWeight * local)), 1.0);
+                // Coming in, the scene first lifts into the fog's colours (a screen blend: brighter and clearer, never greyer), and the
+                // shadowed dream comes over it later. A plain mix halfway in averaged the scene's cool shadows with the pink into grey.
+                float w = saturate(_DreamFogWeight * local);
+                half3 lifted = 1.0 - (1.0 - scene) * (1.0 - saturate(fog) * 0.8);
+                half3 start = lerp(scene, lifted, saturate(w * 2.0));
+                return half4(lerp(start, dream, w * w), 1.0);
             }
             ENDHLSL
         }
