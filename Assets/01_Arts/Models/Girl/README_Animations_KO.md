@@ -1,12 +1,12 @@
 # NPC 소녀 애니메이션 (Unity)
 
-원본: `NPC-Girl-Walk-GetUp.blend` (NPC-Girl-Rig의 액션 11개를 구워서 내보냄. 내보내기 스크립트: `export_girl_animation.py`)
+원본: `NPC-Girl-Walk-GetUp.blend` (NPC-Girl-Rig의 액션 13개를 구워서 내보냄. 내보내기 스크립트: `export_girl_animation.py`)
 
 ## 파일
 
 | 파일 | 내용 |
 |---|---|
-| `NPC-Girl-Animated.fbx` | 메시 + 리그 + 클립 11개 + 텍스처(내장) + 눈 깜빡임·꽃 블렌드셰이프 애니메이션 |
+| `NPC-Girl-Animated.fbx` | 메시 + 리그 + 클립 13개 + 텍스처(내장) + 눈 깜빡임·꽃 블렌드셰이프 애니메이션 |
 | `clips.json` | 클립별 프레임 범위, 루프 여부 |
 
 ## 클립 (30 FPS)
@@ -24,6 +24,8 @@
 | `Girl_LieDown` | 7.267초 | X |
 | `Girl_Sleep` | 3.0초 | O |
 | `Girl_GetUp` | 12.567초 | X |
+| `Girl_Intro_Sleep` | 3.0초 | O |
+| `Girl_Intro_GetUp` | 12.567초 | X |
 
 이어지는 포즈가 정확히 같습니다(검증 오차 0):
 GetUp 끝 ≈ 서 있는 포즈 → LieDown 시작은 GetUp 370프레임 포즈 → LieDown 끝 = Sleep 시작/끝 = GetUp 시작.
@@ -32,7 +34,7 @@ GetUp 끝 ≈ 서 있는 포즈 → LieDown 시작은 GetUp 370프레임 포즈 
 ## Unity 설정
 
 - Rig: Animation Type **Generic**, Avatar Definition **Create From This Model**
-- Animation 탭에서 Walk, Run, BalanceWalk, Sleep, Idle 4종은 **Loop Time** 켜기
+- Animation 탭에서 Walk, Run, BalanceWalk, Sleep, Intro_Sleep, Idle 4종은 **Loop Time** 켜기
 - Materials: 텍스처 없는 옷·머리·눈썹 등은 머티리얼 Base Color에 색이 들어 있음(`Dress`, `Hair`, `Circle`, `Plane`)
 
 ## 참고
@@ -41,7 +43,10 @@ GetUp 끝 ≈ 서 있는 포즈 → LieDown 시작은 GetUp 370프레임 포즈 
   - 발이 미끄러지지 않는 속도: Walk 약 0.1 m/s, Run 약 0.59 m/s, BalanceWalk 약 0.05 m/s
 - 눈 깜빡임과 꽃은 블렌드셰이프 애니메이션으로 클립 안에 들어 있습니다.
 - Blender 뷰포트는 'Preserve Volume' 스키닝이라, 많이 구부러진 치마(눕기/일어나기)는 Unity에서 최대 약 2cm 다르게 보일 수 있습니다.
-- `Girl_GetUp`은 Blender에서 10~387프레임이며, FBX에서는 0초부터 시작합니다.
+- `Girl_GetUp`, `Girl_Intro_GetUp`은 Blender에서 10~387프레임이며, FBX에서는 0초부터 시작합니다.
+- 인트로 흐름: `Girl_Intro_Sleep`(반복, 눈에 덮여 잠) → `Girl_Intro_GetUp`. Intro_Sleep 끝 포즈 = Intro_GetUp 시작 포즈(검증 오차 0). Intro_Sleep의 몸 동작은 Girl_Sleep과 같고 눈만 덮여 있습니다.
+- 눈 덩어리(`Snow_Clumps`, 본 `Snow_xx`)는 `Girl_Intro_Sleep`(덮인 채 고정)과 `Girl_Intro_GetUp`에서만 보입니다. 기본 자세에서는 아주 작게 접혀 있어 다른 클립에서는 보이지 않고, Intro_GetUp 중반(약 4~6초)에 녹아 사라집니다.
+- 피부는 과슈 텍스처(`Skin_Gouache_*`)가 FBX에 내장되어 있습니다.
 - Blender에서 애니메이션을 고친 뒤에는 다시 내보내야 합니다.
 
 ## Girl_Jump (제자리 점프)

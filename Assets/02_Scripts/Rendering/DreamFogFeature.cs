@@ -53,6 +53,7 @@ public class DreamFogFeature : ScriptableRendererFeature
 
 public class DreamFogPass : ScriptableRenderPass
 {
+
     static readonly ProfilingSampler Sampler = new ProfilingSampler("Dream Fog");
     static readonly int BlitTextureId = Shader.PropertyToID("_BlitTexture");
     static readonly int BlitScaleBiasId = Shader.PropertyToID("_BlitScaleBias");

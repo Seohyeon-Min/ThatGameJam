@@ -16,6 +16,11 @@ public class DreamFog : MonoBehaviour
     static readonly int ShadowId = Shader.PropertyToID("_DreamShadow");
     static readonly int DepthId = Shader.PropertyToID("_DreamDepth");
     static readonly int RaysId = Shader.PropertyToID("_DreamRays");
+    static readonly int SilkId = Shader.PropertyToID("_DreamSilk");
+    static readonly int SilkWindId = Shader.PropertyToID("_DreamSilkWind");
+    static readonly int SparkleId = Shader.PropertyToID("_DreamSparkle");
+    static readonly int SilkPlanesId = Shader.PropertyToID("_DreamSilkPlanes");
+    static readonly int SilkFloatId = Shader.PropertyToID("_DreamSilkFloat");
     static readonly int MaskId = Shader.PropertyToID("_DreamFogMask");
     static readonly int AreaId = Shader.PropertyToID("_DreamFogArea");
 
@@ -61,6 +66,32 @@ public class DreamFog : MonoBehaviour
     [Tooltip("How soft the shadows' edges are, in pixels.")]
     [SerializeField, Min(0f)] float edgeSoftness = 3f;
 
+    [Header("Silk")]
+    [Tooltip("How strong the sheer silk veils drifting through the fog are: the shine on their folds.")]
+    [SerializeField, Range(0f, 2f)] float silk = 0.35f;
+    [Tooltip("Folds per metre of the silk sheets, which hang in the world. Higher is finer silk.")]
+    [SerializeField, Min(0.01f)] float silkFoldsPerMetre = 0.35f;
+    [Tooltip("Which way the wind carries the silk in the world (X, Z), and how fast in metres a second.")]
+    [SerializeField] Vector2 silkWindDirection = new(0.3f, -1f);
+    [SerializeField, Min(0f)] float silkWindMetresPerSecond = 0.6f;
+    [Tooltip("Where the silk floats: from this many metres over the fog field's ground up to this many, fading out below and above.")]
+    [SerializeField] Vector2 silkFloats = new(1.5f, 9f);
+    [Tooltip("How far from the camera the nearest of the three silk slices is read, and the metres between slices.")]
+    [SerializeField] Vector2 silkDepths = new(5f, 4.5f);
+    [Tooltip("How close the silk's folds lie together. Lower spreads them apart (fewer, looser folds); higher packs them into tight stripes.")]
+    [SerializeField, Range(0.2f, 4f)] float silkFoldCloseness = 1f;
+    [Tooltip("How much the folds shimmer in rainbow colours, 0 to 1.")]
+    [SerializeField, Range(0f, 1f)] float iridescence = 0.5f;
+
+    [Header("Sparkles")]
+    [Tooltip("Share of the air's cells that hold a star, 0 to 1, before the drifts thin them out. Brighter on the silk and in the light.")]
+    [SerializeField, Range(0f, 1f)] float sparkles = 0.25f;
+    [Tooltip("Size of the 3D cells the stars hang in, in metres: one star at most in each, somewhere inside. Smaller is a denser sky, and reaches less far (24 cells along each line of sight).")]
+    [SerializeField, Min(0.05f)] float sparkleCellSize = 0.8f;
+    [Tooltip("How fast sparkles flash and fade.")]
+    [SerializeField, Min(0f)] float sparkleSpeed = 2.5f;
+    [SerializeField, Min(0f)] float sparkleBrightness = 1.5f;
+
     [Header("Grain and clearing")]
     [SerializeField, Range(0f, 0.2f)] float grain = 0.04f;
     [Tooltip("Thin the dream fog where the field's fog is thin. Off: even everywhere. Leave it off in a maze: the field holds its ways thinner, and they'd show as paths.")]
@@ -97,6 +128,12 @@ public class DreamFog : MonoBehaviour
         Shader.SetGlobalVector(DepthId, new Vector4(shadowDepth.x, shadowDepth.y, edgeSoftness, lightBleed));
         // A cleared floor of 1 leaves the dream fog full everywhere, whatever the cells say.
         Shader.SetGlobalVector(RaysId, new Vector4(rays, grain, showClearing ? clearedLeft : 1f, 0f));
+        Shader.SetGlobalVector(SilkId, new Vector4(silk, silkFoldsPerMetre, silkWindMetresPerSecond, iridescence));
+        Shader.SetGlobalVector(SilkWindId, new Vector4(silkWindDirection.x, silkWindDirection.y, 0f, 0f));
+        float ground = field != null ? field.transform.position.y : 0f;
+        Shader.SetGlobalVector(SilkPlanesId, new Vector4(ground, silkDepths.x, silkFoldCloseness, silkDepths.y));
+        Shader.SetGlobalVector(SilkFloatId, new Vector4(silkFloats.x, silkFloats.y, 0f, 0f));
+        Shader.SetGlobalVector(SparkleId, new Vector4(sparkles, sparkleCellSize, sparkleSpeed, sparkleBrightness));
         if (field != null && field.Mask != null)
         {
             Shader.SetGlobalTexture(MaskId, field.Mask);
