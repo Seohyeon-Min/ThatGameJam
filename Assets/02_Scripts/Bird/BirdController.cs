@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
-// Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer,
+// Player-controlled bird: left-click flies to a point or lands on a Perchable, holding the button keeps following the pointer over the
+// ground (also when the press began on a branch),
 // right-click cries, clicking the baby toggles sheltering her (following her pace) until clicked off again. Left idle
 // in the air near a branch, it lands on it by itself (birdIdlePerchRadius) rather than
 // hopping the camera to any branch on screen. Sent past where the way is still closed
@@ -121,6 +122,9 @@ public class BirdController : MonoBehaviour
     readonly List<Vector2> clipped = new();
     float idleTime;
     bool following;
+    // Pressed on this branch at pressedTime and still held: a click on it if let go within birdPerchClickSeconds.
+    Perchable pressedPerch;
+    float pressedTime;
     Perchable perch;
     bool clicksLocked;
     float landTime;
@@ -374,6 +378,7 @@ public class BirdController : MonoBehaviour
         if (Encyclopedia.IsOpen)
         {
             ShowPerchCursor(false);
+            pressedPerch = null;
             return;
         }
         if (control == Control.Sky)
@@ -387,33 +392,51 @@ public class BirdController : MonoBehaviour
         altitude = FlightAltitude();
 
         Ray ray = Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>());
-        bool hasHit = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
-        Perchable hovered = hasHit ? PerchableAt(hit) : null;
-        // Something the bird cannot perch on now (a branch off screen, a fallen log) does not catch the click: it goes to what lies behind.
-        if (hasHit && hovered == null && hit.collider.gameObject.layer == interactableLayer)
-            hasHit = Physics.Raycast(ray, out hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
-        ShowPerchCursor(hovered != null);
+        Perchable hovered = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide)
+            ? PerchableAt(hit) : null;
+        // Where it flies to: the ground or water under the pointer, behind any branch there.
+        bool onGround = Physics.Raycast(ray, out RaycastHit ground, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
+        bool held = moveAction.IsPressed();
+        // Holding the button the bird follows the pointer and no branch reacts, unless the press began on one and is still a click.
+        ShowPerchCursor(hovered != null && (!held || pressedPerch != null));
 
         bool pressed = moveAction.WasPressedThisFrame() && !clicksLocked && !DevTools.Covers(pointAction.ReadValue<Vector2>());
         if (Cutscene.PlayerLocked)
         {
             // Held still: no clicks count, and it stops where it is instead of going on to its last target.
             following = false;
+            pressedPerch = null;
             target = transform.position;
         }
         else if (pressed && CanShelter() && Baby.Instance.GetComponent<Collider>().Raycast(ray, out _, Mathf.Infinity))
             ToggleShelter();
-        else if (pressed && hasHit)
+        else if (pressed && hovered != null)
         {
-            Click(hit, hovered);
-            // A new click on the ground hops again, however often it comes (HopAgain).
-            if (state == State.Walking)
-                HopAgain();
+            // A press on a branch is a click on it only if let go soon: held on, it follows the pointer like any hold.
+            pressedPerch = hovered;
+            pressedTime = Time.time;
         }
-        else if (!moveAction.IsPressed())
+        else if (pressed && onGround)
+            Click(ground);
+        else if (pressedPerch != null)
+        {
+            if (!held)
+            {
+                if (pressedPerch.CanPerch && OnScreen(pressedPerch.PerchPoint.position))
+                    ClickPerch(pressedPerch);
+                pressedPerch = null;
+            }
+            else if (Time.time - pressedTime >= GameTuning.Current.birdPerchClickSeconds)
+            {
+                pressedPerch = null;
+                if (onGround)
+                    Click(ground);
+            }
+        }
+        else if (!held)
             following = false;
-        else if (following && hasHit)
-            target = hit.point;
+        else if (following && onGround)
+            target = ground.point;
         if (IsSheltering && !CanShelter())
         {
             // The baby has reached the sunlit spot, or stopped walking: hovers where it is.
@@ -574,17 +597,19 @@ public class BirdController : MonoBehaviour
         lastBabyPosition = Baby.Instance.transform.position;
     }
 
-    void Click(RaycastHit hit, Perchable hovered)
+    // An explicit click on a branch or the ground always breaks off sheltering.
+    void ClickPerch(Perchable perchable)
     {
-        // An explicit move/perch click elsewhere always breaks off sheltering.
         IsSheltering = false;
-        following = hovered == null;
-        if (hovered != null)
-        {
-            if (hovered != perch || state != State.Perched)
-                StartPerch(hovered);
-            return;
-        }
+        following = false;
+        if (perchable != perch || state != State.Perched)
+            StartPerch(perchable);
+    }
+
+    void Click(RaycastHit hit)
+    {
+        IsSheltering = false;
+        following = true;
 
         // Sitting (or about to) and sent past where the way is still closed again: it doesn't set off just to refuse again at the line,
         // it stays and shakes its head once more, however often the player clicks there.
@@ -601,6 +626,9 @@ public class BirdController : MonoBehaviour
         // and moves on as the area moves (the camera follows, or a gate opens).
         target = hit.point;
         clickMarker.Show(hit.point);
+        // A new click on the ground hops again, however often it comes (HopAgain).
+        if (state == State.Walking)
+            HopAgain();
     }
 
     // Null unless the hit is a perchable Interactable whose perch point is on screen.
