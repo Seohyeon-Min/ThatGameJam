@@ -5,7 +5,7 @@
 			<value>footstepSnow</value>
 		</property>
 		<property name="outputFormat">
-			<value>1</value>
+			<value>2</value>
 		</property>
 		<relationship name="folder">
 			<destination>{25fe05f1-e477-45fe-acdc-c8d3aee3b0ab}</destination>
@@ -115,6 +115,7 @@
 	<object class="MixerBusEffectChain" id="{67b97268-bce9-4e9c-ba17-e850e48f609e}">
 		<relationship name="effects">
 			<destination>{951b9188-d420-445d-b358-0cb1b6ee5864}</destination>
+			<destination>{db61f21d-0407-4c11-825f-9a0775ac5640}</destination>
 		</relationship>
 	</object>
 	<object class="MixerBusPanner" id="{80c98572-e877-4051-a319-b5702d9f5780}" />
@@ -150,6 +151,14 @@
 	</object>
 	<object class="MixerBusPanner" id="{b2e7d91c-4660-42a1-8410-3f97b6e38a88}" />
 	<object class="MixerBusFader" id="{951b9188-d420-445d-b358-0cb1b6ee5864}" />
+	<object class="SpatialiserEffect" id="{db61f21d-0407-4c11-825f-9a0775ac5640}">
+		<property name="minimumDistance">
+			<value>2</value>
+		</property>
+		<property name="overrideRange">
+			<value>true</value>
+		</property>
+	</object>
 	<object class="RandomizerModulator" id="{30cc65d5-1db4-4d1d-a007-88a6d0e2e6ab}">
 		<property name="nameOfPropertyBeingModulated">
 			<value>volume</value>
