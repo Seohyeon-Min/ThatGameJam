@@ -67,6 +67,7 @@ public class GameFlow : MonoBehaviour
     void Start()
     {
         Baby.Instance.ReachedRest += OnReachedRest;
+        Baby.Instance.GotUp += OnBabyGotUp;
 #if UNITY_EDITOR
         int startStage = UnityEditor.SessionState.GetInt(StartStageKey, -1);
         UnityEditor.SessionState.EraseInt(StartStageKey);
@@ -201,6 +202,10 @@ public class GameFlow : MonoBehaviour
         else
             return;
         season.SetSeason(season.Level - 1);
+        // The light she slept in at this stage's start, and the one ahead at its end, as before they faded.
+        if (current > 0)
+            SunlitSpotOf(stages[current - 1])?.Show();
+        SunlitSpotOf(CurrentStage)?.Show();
         Baby.Instance.PlaceAsleep(CurrentStage.babyStart, CurrentStage.route);
         BirdController.Instance.Teleport(CurrentStage.birdStart.position);
         BirdController.Instance.SetAltitude(CurrentStage.birdAltitude, true);
@@ -235,6 +240,15 @@ public class GameFlow : MonoBehaviour
     Vector3 SunlitSpotPosition => CurrentStage.route[CurrentStage.route.Count - 1].position;
 
     void OnReachedRest() => EndStage();
+
+    // She has got up where the stage before ended: its sunlit spot has done its job and fades away.
+    void OnBabyGotUp()
+    {
+        if (current > 0)
+            SunlitSpotOf(stages[current - 1])?.FadeOut(GameTuning.Current.sunlitSpotFadeSeconds);
+    }
+
+    static SunlitSpot SunlitSpotOf(Stage stage) => stage.route[stage.route.Count - 1].GetComponentInChildren<SunlitSpot>();
 
     // Advances the season and starts the next stage where the baby sleeps. False after the last stage.
     bool EndStage()

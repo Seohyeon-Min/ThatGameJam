@@ -28,6 +28,7 @@ public class Encyclopedia : MonoBehaviour
     [SerializeField, Min(1f)] float photoMargin = 1.15f;
 
     public static bool IsOpen { get; private set; }
+    public static Encyclopedia Instance { get; private set; }
 
     readonly HashSet<EncyclopediaEntry> found = new HashSet<EncyclopediaEntry>();
     RenderTexture[] photos;
@@ -51,7 +52,11 @@ public class Encyclopedia : MonoBehaviour
         popup.Show(index + 1, entry);
     }
 
-    void Awake() => photos = new RenderTexture[entries.Length];
+    void Awake()
+    {
+        Instance = this;
+        photos = new RenderTexture[entries.Length];
+    }
 
     void Start()
     {

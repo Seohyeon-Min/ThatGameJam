@@ -10,7 +10,7 @@ public class TreeGeneratorEditor : Editor
         var root = new VisualElement();
         InspectorElement.FillDefaultInspector(root, serializedObject, this);
 
-        root.Add(new HelpBox("Areas are child objects with a TreeZone (Trees, Clear or Pines). Size each box with its BoxCollider's Edit Collider button.", HelpBoxMessageType.Info));
+        root.Add(new HelpBox("Areas are child objects with a TreeZone (Trees, Clear, Pines or Thin). Size each box with its BoxCollider's Edit Collider button.", HelpBoxMessageType.Info));
         var buttons = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 6 } };
         buttons.Add(new Button(() => ForEach(g => g.Generate())) { text = "Generate", style = { flexGrow = 1 } });
         buttons.Add(new Button(() => ForEach(g => g.Clear())) { text = "Clear", style = { flexGrow = 1 } });

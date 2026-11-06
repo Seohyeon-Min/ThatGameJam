@@ -42,6 +42,32 @@ public class LightBeam : MonoBehaviour
     static readonly int SunPoolColorId = Shader.PropertyToID("_WC_SunPoolColor");
 
     Mesh mesh;
+    float strength = 1f;
+    MaterialPropertyBlock block;
+
+    // The shader's strengths that Strength scales.
+    static readonly int[] StrengthIds =
+        { Shader.PropertyToID("_Intensity"), Shader.PropertyToID("_PoolIntensity"), Shader.PropertyToID("_PoolHalo") };
+
+    // 1 as its material has it, 0 gone: the shaft, the pool, and the light the pool casts on the baby. SunlitSpot fades it out.
+    public float Strength
+    {
+        get => strength;
+        set
+        {
+            strength = Mathf.Clamp01(value);
+            MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+            if (strength >= 1f)
+            {
+                meshRenderer.SetPropertyBlock(null);
+                return;
+            }
+            block ??= new MaterialPropertyBlock();
+            foreach (int id in StrengthIds)
+                block.SetFloat(id, meshRenderer.sharedMaterial.GetFloat(id) * strength);
+            meshRenderer.SetPropertyBlock(block);
+        }
+    }
 
     void OnEnable()
     {
@@ -106,7 +132,7 @@ public class LightBeam : MonoBehaviour
         Shader.SetGlobalVector(SunPoolId, new Vector4(foot.x, foot.y, foot.z, poolRadius));
         Shader.SetGlobalVector(SunPoolSlantId, new Vector4(toSky.x / rise, toSky.z / rise, material.GetFloat("_PoolDrift"), 0f));
         Shader.SetGlobalVector(SunPoolShapeId, new Vector4(material.GetFloat("_PoolBlobSize"), material.GetFloat("_PoolRagged"), material.GetFloat("_PoolThreshold"), material.GetFloat("_PoolEdge")));
-        Shader.SetGlobalColor(SunPoolColorId, material.GetColor("_PoolColor"));
+        Shader.SetGlobalColor(SunPoolColorId, material.GetColor("_PoolColor") * strength);
     }
 
     void OnDestroy()

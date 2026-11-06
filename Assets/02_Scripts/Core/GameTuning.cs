@@ -100,6 +100,15 @@ public class GameTuning : ScriptableObject
     public float babyShiverIntensityFrequency = 0.35f;
     // Seconds the shiver takes to ease in once she sets off after waking (none while she gets up and looks round).
     public float babyShiverFadeIn = 3f;
+    // At the sunlit spot she lies down only with the bird this close (XZ) and her on the screen. Until then she plays nearby
+    // (PlaySpot), each play lasting between the two (seconds).
+    public float babyRestBirdDistance = 10f;
+    public float babyPlaySecondsMin = 5f;
+    public float babyPlaySecondsMax = 9f;
+
+    [Header("Stage change")]
+    // Once the baby has got up in the next stage, the sunlit spot she slept in fades out over this many seconds.
+    public float sunlitSpotFadeSeconds = 1.5f;
 
     [Header("Fog maze (ADR 0028)")]
     // At a fork whose animal has not answered, the girl stands this long before she picks a way at random.
@@ -123,6 +132,8 @@ public class GameTuning : ScriptableObject
     // so landing on a branch far across the screen reads as the camera snapping there unasked; being sent to
     // the nearest branch when refused (Refuse) is unrestricted, by design.
     public float birdIdlePerchRadius = 2.5f;
+    // A press on a branch let go within this many seconds lands on it; held longer, the bird follows the pointer instead.
+    public float birdPerchClickSeconds = 0.2f;
     // How fast the bird's horizontal speed ramps toward birdSpeed (and toward 0 when slowing for a landing).
     public float birdAcceleration = 10f;
     // How hard it brakes approaching a perch: speed near the branch is sqrt(2 * this * remaining distance).

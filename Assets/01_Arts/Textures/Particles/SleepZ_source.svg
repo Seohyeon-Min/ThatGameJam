@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="zGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFDF6"/>
+      <stop offset="55%" stop-color="#F3FAFE"/>
+      <stop offset="100%" stop-color="#CFEBFB"/>
+    </linearGradient>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="tinyBlur" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- soft luminous glow behind the letter -->
+  <path d="M158,172 L354,172 Q300,257 158,340 L354,340"
+        fill="none" stroke="#CDEFFD" stroke-width="64"
+        stroke-linecap="round" stroke-linejoin="round"
+        opacity="0.45" filter="url(#softGlow)"/>
+
+  <!-- subtle volume shading, offset slightly down-right -->
+  <path d="M164,180 L360,180 Q306,265 164,348 L360,348"
+        fill="none" stroke="#A9D7EF" stroke-width="50"
+        stroke-linecap="round" stroke-linejoin="round"
+        opacity="0.35" filter="url(#tinyBlur)"/>
+
+  <!-- main letter -->
+  <path d="M158,172 L354,172 Q300,257 158,340 L354,340"
+        fill="none" stroke="url(#zGrad)" stroke-width="56"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- soft glossy highlight, offset slightly up-left -->
+  <path d="M152,166 L346,166 Q296,249 152,332 L346,332"
+        fill="none" stroke="#FFFFFF" stroke-width="16"
+        stroke-linecap="round" stroke-linejoin="round"
+        opacity="0.5" filter="url(#tinyBlur)"/>
+</svg>
