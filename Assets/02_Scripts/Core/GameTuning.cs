@@ -92,6 +92,10 @@ public class GameTuning : ScriptableObject
     // Seconds the shiver takes to ease in once she sets off after waking (none while she gets up and looks round).
     public float babyShiverFadeIn = 3f;
 
+    [Header("Stage change")]
+    // Once the baby has got up in the next stage, the sunlit spot she slept in fades out over this many seconds.
+    public float sunlitSpotFadeSeconds = 1.5f;
+
     [Header("Fog maze (ADR 0028)")]
     // At a fork whose animal has not answered, the girl stands this long before she picks a way at random.
     public float fogForkWaitTime = 3f;

@@ -195,6 +195,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 - Where the bird may fly: the road and the terrain beside it of every stage up to the current one (`Stage.area`, ADR 0013, ADR 0021). In the current stage it goes forward only up to the Z of that stage's sunlit spot (the last point of the baby's route). Devices do not hold it back. Backwards is always open (ADR 0010, ADR 0012).
 - Only the dev tool's "next stage" teleports. It leaves the baby asleep at the current stage's sunlit spot and starts the next stage. The bird moves to the next stage's start.
 - The light of the Sunlit Rest Area (a gap in the clouds and sunlight) is art work (§16). The code only turns it on and off.
+- In the next stage, once the girl has fully got up (`Baby.GotUp`, when the get-up clip ends), the previous stage's Sunlit Rest Area fades its light out over `GameTuning.sunlitSpotFadeSeconds` (1.5 s) and stays off (`SunlitSpot.FadeOut`). The ring (`SpringRing`) is left alone. The dev tool "Back" turns the light at that stage's start and end on again (the director's order, 2026-11-06).
 - The Sunlit Rest Area in the last stage starts off. It turns on when the clouds are broken through or part (§10.3, 4.13).
 
 ### 4.7 Camera (§2.5)

@@ -54,6 +54,8 @@ public class Baby : CryListener
 
     // Reached the last point of its route and has lain down to sleep there.
     public event Action ReachedRest;
+    // Woken, she has finished getting up (before looking up or around, and walking off).
+    public event Action GotUp;
 
     BabyRoute route;
     bool cryPending;
@@ -333,6 +335,7 @@ public class Baby : CryListener
         StartCoroutine(SparkleEyes(clip));
         yield return new WaitForSeconds(clip.length);
         gettingUp = false;
+        GotUp?.Invoke();
         if (intro)
         {
             snowShaken = true;
