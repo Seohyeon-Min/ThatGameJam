@@ -10,10 +10,13 @@ public class TreeZone : MonoBehaviour
         Trees,
         Clear,
         Pines,
+        Thin,
     }
 
-    [Tooltip("Trees: trees grow here. Clear: none here, even inside a Trees zone (the road). Pines: some of the trees here are pines, without adding any.")]
+    [Tooltip("Trees: trees grow here. Clear: none here, even inside a Trees zone (the road). Pines: some of the trees here are pines, without adding any. Thin: the trees here thin out along the box's Z, from all of them at its -Z face to Far Share at its +Z face.")]
     public Kind kind = Kind.Trees;
+    [Tooltip("Thin: the share of the trees kept at the box's +Z face.")]
+    [Range(0f, 1f)] public float farShare = 0.05f;
 
     BoxCollider Box => GetComponent<BoxCollider>();
 
@@ -33,6 +36,16 @@ public class TreeZone : MonoBehaviour
         BoxCollider box = Box;
         Vector3 local = transform.InverseTransformPoint(world) - box.center;
         return Mathf.Abs(local.x) <= box.size.x * 0.5f && Mathf.Abs(local.z) <= box.size.z * 0.5f;
+    }
+
+    // Thin: the share of the trees kept at this point, eased from 1 at the box's -Z face to farShare at its +Z face. 1 outside the box.
+    public float KeptShare(Vector3 world)
+    {
+        if (!Contains(world))
+            return 1f;
+        BoxCollider box = Box;
+        float along = (transform.InverseTransformPoint(world).z - box.center.z) / box.size.z + 0.5f;
+        return Mathf.Lerp(1f, farShare, Mathf.SmoothStep(0f, 1f, along));
     }
 
 #if UNITY_EDITOR
@@ -82,6 +95,7 @@ public class TreeZone : MonoBehaviour
         {
             Kind.Trees => new Color(0.3f, 0.9f, 0.4f),
             Kind.Clear => new Color(1f, 0.35f, 0.3f),
+            Kind.Thin => new Color(1f, 0.75f, 0.3f),
             _ => new Color(0.2f, 0.55f, 0.35f),
         };
         Vector3[] corners = Corners();
