@@ -3,18 +3,22 @@ using FMOD.Studio;
 using FMODUnity;
 using UnityEngine;
 
-// The stage BGM. Starts once Start Cutscene ends, as one FMOD event instance holding Stage 0 to 2's tracks so they stay in
-// sample-exact sync: Stage 0's track plays at once, Stage 1 and 2's sit silent behind the Layer1-2 parameters until Season raises
-// its level (design doc Season_Change_Effect) past them, when that layer fades in over Fade Seconds - layering, not a crossfade.
-// Reaching Season step 3 (Stage 3) retires that whole layered instance and switches, once, to Final Music Event playing alone;
-// levels past that (the ending) do nothing further.
+// The stage BGM. Starts once Start Cutscene ends: the layered event (Stage 0's track always on, Stage 1-2 gated by the Layer1-2
+// parameters) and BGM_Stage_Final both start together, Final silent, so Final's half-length intro Loop Region stays phase-locked
+// to the layered event's loop from the first frame (Final is authored at twice the layered event's loop length, split at the
+// midpoint, per design). Season reaching Stage 3 (design doc Season_Change_Effect) fades the layered event out, sets Final's
+// Release parameter so FMOD's Transition Region carries it out of the half loop into the rest of the piece on the next bar, and
+// fades Final in - the switch lands on the beat instead of Final restarting from 0. Levels past Stage 3 (the ending) do nothing
+// further.
 public class MusicManager : MonoBehaviour
 {
     [Tooltip("event:/Music/backgroundmusic — one event whose Stage 0 track always plays and whose Stage 1-2 tracks are gated by the Layer1-2 parameters.")]
     [SerializeField] EventReference musicEvent;
-    [Tooltip("event:/Music/BGM_Stage_Final — played alone once Season reaches Stage 3, replacing the layered event above.")]
+    [Tooltip("event:/Music/BGM_Stage_Final — starts muted alongside Music Event (so its half-length intro Loop Region stays phase-locked to it), then takes over alone once Season reaches Stage 3.")]
     [SerializeField] EventReference finalMusicEvent;
-    [Tooltip("Seconds a layer takes to fade from silent to full once its Season step is reached, and the Final track's own fade-in time.")]
+    [Tooltip("Final's parameter that releases it from its half-length intro loop into the rest of the piece, via a Transition Region in FMOD Studio.")]
+    [SerializeField] string finalReleaseParameter = "Release";
+    [Tooltip("Seconds a layer takes to fade from silent to full once its Season step is reached, and Final's own fade-in/out time at the Stage 3 switch-over.")]
     [SerializeField, Min(0.01f)] float fadeSeconds = 3f;
     [Tooltip("The event's local parameters that gate Stage 1 and 2's tracks, in Season level order.")]
     [SerializeField] string[] layerParameters = { "Layer1", "Layer2" };
@@ -30,7 +34,7 @@ public class MusicManager : MonoBehaviour
     EventInstance finalMusic;
     Coroutine[] fades;
     Coroutine finalFade;
-    bool finalStarted;
+    bool released;
 
     void Awake()
     {
@@ -68,33 +72,40 @@ public class MusicManager : MonoBehaviour
         }
     }
 
-    // Catches the instance up to wherever Season's level currently puts it (snapped, not faded: this is catching up, not a
-    // Season_Change_Effect). Already at Stage 3 or past it: skip the layered event entirely and start on Final Music Event.
+    // Starts the layered event and Final together so Final's half-length intro loop is phase-locked to the layered event's loop
+    // from the first frame. Catches an instance up to wherever Season's level currently puts it (snapped, not faded): already at
+    // Stage 3 or past it, Final starts released and audible and the layered event isn't started at all.
     void StartMusic()
     {
         int level = season != null ? season.Level : 0;
-        if (level >= FinalLevel)
+        bool startReleased = level >= FinalLevel;
+
+        if (!startReleased && !music.isValid())
         {
-            StartFinalMusic(snap: true);
-            return;
+            music = RuntimeManager.CreateInstance(musicEvent);
+            for (int i = 0; i < layerParameters.Length; i++)
+                music.setParameterByName(layerParameters[i], level >= i + 1 ? 1f : 0f, true);
+            music.start();
         }
 
-        if (music.isValid())
-            return;
-        music = RuntimeManager.CreateInstance(musicEvent);
-        for (int i = 0; i < layerParameters.Length; i++)
-            music.setParameterByName(layerParameters[i], level >= i + 1 ? 1f : 0f, true);
-        music.start();
+        if (!finalMusic.isValid())
+        {
+            finalMusic = RuntimeManager.CreateInstance(finalMusicEvent);
+            finalMusic.setParameterByName(finalReleaseParameter, startReleased ? 1f : 0f, true);
+            finalMusic.setVolume(startReleased ? 1f : 0f);
+            finalMusic.start();
+        }
+        released = startReleased;
     }
 
     // Layer i (0-based) is on once level has passed Season step i+1, and stays on from then on: driven by the level itself, not a
-    // count of calls, so Game Flow's Back One Stage dev tool can't double-fire or desync a layer. Reaching Final Level switches
-    // over once and for good; Back One Stage before Stage 3 is not expected to undo that switch.
+    // count of calls, so Game Flow's Back One Stage dev tool can't double-fire or desync a layer. Reaching Final Level releases
+    // Final once and for good; Back One Stage before Stage 3 is not expected to undo that.
     void OnSeasonChanged(int level)
     {
         if (level >= FinalLevel)
         {
-            StartFinalMusic(snap: false);
+            ReleaseFinal();
             return;
         }
 
@@ -104,13 +115,13 @@ public class MusicManager : MonoBehaviour
             FadeLayerTo(i, level >= i + 1 ? 1f : 0f);
     }
 
-    // Retires the layered event and starts Final Music Event alone. snap: true catches up an instance that never played the
-    // layers at all (StartMusic called straight into Stage 3); false is the normal in-game switch-over, which fades.
-    void StartFinalMusic(bool snap)
+    // Sets Final's Release parameter (FMOD's Transition Region carries it out of its half-length intro loop on the next bar) and
+    // crossfades: the layered event out, Final in. Final itself is already playing (muted, phase-locked) from StartMusic.
+    void ReleaseFinal()
     {
-        if (finalStarted)
+        if (released)
             return;
-        finalStarted = true;
+        released = true;
 
         if (music.isValid())
         {
@@ -118,22 +129,20 @@ public class MusicManager : MonoBehaviour
             music.release();
         }
 
-        finalMusic = RuntimeManager.CreateInstance(finalMusicEvent);
-        if (snap)
-        {
-            finalMusic.start();
+        if (!finalMusic.isValid())
             return;
-        }
-        finalMusic.setVolume(0f);
-        finalMusic.start();
+        finalMusic.setParameterByName(finalReleaseParameter, 1f, true);
+        if (finalFade != null)
+            StopCoroutine(finalFade);
         finalFade = StartCoroutine(FadeFinalVolume());
     }
 
     IEnumerator FadeFinalVolume()
     {
+        finalMusic.getVolume(out float from);
         for (float t = 0f; t < fadeSeconds; t += Time.deltaTime)
         {
-            finalMusic.setVolume(t / fadeSeconds);
+            finalMusic.setVolume(Mathf.Lerp(from, 1f, t / fadeSeconds));
             yield return null;
         }
         finalMusic.setVolume(1f);
@@ -157,7 +166,7 @@ public class MusicManager : MonoBehaviour
         music.setParameterByName(parameter, target, true);
     }
 
-    // Debug only: as if Season had advanced one more step, to watch a layer fade in (or the Stage 3 switch-over happen) without
+    // Debug only: as if Season had advanced one more step, to watch a layer fade in (or the Stage 3 release happen) without
     // playing through a stage.
     [ContextMenu("Debug/Advance Season (Season_Change_Effect)")]
     void DebugAdvanceSeason()
