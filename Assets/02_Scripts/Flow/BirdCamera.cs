@@ -48,6 +48,8 @@ public class BirdCamera : MonoBehaviour
     float restWeight;
 
     public bool IsLocked => lockedPoint.HasValue;
+    // The wheel has zoomed out as far as this stage lets it, and the zoom has got there.
+    public bool IsZoomedAllTheWayOut => zoom >= Mathf.Min(zoomMax, GameTuning.Current.cameraZoomMax) - 0.001f;
 
     void Awake()
     {

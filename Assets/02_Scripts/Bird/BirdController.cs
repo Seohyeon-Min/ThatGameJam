@@ -67,6 +67,8 @@ public class BirdController : MonoBehaviour
     public Vector3 SkyForward { get; set; } = Vector3.forward;
 
     public bool IsPerched => state == State.Perched;
+    // Standing on a perch or on the ground.
+    public bool IsOnFoot => state is State.Perched or State.Walking;
     // Sitting on a perch or on the way to one.
     public bool IsPerchedOrLanding => state is State.ToPerch or State.Landing or State.Perched;
     // Toggled on by a click on the walking baby, keeping the snow off her (SnowShelter) until clicked off again.
@@ -968,6 +970,43 @@ public class BirdController : MonoBehaviour
                 tail.Aim();
             cryPulse.Play();
         }
+    }
+
+    // Placeholder until a peck clip exists: tips the body forward and back, once per peck. Returns the seconds it takes.
+    public float Peck(int times)
+    {
+        const float eachSeconds = 0.3f;
+        StartCoroutine(PeckRoutine(times, eachSeconds));
+        return times * eachSeconds;
+    }
+
+    IEnumerator PeckRoutine(int times, float eachSeconds)
+    {
+        const float depth = 40f;
+        for (float t = 0f; t < times * eachSeconds; t += Time.deltaTime)
+        {
+            bodyPitch = depth * Mathf.Sin(Mathf.PI * (t % eachSeconds) / eachSeconds);
+            yield return null;
+        }
+        bodyPitch = 0f;
+    }
+
+    // Placeholder until a clip exists: the body swells and settles back. Returns the seconds it takes.
+    public float PuffChest()
+    {
+        const float seconds = 1.2f;
+        StartCoroutine(Swell(seconds, 0.25f));
+        return seconds;
+    }
+
+    IEnumerator Swell(float seconds, float amount)
+    {
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            transform.localScale = baseScale * (1f + amount * Mathf.Sin(Mathf.PI * t / seconds));
+            yield return null;
+        }
+        transform.localScale = baseScale;
     }
 
     // Placeholder until the cry animation exists.
