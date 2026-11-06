@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum NaturalTimerKind { Wake, LeaningLog, RabbitFamily, FogSection, Cloud }
+public enum NaturalTimerKind { Wake, LeaningLog, RabbitBurrow, FogSection, Cloud }
 
 // All timing and speed values in one asset, so playtime can be tuned without code changes.
 // The asset lives at Assets/04_Data/Resources/GameTuning.asset.
@@ -10,7 +10,7 @@ public class GameTuning : ScriptableObject
     [Header("Natural resolution (seconds)")]
     public float wakeTime = 10f;
     public float leaningLogTime = 30f;
-    public float rabbitFamilyTime = 30f;
+    public float rabbitBurrowTime = 30f;
     public float fogSectionTime = 30f;
     public float cloudTime = 40f;
 
@@ -109,6 +109,13 @@ public class GameTuning : ScriptableObject
     [Header("Stage change")]
     // Once the baby has got up in the next stage, the sunlit spot she slept in fades out over this many seconds.
     public float sunlitSpotFadeSeconds = 1.5f;
+
+    [Header("Rabbit burrow (ADR 0036)")]
+    // The rabbits inside (called by the cry, or by themselves near the end of the natural time) dig through the entrance's snow in
+    // this many seconds, and so does the bird pecking at it. Both together take half.
+    public float burrowDigTime = 8f;
+    // A cry this close to the entrance (XZ) calls the rabbits inside.
+    public float burrowCryRadius = 10f;
 
     [Header("Fog maze (ADR 0028)")]
     // At a fork whose animal has not answered, the girl stands this long before she picks a way at random.
@@ -220,7 +227,7 @@ public class GameTuning : ScriptableObject
     {
         NaturalTimerKind.Wake => wakeTime,
         NaturalTimerKind.LeaningLog => leaningLogTime,
-        NaturalTimerKind.RabbitFamily => rabbitFamilyTime,
+        NaturalTimerKind.RabbitBurrow => rabbitBurrowTime,
         NaturalTimerKind.FogSection => fogSectionTime,
         _ => cloudTime,
     };

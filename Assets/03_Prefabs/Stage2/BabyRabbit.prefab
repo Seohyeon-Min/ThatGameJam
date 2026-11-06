@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5604259831563216100}
-  - component: {fileID: 4526550486256292998}
+  - component: {fileID: 1089552210364761636}
   m_Layer: 0
   m_Name: BabyRabbit
   m_TagString: Untagged
@@ -33,7 +33,7 @@ Transform:
   - {fileID: 9138863063024472220}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4526550486256292998
+--- !u!114 &1089552210364761636
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,16 +42,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 6891943817998845716}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a86b75cf97dcc4748b1a04b1c34458c7, type: 3}
+  m_Script: {fileID: 11500000, guid: d2ff111374519014b90ff6bed4c410c1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RabbitActor
+  m_EditorClassIdentifier: Assembly-CSharp::BurrowRabbit
   animator: {fileID: 2896922171261504230}
-  wakeClip: {fileID: -5297868539890211015, guid: f88151b2f07d4e145a16a555fb3d8f4d, type: 3}
-  sleepVariant: 0
-  hopSpeed: 0.34
-  exitPoints:
-  - {fileID: 0}
-  - {fileID: 0}
+  hopSpeed: 0.9
+  idleSeconds: {x: 3, y: 6}
+  sinkDepth: 0.3
 --- !u!1001 &8744155341052082039
 PrefabInstance:
   m_ObjectHideFlags: 0

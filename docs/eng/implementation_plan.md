@@ -240,29 +240,24 @@ For now it is one stage without a device (ADR 0018, the director's sketch). The 
   - The bird may perch and knock the log down before the baby arrives. In that case the baby does not stop. It looks up in front of the log, then crosses (Q4, §4.2).
 - 1-3: Sunlit Rest Area. The seasonal effect is a mother rabbit and baby rabbits passing in a line along a set path (§7.4). It is simple movement using the same point list as `BabyRoute`.
 
-### 4.11 Stage 2 — Sleeping Rabbit Family (§8)
+### 4.11 Stage 2 — Blocked Rabbit Burrow (§8)
 
-- 2-1 demonstration: when the baby passes a trigger, one small bird flies in along a set path, perches on a branch, and leaves. At that moment, the `SnowBranch` resolution animation plays too. Position and timing are not yet decided in the design (§16).
-- `SnowBranch`: a bent snow-laden branch. When the bird perches, the snow falls and the branch springs up. 2-1 and 2-2 use the same component.
-- `RabbitFamily` (2-2):
-  - The baby crouches at the `StopPoint` in front of it. It is not physically blocked (§8.3). So the rabbits get no collider check; the baby stops only through the `StopPoint`.
-  - `NaturalTimer` about 30 seconds. Signals are snow dust from the branches → the babies toss and turn → the mother yawns and stretches.
-  - When all branches blocking the side path are cleared, `ResolveByBird()`. The baby peeks at the family, looks up at the bird, and goes to the side path's point list.
-  - When time runs out, the rabbits wake up, move off the path, and pass by. The baby watches them, then takes the original path.
-  - The number of branches is not yet decided in the design (§16). The code takes N branches, and the side path opens only when all are cleared (Q9).
-- The bird does not touch the rabbits (§8.3). The rabbits are not `Perchable`, so clicking them just makes the bird fly to the ground at that spot.
+Changed to the new design (road rabbits and a blocked burrow) on 2026-11-06 ([ADR 0036](decisions/0036-stage-2-becomes-the-blocked-rabbit-burrow.md)). The old design (demo bird, snow-laden branches, sleeping rabbit family, bypass), its scripts (`RabbitFamily`, `RabbitActor`, `SnowBranch`, `BranchDemo`) and `SnowBranch.prefab` were removed. The old stage 2 in `Sam_Test` was not touched and is left with missing scripts.
 
-
-Current first version (`Sam_Test`, 2026-10-30): one mother, three kits, and two bypass branches. Uses the actual models and `Sleep*`, `WakeUp*`, `Hop`, `SitIdle` clips in `Assets/01_Arts/Models/Rabbits/`. Mother speed 0.61 m/s; kit speed 0.34 m/s. The source ZIP was removed after CRC and model import verification.
-
-- Demo starts after baby Z 27.2 when the branch is on screen. The separate small bird lands and leaves; the player cannot perch on the demo branch.
-- Stop Z 31, family center Z 33.3. The 30s timer starts on baby arrival. The baby faces the rabbits while waiting.
-- Help: open only after both branches finish rising. Rabbits remain asleep; the baby faces the family, looks at the bird, and walks the X −2.75 bypass. Early resolution uses the same route.
-- Natural: each rabbit plays the wake matching its sleep pose, then all move off the lane before opening. Partial branch progress cannot override a natural result once decided.
-- Signals are branch snow dust, small kit turns, and a small mother turn. Source clips have no yawning/stretching or baby crouch/peek. Baby uses `QuietWait` (breathing only) for waiting/reactions at the rabbit stop; normal hum/stretch idles are excluded. Prototype snow rustle plays only when a branch actually sheds its snow. Waiting signals are visual only until distinct signal audio exists.
-- At season 3, five local snowbanks shrink away over 3s. No global ground-snow shader change yet.
-- In-place builder: `AgentScripts/BuildStage2.cs`, `BuildStage2.Run`. Run this pass again after a full `BuildSamTestScene.Build` reset.
-- No fog stage was connected; the earlier decision not to rebuild the fog map until requested remains in force.
+- `Stage2/RabbitStage` in `Main`. Builder: `AgentScripts/BuildStage2.cs`, `BuildStage2.Run`. Running it again keeps the two snowbanks (`RightBank`, `LeftOuterBank`) and the root's `HiddenUntilSeason` and `Stage2SnowMelt`, and rebuilds the rest. Positions are relative to the `Stage2` root, so they follow the stage spacing.
+- Route: the girl stops at the `StopPoint` at z 51 (34 in `Stage2` space) and watches the burrow's hole while waiting. Three road rabbits (`BabyRabbit.prefab`) sit on the road right ahead (z 52.5 – 53.2).
+- Burrow: a hole in the left snowbank (x −3.45, z 53) with the entrance snow in front (`EntranceSnow`, `Snowbank.prefab`). Two burrow rabbits (`Rabbit.prefab`) wait inactive inside the hole. The hole (a dark sphere) and the snow mound are placeholders.
+- `RabbitBurrow` (`PathBlocker`): digs the entrance snow from 0 to 1.
+  - Cry (`CryListener.Cried`): within `burrowCryRadius` (10 m, horizontal) of the hole, the burrow rabbits answer with the bird's own cry (`BirdCryPulse`) and dig from inside from then on.
+  - Left click: the snow mound is a `Perchable` (Interactable layer, yellow sparkle). The bird lands on the ground in front of it (`PerchPoint`), faces the snow and pecks over and over (`BirdController.Peck`). It digs only while perched there. Clicking elsewhere stops it; what it dug stays.
+  - Speed: the burrow rabbits and the bird each dig through alone in `burrowDigTime` (8 s); together the rates add up to 4 s. The mound trembles while the rabbits dig and gets lower as it is dug.
+  - Natural: the `NaturalTimer` (`RabbitBurrow`, 30 s) starts when the girl stops. With 8 s left, the burrow rabbits start digging by themselves and break through at 30 s. The only waiting signal is the yellow sparkle.
+  - Through: if the bird helped at all (cry or pecking), it counts as the bird's help (`ResolveByBird`). The mound goes, the burrow rabbits come out and sit, the road rabbits go into the hole 0.35 s apart, and then the road opens (about 7 s after breaking through). The burrow rabbits then go in too. The girl looks at the hole and, if the bird helped, looks up at the bird before walking on.
+  - The bird may break through before the girl arrives; she then only reacts, without waiting.
+- `BurrowRabbit`: sitting, it switches between `SitIdle` variants and `Sniff` every 3 – 6 s. It hops (`Hop`) to given points (kits 0.9 m/s, adults 1.1 m/s) and sinks 0.3 m into the hole before it disappears.
+- Camera: `CameraZone_Burrow` semi-lock, released when the burrow opens.
+- At season 3 the two snowbanks shrink away (`Stage2SnowMelt`).
+- Verification: `AgentScripts/VerifyStage2.cs`. Run `Prepare`, enter Play Mode, then run one of `Natural`, `CryOnly`, `Clear`, `Both`, `Partial`, `Early`.
 
 ### 4.12 Stage 3 — Fog (§9.2 ~ §9.5)
 
@@ -390,7 +385,7 @@ All times and speeds are collected in `GameTuning`. The draft values are taken d
 |---|---|---|---|
 | Baby wakes up | 10 s | 4 (intro + 3 stage starts) | 40 s |
 | Leaning log | 30 s | 1 | 30 s |
-| Sleeping rabbit family | 30 s | 1 | 30 s |
+| Blocked rabbit burrow | 30 s | 1 | 30 s |
 | Fog | 30 s per section | 2 (3-1, 3-2) | 60 s |
 | Clouds | 40 s | 1 | 40 s |
 | Total | | | 200 s = 3 min 20 s |
@@ -457,7 +452,7 @@ Steps 1 and 2 do not depend on each other, so two people can split them. Steps 3
 |---|---|---|
 | 1. Shared framework | Done | `Assets/00_Scenes/Sam_Test.unity`. Work records 04, 05 |
 | 2. Fog prototype | Done | `Assets/00_Scenes/Sam_Fog_Test.unity`. Work record 06 |
-| 3. Stage 2 | First playable version; awaiting feedback | `Sam_Test/Stage2`: demo, sleeping family, two branches/bypass, natural resolution, local snow melt. The 1-3 rabbit procession is not yet implemented |
+| 3. Stage 2 | Blocked rabbit burrow, first version (2026-11-06) | `Main/Stage2`: 3 road rabbits, 2 burrow rabbits, cry / pecking / both / natural, local snow melt. The burrow and snow mound are placeholders. The 1-3 rabbit procession is not yet implemented |
 | Stage 3 (fog, ADR 0028) | First playable, awaiting feedback | `Main/Stage3`. A straight way and 6 forks, 6 placeholder animals, the girl running to the bird, fog thin only over the ways |
 | 3-3 cliff and resting stone (ADR 0029) | Rough first version, awaiting feedback | `Main/Stage3/CliffEnding`. A road through a thinning forest, a big stone, the cliff; when the bird reaches the screen's edge, `Girl_Intro_GetUp` in place of the ending. No clouds or two endings yet |
 | 4 to 6 | Not started | |
