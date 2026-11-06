@@ -603482,7 +603482,6 @@ GameObject:
   - component: {fileID: 1110797294}
   - component: {fileID: 1110797296}
   - component: {fileID: 1110797300}
-  - component: {fileID: 1110797299}
   - component: {fileID: 1110797298}
   - component: {fileID: 1110797297}
   m_Layer: 0
@@ -603506,10 +603505,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 636685691}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.7}
+  m_AnchorMax: {x: 0.5, y: 0.7}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 640, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1110797296
 CanvasRenderer:
@@ -603568,20 +603567,6 @@ VideoPlayer:
   m_WaitForFirstFrame: 1
   m_FrameReadyEventEnabled: 0
   m_VideoShaders: []
---- !u!114 &1110797299
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1110797293}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 86710e43de46f6f4bac7c8e50813a599, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.AspectRatioFitter
-  m_AspectMode: 3
-  m_AspectRatio: 1.7777778
 --- !u!114 &1110797300
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -603606,9 +603591,9 @@ MonoBehaviour:
   m_UVRect:
     serializedVersion: 2
     x: 0
-    y: 0
+    y: 0.15
     width: 1
-    height: 1
+    height: 0.5555556
 --- !u!1001 &1110821955
 PrefabInstance:
   m_ObjectHideFlags: 0

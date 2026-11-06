@@ -6,13 +6,16 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 
 // Swaps the intro's grey title box in Main for the game's logo video (StreamingAssets/primavis_anim.webm): a VideoPlayer draws it into
-// a render texture, which a RawImage shows over the whole screen at the video's 16:9. IntroSequence fades and hides it as before.
+// a render texture, which a RawImage shows where the grey box was, at its size. IntroSequence fades and hides it as before.
 // Rerunning puts it in place again.
 // unity command script run --file AgentScripts/SetupTitleVideo.cs --entry SetupTitleVideo.Run
 public static class SetupTitleVideo
 {
     const string TexturePath = "Assets/01_Arts/Video/TitleLogo.renderTexture";
     const int Width = 1920, Height = 1080;
+    static readonly Vector2 BoxSize = new(640f, 200f);
+    // Bottom of the band shown, as a fraction of the video's height from its bottom. The logo lies between about 0.21 and 0.65.
+    const float BandBottom = 0.15f;
 
     public static string Run()
     {
@@ -41,17 +44,16 @@ public static class SetupTitleVideo
         image.color = Color.white;
         image.raycastTarget = false;
 
+        // Where the grey box was, at its size. The video is wider than the box's 640:200, so the box shows the video's full width
+        // and the band of its height the logo is in, unstretched.
+        image.uvRect = new Rect(0f, BandBottom, 1f, BoxSize.y / BoxSize.x * Width / Height);
+        if (title.TryGetComponent(out AspectRatioFitter fitter))
+            Undo.DestroyObjectImmediate(fitter);
         var rect = (RectTransform)title.transform;
         Undo.RecordObject(rect, "Setup Title Video");
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = rect.offsetMax = Vector2.zero;
-        if (!title.TryGetComponent(out AspectRatioFitter fitter))
-            fitter = Undo.AddComponent<AspectRatioFitter>(title);
-        Undo.RecordObject(fitter, "Setup Title Video");
-        fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-        fitter.aspectRatio = (float)Width / Height;
-
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.7f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = BoxSize;
         if (!title.TryGetComponent(out VideoPlayer player))
             player = Undo.AddComponent<VideoPlayer>(title);
         Undo.RecordObject(player, "Setup Title Video");
