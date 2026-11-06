@@ -91,6 +91,11 @@ public class GameTuning : ScriptableObject
     public float babyShiverIntensityFrequency = 0.35f;
     // Seconds the shiver takes to ease in once she sets off after waking (none while she gets up and looks round).
     public float babyShiverFadeIn = 3f;
+    // At the sunlit spot she lies down only with the bird this close (XZ) and her on the screen. Until then she plays nearby
+    // (PlaySpot), each play lasting between the two (seconds).
+    public float babyRestBirdDistance = 10f;
+    public float babyPlaySecondsMin = 5f;
+    public float babyPlaySecondsMax = 9f;
 
     [Header("Stage change")]
     // Once the baby has got up in the next stage, the sunlit spot she slept in fades out over this many seconds.

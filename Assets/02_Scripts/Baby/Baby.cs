@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Resting, Ending }
+public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Playing, Resting, Ending }
 
 // The baby: sleeps until the cry or its wake timer, walks its route, waits at blockers,
 // and looks up at the bird whenever the bird was the one who helped (design doc §2.2, §4).
@@ -25,6 +25,9 @@ public class Baby : CryListener
     static readonly int IntroWakeParam = Animator.StringToHash("IntroWake");
     // Played directly as the ending, which has no animation of its own yet.
     static readonly int IntroGetUpState = Animator.StringToHash("IntroGetUp");
+    // Played directly while she plays by the sunlit spot (PlaySpot). Their clips are stand-ins until the art comes.
+    static readonly int PlaySnowState = Animator.StringToHash("PlaySnow");
+    static readonly int PlayTreeState = Animator.StringToHash("PlayTree");
 
     [SerializeField] NaturalTimer wakeTimer;
     [SerializeField] float turnSpeed = 360f;
@@ -41,6 +44,10 @@ public class Baby : CryListener
     [SerializeField, Min(0)] int eyeSparkleFrame;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
+    [Tooltip("Zs rising off her head while she lies fully down: asleep, and the lying ends of lying down and getting up.")]
+    [SerializeField] ParticleSystem sleepZzz;
+    [Tooltip("Her head lower than this above her feet (in the model's own units) counts as lying fully down.")]
+    [SerializeField] float lyingHeadHeight = 0.18f;
     // Stepping up onto a balance beam (a log) or down off the far end plays this once, covering that segment's
     // own movement, before Walk/BalanceWalk resumes.
     [SerializeField] AnimationClip jumpClip;
@@ -65,8 +72,10 @@ public class Baby : CryListener
     // BalanceWalk plays instead of Walk, and the baby ignores curious pauses/cries until BalanceBeamEnd.
     bool onBalanceBeam;
     bool gettingUp;
-    // In the Run state, which has no transitions: walking or standing still cross-fades out of it.
-    bool running;
+    // A state played directly (Run, a play), which has no transitions out, else 0: walking or standing still cross-fades out of it.
+    int directState;
+    // Playing at a PlaySpot that has her look at something: the head turns to it while PlayTree plays.
+    Transform playLookAt;
     // The intro GetUp has played: the snow is gone for the rest of the game.
     bool snowShaken;
     // 0 to 1: how far the cold tremor has eased in since she set off.
@@ -116,6 +125,7 @@ public class Baby : CryListener
     // carries it alone. Once she sets off it eases in over babyShiverFadeIn, so it never starts with a jolt.
     void Update()
     {
+        UpdateSleepZzz();
         if (State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking or BabyState.Ending || gettingUp)
         {
             shiverFade = 0f;
@@ -133,6 +143,20 @@ public class Baby : CryListener
         animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
     }
 
+    // Lying fully down (asleep, or the lying ends of lying down and getting up): her head is near the ground then.
+    void UpdateSleepZzz()
+    {
+        // Scenes built before the Zs (Sam_Test) have none.
+        if (sleepZzz == null || headBone == null)
+            return;
+        bool lying = State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking
+            && headBone.position.y - transform.position.y < lyingHeadHeight * animator.transform.lossyScale.y;
+        if (lying && !sleepZzz.isEmitting)
+            sleepZzz.Play();
+        else if (!lying && sleepZzz.isEmitting)
+            sleepZzz.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+    }
+
     // Turns the head toward gazeTarget, after the animator has already posed it this frame (standard
     // look-override timing). Blends in/out by angle instead of a fixed ramp time, so a target that
     // appears or disappears mid-gaze (balance beam start, a reaction interrupting it) still eases smoothly.
@@ -148,6 +172,11 @@ public class Baby : CryListener
         if (noticingBird || lookingUpAtBird)
         {
             lookPoint = BirdController.Instance.transform.position;
+            active = true;
+        }
+        else if (directState == PlayTreeState && playLookAt != null)
+        {
+            lookPoint = playLookAt.position;
             active = true;
         }
         // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
@@ -209,7 +238,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
-        running = false;
+        directState = 0;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         animator.speed = 1f;
@@ -230,7 +259,7 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
-        running = false;
+        directState = 0;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         CurrentBlocker = null;
@@ -264,10 +293,10 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         gettingUp = false;
-        // Run has no transitions, so asleep would not take her out of it.
-        if (running)
+        // Run and the plays have no transitions, so asleep would not take her out of them.
+        if (directState != 0)
             animator.Play(SleepState, 0, 0f);
-        running = false;
+        directState = 0;
         lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
@@ -449,7 +478,94 @@ public class Baby : CryListener
             }
         }
 
+        yield return PlayUntilBirdComes();
         yield return LieDown();
+    }
+
+    // At the sunlit spot she lies down only with the bird near her. Until it comes she leaves the road to play nearby (PlaySpot),
+    // then walks back to the light (the director, 2026-11-06).
+    IEnumerator PlayUntilBirdComes()
+    {
+        if (BirdClose())
+            yield break;
+        Transform spot = route[route.Count - 1];
+        PlaySpot[] plays = spot.GetComponentsInChildren<PlaySpot>();
+        State = BabyState.Playing;
+        yield return EaseToStop();
+        PlaySpot last = null;
+        while (!BirdClose())
+        {
+            if (plays.Length == 0)
+            {
+                yield return null;
+                continue;
+            }
+            PlaySpot play = plays[UnityEngine.Random.Range(0, plays.Length)];
+            if (play == last && plays.Length > 1)
+                continue;
+            last = play;
+            yield return Play(play);
+        }
+        yield return LookUp(GameTuning.Current.babyLookUpDuration);
+        State = BabyState.Walking;
+        while (!StepToward(spot.position))
+            yield return null;
+    }
+
+    // One play, ended early when the bird comes near.
+    IEnumerator Play(PlaySpot play)
+    {
+        bool run = play.kind == PlayKind.RunAround;
+        while (!(run ? RunToward(play.transform.position) : StepToward(play.transform.position)))
+        {
+            if (BirdClose())
+                yield break;
+            yield return null;
+        }
+        GameTuning tuning = GameTuning.Current;
+        float end = Time.time + UnityEngine.Random.Range(tuning.babyPlaySecondsMin, tuning.babyPlaySecondsMax);
+        if (run)
+        {
+            for (int i = 0; Time.time < end; i = (i + 1) % play.transform.childCount)
+            {
+                while (!RunToward(play.transform.GetChild(i).position))
+                {
+                    if (BirdClose())
+                        yield break;
+                    yield return null;
+                }
+                yield return null;
+            }
+            yield break;
+        }
+        StandStill();
+        playLookAt = play.lookAt;
+        PlayDirect(play.kind == PlayKind.SnowPlay ? PlaySnowState : PlayTreeState, 0.25f);
+        while (Time.time < end && !BirdClose())
+        {
+            if (play.lookAt != null)
+                TurnToward(play.lookAt.position - transform.position);
+            yield return null;
+        }
+    }
+
+    // Near enough for her to sleep: the bird within babyRestBirdDistance of her (XZ), and her on the screen.
+    bool BirdClose()
+    {
+        Vector3 bird = BirdController.Instance.transform.position;
+        Vector3 offset = bird - transform.position;
+        if (new Vector2(offset.x, offset.z).magnitude > GameTuning.Current.babyRestBirdDistance)
+            return false;
+        Vector3 view = Camera.main.WorldToViewportPoint(transform.position);
+        return view.z > 0f && view.x is > 0f and < 1f && view.y is > 0f and < 1f;
+    }
+
+    void PlayDirect(int state, float fade)
+    {
+        if (directState == state)
+            return;
+        directState = state;
+        animator.CrossFade(state, fade);
     }
 
     IEnumerator WalkTo(Vector3 target)
@@ -571,9 +687,9 @@ public class Baby : CryListener
     {
         animator.SetBool(QuietWaitParam, false);
         animator.SetBool(WalkingParam, true);
-        if (running)
+        if (directState != 0)
         {
-            running = false;
+            directState = 0;
             animator.CrossFade(WalkState, 0.2f);
         }
         GameTuning tuning = GameTuning.Current;
@@ -609,11 +725,7 @@ public class Baby : CryListener
     {
         animator.SetBool(QuietWaitParam, false);
         animator.SetBool(WalkingParam, true);
-        if (!running)
-        {
-            running = true;
-            animator.CrossFade(RunState, 0.15f);
-        }
+        PlayDirect(RunState, 0.15f);
         TurnToward(target - transform.position);
         transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.fogRunSpeed * Time.deltaTime);
         return transform.position == target;
@@ -639,7 +751,7 @@ public class Baby : CryListener
     public void PlayEnding()
     {
         StopAllCoroutines();
-        running = false;
+        directState = 0;
         lookingAround = false;
         CurrentBlocker = null;
         State = BabyState.Ending;
@@ -675,9 +787,9 @@ public class Baby : CryListener
         animator.speed = 1f;
         // So the next walk ramps up from a stop again, instead of resuming at whatever speed she had.
         currentSpeed = 0f;
-        if (running)
+        if (directState != 0)
         {
-            running = false;
+            directState = 0;
             animator.CrossFade(IdleState, 0.2f);
         }
     }

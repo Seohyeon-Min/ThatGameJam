@@ -166,7 +166,8 @@ The clips of the art's girl model (`Assets/01_Arts/Models/Girl/NPC-Girl-Animated
 | Waking | Walks only after `Girl_GetUp` (12.6 s) ends. Then, if the bird woke it, it breathes and turns toward the bird. If it woke by itself, `Girl_Idle_LookAround` |
 | Walking | `Girl_Walk` |
 | Waiting at a device, looking up after the bird helped, waiting for a trail in the fog | Standing idles. Each time one of breathing (`Girl_Idle_Breathing`), humming (`Girl_Idle_Hum`), or stretching (`Girl_Idle_Stretch`) ends, the next is picked at random |
-| Reaching the sunlit spot | `Girl_LieDown` → `Girl_Sleep`. The season effect and transition start after lying down ends |
+| Reaching the sunlit spot | `Girl_LieDown` → `Girl_Sleep`. The season effect and transition start after lying down ends. Without the bird near she first plays nearby (4.6) |
+| Playing near the sunlit spot | Snow play `PlaySnow`, tree look `PlayTree` (Hum and Breathing stand in for now; when the director's clips come, only the Motion changes), run around `Girl_Run` |
 
 No clip yet: crouch, sit and rest, the waiting signals (toss and turn, rub eyes, stretch), look up, peek, watch. At crouch and sit stops the baby waits standing. `Girl_Run` is used in the fog stage when she runs to the bird (the `Run` state, played directly by `Baby`).
 
@@ -191,6 +192,7 @@ The five points in the §3.2 table (waking, log, rabbits, fog, clouds) all have 
 
 - The Sunlit Rest Area is not a special section (ADR 0006). Put one portal-like light at the end of the baby's path, right after the stage's last device. Do not build more path or ground past it.
 - When the baby reaches the end of the path: the baby lies down and falls asleep → the season goes up one level (4.15) → `GameFlow` starts the next stage right there (ADR 0010).
+- Without the bird near (within 10 m `babyRestBirdDistance` horizontally, and her on the screen) the baby does not lie down but plays at nearby play spots (`PlaySpot`, under `PlaySpots` below the sunlit spot). She picks them at random, 5 to 9 s each. When the bird comes near she stops at once, looks up at it, walks back to the sunlit spot and lies down. The play spots, the Animator states and the sleeping girl's Zzz are made by `AgentScripts/BuildGirlPlay.cs` ([ADR 0035](decisions/0035-the-girl-sleeps-at-the-sunlit-spot-only-with-the-bird-near.md)).
 - Next stage: the baby stays asleep where it is (`Sleeping`) and its wake timer runs again. The bird's altitude eases to the new stage's value. The new stage is added to the road the bird may fly over.
 - Where the bird may fly: the road and the terrain beside it of every stage up to the current one (`Stage.area`, ADR 0013, ADR 0021). In the current stage it goes forward only up to the Z of that stage's sunlit spot (the last point of the baby's route). Devices do not hold it back. Backwards is always open (ADR 0010, ADR 0012).
 - Only the dev tool's "next stage" teleports. It leaves the baby asleep at the current stage's sunlit spot and starts the next stage. The bird moves to the next stage's start.
