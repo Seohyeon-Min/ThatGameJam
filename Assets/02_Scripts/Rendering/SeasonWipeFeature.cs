@@ -25,6 +25,8 @@ public class SeasonWipeFeature : ScriptableRendererFeature
     [SerializeField, Tooltip("Ring radius where the old look is gone. Keep it inside the ring's Max Radius.")]
     float fadeEnd = 38f;
 
+    static readonly int EdgeId = Shader.PropertyToID("_WC_SeasonWipeEdge");
+
     Material m_Material;
     SeasonWipePass m_Pass;
 
@@ -47,7 +49,10 @@ public class SeasonWipeFeature : ScriptableRendererFeature
     {
         if (m_Pass == null || !SeasonWipe.Busy)
             return;
-        m_Pass.Setup(new Vector4(edgeSoftness, lumpHeight, lumpSize, 0f), new Vector4(fadeStart, fadeEnd, 0f, 0f));
+        var wipe = new Vector4(edgeSoftness, lumpHeight, lumpSize, 0f);
+        // The edge's shape for what follows it on the screen, as the flowers that bloom with the ring do (RingBloom).
+        Shader.SetGlobalVector(EdgeId, wipe);
+        m_Pass.Setup(wipe, new Vector4(fadeStart, fadeEnd, 0f, 0f));
         renderer.EnqueuePass(m_Pass);
     }
 

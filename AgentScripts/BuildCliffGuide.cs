@@ -588,8 +588,9 @@ public static class BuildCliffGuide
         return "Low shot at " + at.ToString("F1") + ", gap at " + gap.ToString("F1") + ", " + shafts.Length + " shafts beside her.";
     }
 
-    // The last two shots: Sleep Shot from in front of her, out over the drop looking back at her and the light she walks into, and Back Shot
-    // behind where she lies in it, looking out with her over the cliff. The light (Sleep Shaft) is one more, wider, shaft from the
+    // The last shot: Sleep Shot from in front of her, out over the drop looking back at her and the light she walks into (it draws
+    // away from there as it plays; an old Back Shot is taken away).
+    // The light (Sleep Shaft) is one more, wider, shaft from the
     // gap, the last of the low shot's to come.
     // unity command script run --file AgentScripts/BuildCliffGuide.cs --entry BuildCliffGuide.AddSleepShots
     static readonly Vector2 SleepShaftFoot = new(2f, 0.3f);
@@ -628,13 +629,10 @@ public static class BuildCliffGuide
 
         Vector3 middle = (girl + foot) / 2f;
         CinemachineCamera sleep = Shot(ending, "SleepShot", middle + new Vector3(0f, 1.5f, 6.5f), middle + Vector3.up * 0.7f, Camera.main, 35f);
-        CinemachineCamera back = Shot(ending, "BackShot", foot + new Vector3(0.4f, 1.1f, -3.2f), foot + new Vector3(0.4f, 0.6f, 3f), Camera.main, 40f);
         Undo.RegisterCreatedObjectUndo(sleep.gameObject, "Add Sleep Shots");
-        Undo.RegisterCreatedObjectUndo(back.gameObject, "Add Sleep Shots");
 
         var flight = new SerializedObject(ending.GetComponent<EndingFlight>());
         flight.FindProperty("sleepShot").objectReferenceValue = sleep;
-        flight.FindProperty("backShot").objectReferenceValue = back;
         flight.FindProperty("sleepShaft").objectReferenceValue = beam;
         SerializedProperty list = flight.FindProperty("lightShafts");
         bool listed = false;
@@ -654,7 +652,7 @@ public static class BuildCliffGuide
         }
         flight.ApplyModifiedProperties();
         EditorSceneManager.MarkSceneDirty(ending.gameObject.scene);
-        return "Sleep shaft at " + foot.ToString("F1") + ", " + list.arraySize + " shafts; sleep shot " + sleep.transform.position.ToString("F1") + ", back shot " + back.transform.position.ToString("F1");
+        return "Sleep shaft at " + foot.ToString("F1") + ", " + list.arraySize + " shafts; sleep shot " + sleep.transform.position.ToString("F1");
     }
 
     // One shaft of light (LightBeam), its material a brighter copy of the sunlit spots' beam.

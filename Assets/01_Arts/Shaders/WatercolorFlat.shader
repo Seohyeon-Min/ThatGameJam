@@ -29,6 +29,8 @@ Shader "ThatGameJam/WatercolorFlat"
         [MainColor] _BaseColor ("Base Color", Color) = (1, 1, 1, 1)
 
         [Toggle] _Floor ("Floor (wide flat surface: no paper, outline or boundary band)", Float) = 0
+        [Toggle] _TerrainHoles ("Terrain Holes (a terrain's material: cut where its holes are)", Float) = 0
+        [HideInInspector] _TerrainHolesTexture ("Terrain Holes Map", 2D) = "white" {}
 
         [Header(Baked by WatercolorBaker)]
         [Toggle] _HasPattern ("Has Pattern", Float) = 0
@@ -97,6 +99,9 @@ Shader "ThatGameJam/WatercolorFlat"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
+        // 터레인 구멍(Terrain Holes). 터레인이 자기 구멍 맵을 넣어 준다. 없으면 흰색(구멍 없음).
+        TEXTURE2D(_TerrainHolesTexture);
+        SAMPLER(sampler_TerrainHolesTexture);
         TEXTURE3D(_PatternTex);
         SAMPLER(sampler_PatternTex);
         TEXTURE3D(_ChaosTex); // r: 색 물방울(0.5 = 변화 없음), g: 연필 덩어리
@@ -108,6 +113,7 @@ Shader "ThatGameJam/WatercolorFlat"
             float4 _BaseMap_ST;
             half4 _BaseColor;
             half _Floor;
+            half _TerrainHoles;
             half _HasPattern;
             half _Cutoff;
             half _SelfShadowSkip;
@@ -163,6 +169,59 @@ Shader "ThatGameJam/WatercolorFlat"
             return positionWS;
         }
 
+        // 링과 함께 피기(RingBloom, ScatterGenerator 영역의 Bloom With Ring, 셰이더 사용자 값의 24번 비트): 봄 링의 가장자리가
+        // 오면 하얗고 조금 크게 솟았다가 제 크기와 제 색으로 가라앉는다. 가장자리는 SeasonWipe 와 같은 식으로 잰다(화면에서 링 중심
+        // 둘레의 원, 링 깊이에서의 미터, 같은 울퉁불퉁함). 그래서 옛 모습 사진이 걷히는 바로 그 자리에서 핀다. 링이 없으면 늘 그대로다.
+        float4 _SpringRing;          // 링이 퍼지는 동안 중심(xyz)과 반지름(w), 아니면 0
+        float4 _WC_SeasonWipeEdge;   // SeasonWipeFeature: x 가장자리 부드러움, y 울퉁불퉁한 높이, z 그 크기(미터)
+        float4 _WC_RingBloom;        // RingBloom: x 피어나는 폭(미터), y 가장 커질 때 더 커지는 비율, z 처음 흰 정도, w 앞뒤로 흩어지는 거리(미터)
+
+        // 0 = 아직(가장자리 밖, 그리지 않는다), 1 = 다 피었다. onScreen 이 아니면(그림자 패스, 행렬이 빛 기준) 땅 위 거리로 잰다.
+        float RingBloomProgress(bool onScreen)
+        {
+            if (((unity_RendererUserValue >> 24) & 1u) == 0u || _SpringRing.w <= 0.0 || _WC_RingBloom.x <= 0.0)
+                return 1.0;
+            float3 pivot = UNITY_MATRIX_M._m03_m13_m23;
+            float inside;
+            if (onScreen)
+            {
+                float2 screen = _ScaledScreenParams.xy;
+                float2 centre = ComputeNormalizedDeviceCoordinates(_SpringRing.xyz, UNITY_MATRIX_VP);
+                float2 metreAway = ComputeNormalizedDeviceCoordinates(_SpringRing.xyz + UNITY_MATRIX_V[0].xyz, UNITY_MATRIX_VP);
+                float pixelsPerMetre = max(length((metreAway - centre) * screen), 1e-3);
+                float2 offset = (ComputeNormalizedDeviceCoordinates(pivot, UNITY_MATRIX_VP) - centre) * screen / pixelsPerMetre;
+                float2 lumpAt = offset / max(_WC_SeasonWipeEdge.z, 1e-3);
+                float lumps = SunPoolNoise(lumpAt) * 0.6 + SunPoolNoise(lumpAt * 2.3 + 5.1) * 0.4;
+                inside = _SpringRing.w - length(offset) - (lumps - 0.5) * _WC_SeasonWipeEdge.y - _WC_SeasonWipeEdge.x;
+            }
+            else
+                inside = _SpringRing.w - distance(pivot.xz, _SpringRing.xz);
+            inside -= SunPoolHash(pivot.xz * 1.7 + 3.1) * _WC_RingBloom.w;
+            return saturate(inside / _WC_RingBloom.x);
+        }
+
+        // 크기: 없음에서 빠르게 솟아(앞 40%) 가장 클 때 1 + y 배, 끝에서 제 크기.
+        float RingBloomScale(float t)
+        {
+            float grow = 1.0 - pow(1.0 - saturate(t / 0.4), 3.0);
+            return grow * (1.0 + _WC_RingBloom.y * sin(saturate(t) * PI));
+        }
+
+        // 흰 정도: 처음에 z, 가라앉으며 제 색으로.
+        half RingBloomWhite(float t)
+        {
+            return (1.0 - smoothstep(0.25, 1.0, t)) * _WC_RingBloom.z;
+        }
+
+        float3 ApplyRingBloom(float3 positionWS, bool onScreen)
+        {
+            float t = RingBloomProgress(onScreen);
+            if (t >= 1.0)
+                return positionWS;
+            float3 pivot = UNITY_MATRIX_M._m03_m13_m23;
+            return pivot + (positionWS - pivot) * RingBloomScale(t);
+        }
+
         // 잎 카드(Leaf Card 체크, 나무 모델의 LeafCard_* 처럼 카드마다 오브젝트가 따로 있는 잎): 카드(XY 평면 사각형)를 자기
         // 원점에서 카메라의 오른쪽/위로 펼쳐 늘 카메라를 보게 한다. 카드마다 화면에서 도는 각도가 달라(원점으로 정한다) 잎이
         // 한 방향으로만 서지 않는다. Static 으로 합쳐지면 원점이 사라져 맞지 않는다. 그림자는 원래 방향의 카드로 드리운다.
@@ -194,7 +253,7 @@ Shader "ThatGameJam/WatercolorFlat"
         {
             if (_LeafCard > 0.5)
                 return LeafCardPositionWS(positionOS);
-            return ApplyWind(TransformObjectToWorld(positionOS));
+            return ApplyRingBloom(ApplyWind(TransformObjectToWorld(positionOS)), true);
         }
 
         // The old leaf graph's noise (Shader Graph's Simple Noise, Deterministic hash), for the boiling leaves.
@@ -463,8 +522,19 @@ Shader "ThatGameJam/WatercolorFlat"
             return saturate((grain - 0.5) * 2.0 + 0.5);
         }
 
+        // 터레인 구멍 자리를 잘라낸다. uv 는 _BaseMap 타일링이 걸린 것이라 되돌려서 터레인 전체 0~1 좌표로 쓴다.
+        void TerrainHoleClip(float2 uv)
+        {
+            if (_TerrainHoles > 0.5)
+            {
+                float2 terrainUV = (uv - _BaseMap_ST.zw) / _BaseMap_ST.xy;
+                clip(SAMPLE_TEXTURE2D(_TerrainHolesTexture, sampler_TerrainHolesTexture, terrainUV).r - 0.5);
+            }
+        }
+
         void AlphaClip(float2 uv)
         {
+            TerrainHoleClip(uv);
             #if defined(_ALPHATEST_ON)
             clip(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, LeafUV(uv)).a * _BaseColor.a - _Cutoff);
             #endif
@@ -686,6 +756,7 @@ Shader "ThatGameJam/WatercolorFlat"
                 UNITY_SETUP_INSTANCE_ID(input);
 
                 CameraFadeClip(input.positionWS, input.positionCS.xy);
+                TerrainHoleClip(input.uv);
 
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, LeafUV(input.uv));
                 #if defined(_ALPHATEST_ON)
@@ -717,6 +788,7 @@ Shader "ThatGameJam/WatercolorFlat"
                     albedo = HsvToRgb(tintHsv);
                 }
                 albedo = lerp(albedo, 1.0, InstanceWhiten());
+                albedo = lerp(albedo, 1.0, RingBloomWhite(RingBloomProgress(true)));
 
                 // 색 카오스: 같은 색 안에 떨어뜨린 다른 색 물방울. 굽기 때 정한 덩어리와 물방울 모양대로 색상을 돌린다.
                 // 채도가 거의 없는 색(회색, 흰색)은 색상이 의미가 없어서 거의 바뀌지 않는다(빛 쪽 파스텔 조각은 따로 보인다).
@@ -1228,7 +1300,7 @@ Shader "ThatGameJam/WatercolorFlat"
             {
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
-                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz));
+                float3 positionWS = ApplyRingBloom(ApplyWind(TransformObjectToWorld(input.positionOS.xyz)), false);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
                 float3 lightDirectionWS = normalize(_LightPosition - positionWS);

@@ -1,12 +1,12 @@
 # NPC 소녀 애니메이션 (Unity)
 
-원본: `NPC-Girl-Walk-GetUp.blend` (NPC-Girl-Rig의 액션 13개를 구워서 내보냄. 내보내기 스크립트: `export_girl_animation.py`)
+원본: `NPC-Girl-Walk-GetUp.blend` (NPC-Girl-Rig의 액션 14개를 구워서 내보냄. 내보내기 스크립트: `export_girl_animation.py`)
 
 ## 파일
 
 | 파일 | 내용 |
 |---|---|
-| `NPC-Girl-Animated.fbx` | 메시 + 리그 + 클립 13개 + 텍스처(내장) + 눈 깜빡임·꽃 블렌드셰이프 애니메이션 |
+| `NPC-Girl-Animated.fbx` | 메시 + 리그 + 클립 14개 + 텍스처(내장) + 눈 깜빡임·꽃 블렌드셰이프 애니메이션 |
 | `clips.json` | 클립별 프레임 범위, 루프 여부 |
 
 ## 클립 (30 FPS)
@@ -24,6 +24,7 @@
 | `Girl_LieDown` | 7.267초 | X |
 | `Girl_Sleep` | 3.0초 | O |
 | `Girl_GetUp` | 12.567초 | X |
+| `Girl_GetUp_Fast` | 5.367초 | X |
 | `Girl_Intro_Sleep` | 3.0초 | O |
 | `Girl_Intro_GetUp` | 12.567초 | X |
 
@@ -64,3 +65,7 @@ GetUp 끝 ≈ 서 있는 포즈 → LieDown 시작은 GetUp 370프레임 포즈 
 - 0.433초에 Animation Event를 걸어 그때 위로 힘을 주면 발 구르는 순간과 딱 맞습니다.
 - 높은 곳으로 올라가느라 공중에 있는 시간이 0.4초와 다르면, 공중 구간(0.433~0.833초) 동안 Animator 속도를 맞춰 주세요.
 - 첫 프레임과 마지막 프레임은 Idle의 서 있는 자세와 거의 같습니다(약 6mm 차이). Idle과 짧게 크로스페이드하면 이어집니다.
+
+## Girl_GetUp_Fast
+
+`Girl_GetUp`을 약 43% 길이(5.37초)로 다시 타이밍한 버전입니다(단순 배속 아님). 무릎 꿇은 뒤 가만히 멈춰 있던 구간(원본 280~331프레임)은 빼고, 바로 오른발을 내딛어 일어섭니다. 원본의 모든 포즈를 같은 순서로 지나가며, 느린 순간은 많이(최대 3.5배), 빠른 순간은 조금만(1.25배~) 줄였습니다. 관절 최고 속도는 원본의 1.4배 이내입니다. 시작 포즈 = Girl_GetUp 시작(= Sleep), 끝 포즈 = Girl_GetUp 끝(서 있는 자세).

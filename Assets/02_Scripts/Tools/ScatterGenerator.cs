@@ -32,6 +32,10 @@ public abstract class ScatterGenerator : MonoBehaviour
         [Range(0f, WatercolorTint.MostHueShift)] public float hueRange;
         [Tooltip("Hidden until the season reaches this level, then shown as it rises (0 = always). Intro 0, Stage1 1, Stage2 2, Stage3 3")]
         public int fromSeason;
+        [Tooltip("As the spring ring brings them out, each one here springs up at the ring's edge, white and a little too big, then settles to its own size and colour (RingBloom sets how). Off: they are just there inside the ring")]
+        public bool bloomWithRing;
+        [Tooltip("Grows here even inside the generator's clear areas (FlowerGenerator's red boxes), such as the ending's field by the cliff. Paths still keep clear")]
+        public bool ignoreClearAreas;
     }
 
     // Above 1, more of the amounts land near the whitest end of an area's range.
@@ -74,8 +78,20 @@ public abstract class ScatterGenerator : MonoBehaviour
 
     public int MadeCount => made.Count;
 
+    // Whether this one, made by this generator, stands in an area whose ones bloom with the ring (WatercolorPaintedModel.ApplyUserValue).
+    public bool BloomsWithRing(Transform thing)
+    {
+        if (thing.parent == null)
+            return false;
+        int area = groups.IndexOf(thing.parent.gameObject);
+        return area >= 0 && area < areas.Length && areas[area].bloomWithRing;
+    }
+
     // The share of spots kept at this world point, 0 to 1. All by default.
     protected virtual float Keep(Vector3 point) => 1f;
+
+    // The same, for a spot in this area; by default the area makes no difference.
+    protected virtual float Keep(Vector3 point, Area area) => Keep(point);
 
     void Start()
     {
@@ -181,7 +197,7 @@ public abstract class ScatterGenerator : MonoBehaviour
                 float patch = Mathf.PerlinNoise(local.x / patchSize + patchOffset.x, local.y / patchSize + patchOffset.y);
                 float chance = Mathf.Lerp(1f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.4f, 0.65f, patch)), clustering);
                 Vector3 point = transform.TransformPoint(new Vector3(local.x, 0f, local.y));
-                chance *= Keep(point);
+                chance *= Keep(point, area);
                 if (keep > chance)
                     continue;
                 if (!OnTerrain(terrain, point, out Vector3 world, out Vector3 normal))

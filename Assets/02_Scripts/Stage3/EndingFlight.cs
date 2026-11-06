@@ -13,14 +13,15 @@ using UnityEngine.Rendering;
 // 3. Far Shot: from far off to the side of the cliff, the bird, small, climbing slowly away along Far Path for Far Seconds, only
 //    just reaching the top of the picture as it ends.
 // 4. Top Shot: just over the top of the clouds, looking across them. A moment of clouds only, then the bird bursts up through
-//    them (Rise Curve: slow in the cloud, a rush out of it, easing over the top), hangs a beat and dives back in (the dive clip).
+//    them (Rise Curve: slow in the cloud, a rush out of it, easing over the top), hovers there a moment, its wings slowing as its strength goes, and lets itself fall straight back in where it came out (the dive's falling loop).
 //    The camera tilts after it a beat late, a little, up and down only, never down below the clouds; it dips as the bird dives and springs back. Where
 //    the bird goes in, the clouds swell in a ring that spreads out (Wave Speed), and the camera rides up and down on it as it passes under.
 // 5. Low Shot: down by the girl's feet, looking up past her at the clouds from below. Over them a gap opens from nothing, the
 //    clouds there drawing back, and thin shafts of light come down through it one after another, each brightening slowly.
 // 6. Sleep Shot: back by her, from in front. She turns her head to the light that has come down beside her (Sleep Shaft), blinks
-//    twice, walks into it and lies down there to sleep.
-// 7. Back Shot: behind her as she sleeps, drawing slowly back and up, swaying a very little from side to side. It ends there.
+//    twice, walks into it and lies down there to sleep. All the while the camera draws away from her, back and a little up, still
+//    looking at her and turning a little from left to right: slowly at first, then, as she lies down, faster and climbing more,
+//    to look down over the ground round her (where the flowers come up), on until it eases to a stop high off. It ends there.
 public class EndingFlight : MonoBehaviour
 {
     [Header("Flying out")]
@@ -80,13 +81,17 @@ public class EndingFlight : MonoBehaviour
     [SerializeField] AnimationCurve riseCurve = new(
         new Keyframe(0f, 0f, 0f, 0.3f), new Keyframe(0.3f, 0.18f, 1.6f, 1.6f), new Keyframe(0.6f, 0.92f, 1.1f, 1.1f),
         new Keyframe(0.82f, 1.03f, 0f, 0f), new Keyframe(1f, 1f, 0f, 0f));
-    [Tooltip("Seconds it hangs at the top before diving.")]
-    [SerializeField, Min(0f)] float apexPause = 0.15f;
+    [Tooltip("Seconds sooner the top shot cuts away than when the wave would have died down.")]
+    [SerializeField, Min(0f)] float topEndSooner = 0.5f;
+    [Tooltip("Seconds it hovers at the top where it climbed to, its wings beating on the spot slower and slower (rate from, to), sinking a little (metres), before it lets itself fall; and the seconds it takes to go over into the falling loop.")]
+    [SerializeField, Min(0f)] float apexPause = 1.4f;
+    [SerializeField, Min(0f)] float hoverRateFrom = 1.3f;
+    [SerializeField, Min(0f)] float hoverRateTo = 0.35f;
+    [SerializeField, Min(0f)] float hoverSink = 0.35f;
+    [SerializeField, Min(0f)] float fallBlend = 0.35f;
     [SerializeField, Min(0.1f)] float diveSeconds = 0.75f;
     [Tooltip("Metres below the top the dive takes it, into the clouds.")]
     [SerializeField, Min(0f)] float diveDepth = 4f;
-    [Tooltip("Metres to the left (on the screen) it curls over the top, so it goes back in a little left of where it came out.")]
-    [SerializeField] float diveShift = 1.2f;
     [Tooltip("Degrees its body tilts down as it dives, over what the dive clip already has (the clip is already nose down).")]
     [SerializeField, Range(0f, 60f)] float divePitch = 30f;
     [Tooltip("How far down (0 to 1) it is over the dive's time: slow off the top, faster and faster.")]
@@ -119,19 +124,21 @@ public class EndingFlight : MonoBehaviour
     [Tooltip("The gap's size once open (metres), and the seconds it takes to open from nothing.")]
     [SerializeField, Min(0f)] float gapRadius = 8f;
     [SerializeField, Min(0.1f)] float openSeconds = 4f;
-    [Tooltip("How far open (0 to 1) the gap is over its time: slow to start, then widening, easing to its size.")]
-    [SerializeField] AnimationCurve openCurve = new(new Keyframe(0f, 0f, 0f, 0f), new Keyframe(0.35f, 0.18f, 0.9f, 0.9f), new Keyframe(1f, 1f, 0f, 0f));
+    [Tooltip("How far open (0 to 1) the gap is over its time: moving from the first moment, slowly, and still moving at the end (it goes on, below).")]
+    [SerializeField] AnimationCurve openCurve = new(new Keyframe(0f, 0f, 0.8f, 0.8f), new Keyframe(0.5f, 0.45f, 1.1f, 1.1f), new Keyframe(1f, 1f, 0.5f, 0.5f));
+    [Tooltip("Seconds over which, once its time is up, the gap goes on widening more and more slowly to the end of the shot, from as fast as the curve's end has it (so the clouds never stop).")]
+    [SerializeField, Min(0.1f)] float openOnSeconds = 2.5f;
     [Tooltip("Degrees the low shot's field of view widens over its seconds, slowly, as if the camera drew back a little.")]
     [SerializeField, Min(0f)] float lowZoomOut = 3f;
     [SerializeField, Min(0.1f)] float lowZoomSeconds = 10f;
     [Tooltip("The shafts of light through the gap (LightBeams), in the order they come; off until the gap opens.")]
     [SerializeField] LightBeam[] lightShafts = { };
     [Tooltip("How far open (0 to 1) the gap is when the first shaft starts to come, the seconds between one shaft and the next, and the seconds each takes to brighten fully.")]
-    [SerializeField, Range(0f, 1f)] float firstShaftAt = 0.2f;
+    [SerializeField, Range(0f, 1f)] float firstShaftAt = 0.8f;
     [SerializeField, Min(0f)] float shaftStagger = 0.7f;
     [SerializeField, Min(0.05f)] float shaftFade = 1.5f;
     [Tooltip("Seconds of cloud only before the gap starts to open.")]
-    [SerializeField, Min(0f)] float lowLead = 0.8f;
+    [SerializeField, Min(0f)] float lowLead = 0f;
 
     [Header("Sleep Shot")]
     [SerializeField] CinemachineCamera sleepShot;
@@ -145,16 +152,18 @@ public class EndingFlight : MonoBehaviour
     [Tooltip("Seconds she turns, there, to face out over the cliff before lying down; then seconds for lying down before the last shot.")]
     [SerializeField, Min(0f)] float turnSeconds = 0.8f;
     [SerializeField, Min(0f)] float lieSeconds = 3f;
-
-    [Header("Back Shot")]
-    [SerializeField] CinemachineCamera backShot;
-    [Tooltip("Metres it draws back, and rises, over its seconds, slowly, eased at both ends.")]
-    [SerializeField, Min(0f)] float backPull = 4f;
-    [SerializeField, Min(0f)] float backRise = 0.8f;
-    [SerializeField, Min(0.1f)] float backSeconds = 10f;
-    [Tooltip("Degrees it turns from side to side, and the seconds of one sway there and back.")]
-    [SerializeField, Min(0f)] float backSway = 1.5f;
-    [SerializeField, Min(0.1f)] float backSwaySeconds = 7f;
+    [Tooltip("The camera drawing away from her through the shot: metres a second at first, and once she lies down; the seconds it takes to go from the one to the other, the seconds it keeps on at the faster, and the seconds it then takes to ease to a stop.")]
+    [SerializeField, Min(0f)] float pullSlow = 0.12f;
+    [SerializeField, Min(0f)] float pullFast = 1.1f;
+    [SerializeField, Min(0.1f)] float pullRamp = 3f;
+    [SerializeField, Min(0f)] float pullFastSeconds = 12f;
+    [SerializeField, Min(0.1f)] float pullStop = 5f;
+    [Tooltip("How much it rises for each metre it draws back, at first and once she lies down (going faster), and degrees it turns round her from left to right for each metre (she stays in the middle).")]
+    [SerializeField, Min(0f)] float pullRise = 0.2f;
+    [SerializeField, Min(0f)] float pullRiseFast = 1.1f;
+    [SerializeField, Min(0f)] float pullPan = 0.3f;
+    [Tooltip("Seconds after she lies down that the season turns to the last (the ending's), as the camera starts to climb: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
+    [SerializeField, Min(0f)] float seasonAfterLying = 0f;
 
     static readonly int ShaftIntensityId = Shader.PropertyToID("_Intensity");
     static readonly int PoolIntensityId = Shader.PropertyToID("_PoolIntensity");
@@ -243,8 +252,6 @@ public class EndingFlight : MonoBehaviour
             yield return LowShot();
         if (sleepShot != null && sleepShaft != null)
             yield return SleepShot();
-        if (backShot != null)
-            yield return BackShot();
         // Holds on the last shot.
     }
 
@@ -268,7 +275,7 @@ public class EndingFlight : MonoBehaviour
     {
         if (shot == null)
             return;
-        foreach (CinemachineCamera other in new[] { riseShot, farShot, topShot, lowShot, sleepShot, backShot })
+        foreach (CinemachineCamera other in new[] { riseShot, farShot, topShot, lowShot, sleepShot })
             if (other != null && other != shot)
                 other.gameObject.SetActive(false);
         shot.Priority.Value = ShotPriority;
@@ -397,26 +404,30 @@ public class EndingFlight : MonoBehaviour
             Frame();
             yield return null;
         }
+        // It hovers there, beating its wings on the spot, slower and slower as its strength goes, sinking a little.
+        float risePitch = pitch;
+        Vector3 hoverAt = top;
         for (float t = 0f; t < apexPause; t += Time.deltaTime)
         {
-            pitch = Mathf.Lerp(pitch, 0f, 1f - Mathf.Exp(-10f * Time.deltaTime));
-            bird.FlyScripted(top, side, pitch, false, strokeDown);
+            float share = t / apexPause;
+            pitch = Mathf.Lerp(risePitch, 0f, Mathf.SmoothStep(0f, 1f, t / 0.4f));
+            hoverAt = top + Vector3.down * hoverSink * share * share;
+            bird.HoverScripted(hoverAt, side, pitch, Mathf.Lerp(hoverRateFrom, hoverRateTo, Mathf.SmoothStep(0f, 1f, share)));
             Frame();
             yield return null;
         }
 
-        // And down into them, curling over to the left.
-        bird.SetDiving(true);
+        // And it lets itself fall, in the dive's falling loop, straight back down into them where it came out.
+        bird.StartFalling(fallBlend);
         dipFrom = Time.time;
-        Vector3 under = surface - Vector3.up * diveDepth + side * diveShift;
+        Vector3 noseDown = (side * 0.1f + Vector3.down).normalized;
+        Vector3 under = top + Vector3.down * (riseHeight + diveDepth);
         for (float t = 0f; t < diveSeconds; t += Time.deltaTime)
         {
-            pitch = Mathf.Lerp(pitch, -divePitch, 1f - Mathf.Exp(-12f * Time.deltaTime));
+            pitch = Mathf.Lerp(0f, -divePitch, Mathf.SmoothStep(0f, 1f, t / fallBlend));
             float down = diveCurve.Evaluate(t / diveSeconds);
-            // Over sideways first, then straight down.
-            float over = Mathf.Sin(Mathf.Clamp01(t / diveSeconds * 1.6f) * Mathf.PI * 0.5f);
-            Vector3 at = new Vector3(Mathf.Lerp(top.x, under.x, over), Mathf.LerpUnclamped(top.y, under.y, down), Mathf.Lerp(top.z, under.z, over));
-            bird.FlyScripted(at, side * 0.1f + Vector3.down, pitch, false, 0f);
+            Vector3 at = Vector3.LerpUnclamped(hoverAt, under, down);
+            bird.FlyScripted(at, noseDown, pitch, false, 0f);
             if (impactAt < 0f && at.y <= surface.y)
                 impactAt = Time.time;
             Frame();
@@ -425,7 +436,8 @@ public class EndingFlight : MonoBehaviour
         if (impactAt < 0f)
             impactAt = Time.time;
         // The wave goes on spreading and the camera rides it as it reaches it; then it holds.
-        float until = Time.time + Mathf.Max(rippleReach / waveSpeed, FlatDistance(surface, basePosition) / waveSpeed) + rippleSeconds + 2f * rippleFade;
+        float until = Time.time + Mathf.Max(rippleReach / waveSpeed, FlatDistance(surface, basePosition) / waveSpeed) + rippleSeconds + 2f * rippleFade
+            - topEndSooner;
         while (Time.time < until)
         {
             Frame();
@@ -458,9 +470,9 @@ public class EndingFlight : MonoBehaviour
 
         Vector3 centre = gapCentre.position;
         Baby baby = Baby.Instance;
-        // She looks ahead at first, no longer after the bird, until the clouds start to part.
+        // She stands as she does, looking ahead (no longer after the bird); as the clouds part, from the start, she looks up.
         if (baby != null)
-            baby.LookUpAtSky(centre, 0f);
+            baby.LookUpAtSky(centre, 0f, true);
         for (float t = 0f; t < lowLead; t += Time.deltaTime)
             yield return null;
         float lightFrom = -1f;
@@ -468,9 +480,16 @@ public class EndingFlight : MonoBehaviour
         for (float t = 0f; t <= openSeconds || lightFrom < 0f || t - lightFrom <= lightUntil; t += Time.deltaTime)
         {
             float open = openCurve.Evaluate(Mathf.Clamp01(t / openSeconds));
+            // On past its time, at the curve's own last speed, slowing.
+            if (t > openSeconds)
+            {
+                Keyframe last = openCurve[openCurve.length - 1];
+                float speed = last.inTangent / openSeconds;
+                open += speed * openOnSeconds * (1f - Mathf.Exp(-(t - openSeconds) / openOnSeconds));
+            }
             Part(puffs, centre, gapRadius * open);
             if (baby != null)
-                baby.LookUpAtSky(centre, open / 0.8f);
+                baby.LookUpAtSky(centre, open);
             // The light comes once there is a gap to come through: one shaft, then the next, each slowly.
             if (lightFrom < 0f && open >= firstShaftAt)
                 lightFrom = t;
@@ -489,6 +508,8 @@ public class EndingFlight : MonoBehaviour
         Baby baby = Baby.Instance;
         if (baby == null)
             yield break;
+        lieDownAt = -1f;
+        StartCoroutine(PullAway());
         Vector3 spot = sleepShaft.transform.position;
         baby.LookAtLight(spot + Vector3.up * 0.6f);
         yield return new WaitForSeconds(lookBeforeBlink);
@@ -504,24 +525,79 @@ public class EndingFlight : MonoBehaviour
             yield return null;
         }
         baby.LieDownInLight();
+        lieDownAt = Time.time;
+        StartCoroutine(LastSeason());
         yield return new WaitForSeconds(lieSeconds);
     }
 
-    // Drawing slowly back and up from behind her, swaying a very little from side to side.
-    IEnumerator BackShot()
+    // The season turns to the last a moment after she lies down; the ring and the flowers follow the season on their own.
+    IEnumerator LastSeason()
     {
-        Show(backShot);
-        Transform shot = backShot.transform;
+        yield return new WaitForSeconds(seasonAfterLying);
+        Season season = FindAnyObjectByType<Season>();
+        if (season != null)
+            season.AdvanceSeason();
+    }
+
+    // When she lay down in the sleep shot (below 0 until then).
+    float lieDownAt = -1f;
+
+    // The sleep shot's camera drawing away from her, back and up, its look coming round to where she will sleep as she goes there,
+    // and turning from left to right: slowly, then from when she lies down eased up to faster, on at that a while, and eased to a stop. Then it holds.
+    IEnumerator PullAway()
+    {
+        Transform shot = sleepShot.transform;
         Vector3 from = shot.position;
-        Quaternion facing = shot.rotation;
-        Vector3 back = -Vector3.ProjectOnPlane(shot.forward, Vector3.up).normalized;
-        for (float t = 0f; ; t += Time.deltaTime)
+        Vector3 forward = shot.forward;
+        Vector3 spot = sleepShaft.transform.position;
+        Vector3 firstAim = from + forward * Mathf.Max(1f, Vector3.Dot(spot - from, forward));
+        // Her body's middle as it is posed (lying, she is off to one side of where she stood), followed smoothly.
+        var body = new List<Transform>();
+        if (Baby.Instance != null)
+            foreach (Transform bone in Baby.Instance.GetComponentsInChildren<Transform>())
+                if (bone.name == "Hips" || bone.name == "Head")
+                    body.Add(bone);
+        Vector3 sleepAim = BodyMiddle(body, spot);
+        float startedAt = Time.time;
+        Vector3 back = -Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
+        Vector3 at = from;
+        for (float pulled = 0f; ; )
         {
-            float out_ = Mathf.SmoothStep(0f, 1f, t / backSeconds);
-            float sway = Mathf.Sin(t / backSwaySeconds * 2f * Mathf.PI) * backSway * Mathf.SmoothStep(0f, 1f, t / 2f);
-            shot.SetPositionAndRotation(from + back * backPull * out_ + Vector3.up * backRise * out_, Quaternion.Euler(0f, sway, 0f) * facing);
+            float speed = pullSlow, rise = pullRise;
+            if (lieDownAt >= 0f)
+            {
+                float since = Time.time - lieDownAt;
+                float faster = Mathf.SmoothStep(0f, 1f, since / pullRamp);
+                speed = Mathf.Lerp(pullSlow, pullFast, faster);
+                rise = Mathf.Lerp(pullRise, pullRiseFast, faster);
+                float stopping = since - pullRamp - pullFastSeconds;
+                if (stopping > 0f)
+                {
+                    if (stopping >= pullStop)
+                        yield break;
+                    speed *= 1f - Mathf.SmoothStep(0f, 1f, stopping / pullStop);
+                }
+            }
+            pulled += speed * Time.deltaTime;
+            at += (back + Vector3.up * rise).normalized * speed * Time.deltaTime;
+            sleepAim = Vector3.Lerp(sleepAim, BodyMiddle(body, spot), 1f - Mathf.Exp(-2f * Time.deltaTime));
+            Vector3 aim =Vector3.Lerp(firstAim, sleepAim, Mathf.SmoothStep(0f, 1f, (Time.time - startedAt) / 6f));
+            // Turning round her rather than away from her, so she stays in the middle of the picture.
+            Vector3 round = aim + Quaternion.Euler(0f, pullPan * pulled, 0f) * (at - aim);
+            shot.SetPositionAndRotation(round, Quaternion.LookRotation(aim - round));
             yield return null;
         }
+    }
+
+    // Midway between her hips and her head as they are posed, or the spot (a little up) without them.
+    static Vector3 BodyMiddle(List<Transform> body, Vector3 spot)
+    {
+        if (body.Count == 0)
+            return spot + Vector3.up * 0.2f;
+        Vector3 sum = Vector3.zero;
+        foreach (Transform bone in body)
+            sum += bone.position;
+        return sum / body.Count;
     }
 
     // The field of view widening slowly, eased at both ends.

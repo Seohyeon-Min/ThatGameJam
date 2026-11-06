@@ -24,6 +24,7 @@ public class BirdController : MonoBehaviour
     static readonly int HoppingParam = Animator.StringToHash("Hopping");
     static readonly int HoverRateParam = Animator.StringToHash("HoverRate");
     static readonly int FlapState = Animator.StringToHash("Flap");
+    static readonly int DiveLoopState = Animator.StringToHash("DiveLoop");
     // How fast Bird_Hop goes forward without its feet sliding, in the model's units per second (the bird's export notes).
     const float HopClipSpeed = 0.44f;
     // How fast Bird_Walk steps forward without its feet sliding, in the model's units per second (the bird's export notes).
@@ -336,6 +337,27 @@ public class BirdController : MonoBehaviour
 
     // Intro: Bird_Dive then Bird_DiveLoop while on, back to gliding when off.
     public void SetDiving(bool diving) => animator.SetBool(DivingParam, diving);
+
+    // Hovers by script (the ending): in place, beating its wings on the spot at this rate (1: as it hovers anywhere), facing the
+    // way given (flat) and tilted by pitch as in FlyScripted.
+    public void HoverScripted(Vector3 position, Vector3 heading, float pitch, float rate)
+    {
+        bodyPitch = pitch;
+        wingStrokeDown = 0f;
+        Face(heading, false, ScriptedTurnSpeed);
+        transform.position = position;
+        hoverRate = rate;
+        animator.SetFloat(HoverRateParam, rate);
+        animator.SetBool(MovingParam, false);
+        animator.SetBool(PerchedParam, false);
+    }
+
+    // Lets itself fall (the ending): straight into the dive's falling loop, not the dive's run-up, eased over these seconds.
+    public void StartFalling(float blendSeconds)
+    {
+        animator.SetBool(DivingParam, true);
+        animator.CrossFadeInFixedTime(DiveLoopState, blendSeconds, 0);
+    }
 
     public void MoveScripted(Vector3 position, float pitch = 0f)
     {

@@ -30,6 +30,8 @@ public class FlowerGenerator : ScatterGenerator
 
     protected override float Keep(Vector3 point) => KeepByPaths(point) * KeepByClearAreas(point);
 
+    protected override float Keep(Vector3 point, Area area) => area.ignoreClearAreas ? KeepByPaths(point) : Keep(point);
+
     // 1 outside every clear area, 0 deep inside one, eased over clearAreaFade from its border.
     float KeepByClearAreas(Vector3 point)
     {

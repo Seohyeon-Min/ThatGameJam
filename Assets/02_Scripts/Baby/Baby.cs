@@ -40,6 +40,8 @@ public class Baby : CryListener
     [SerializeField] ParticleSystem[] eyeSparkles;
     [Tooltip("The frame of the GetUp clip they play on: when the flowers appear in the eyes.")]
     [SerializeField, Min(0)] int eyeSparkleFrame;
+    [Tooltip("The same for the intro's GetUp clip, which is timed differently.")]
+    [SerializeField, Min(0)] int introEyeSparkleFrame;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
     // Stepping up onto a balance beam (a log) or down off the far end plays this once, covering that segment's
@@ -398,9 +400,9 @@ public class Baby : CryListener
     }
 
     // A glint on each eye when the flowers appear in the GetUp clip.
-    IEnumerator SparkleEyes(AnimationClip clip)
+    IEnumerator SparkleEyes(AnimationClip clip, int frame)
     {
-        yield return new WaitForSeconds(eyeSparkleFrame / clip.frameRate);
+        yield return new WaitForSeconds(frame / clip.frameRate);
         foreach (ParticleSystem sparkle in eyeSparkles)
             sparkle.Play();
     }
@@ -418,7 +420,7 @@ public class Baby : CryListener
         animator.SetBool(IntroWakeParam, intro);
         animator.SetBool(AsleepParam, false);
         gettingUp = true;
-        StartCoroutine(SparkleEyes(clip));
+        StartCoroutine(SparkleEyes(clip, intro ? introEyeSparkleFrame : eyeSparkleFrame));
         yield return new WaitForSeconds(clip.length);
         gettingUp = false;
         if (intro)
@@ -749,10 +751,13 @@ public class Baby : CryListener
     }
 
     // The ending's last shot (EndingFlight): she stops watching the bird, her head going back to the front, and as the sky opens
-    // (reach 0 to 1) she looks up at it, her head first, then rising onto her toes. The Idle animation plays under it.
-    public void LookUpAtSky(Vector3 point, float reach)
+    // (reach 0 to 1) she looks up at it, her head first, then rising onto her toes. The Idle animation plays under it. atOnce:
+    // her head as the Idle animation has it from now, not easing down from where the bird was (a new shot).
+    public void LookUpAtSky(Vector3 point, float reach, bool atOnce = false)
     {
         watchingBird = false;
+        if (atOnce)
+            gazeBlend = 0f;
         animator.SetBool(QuietWaitParam, false);
         // Plain Idle only, not the variant (Hum, Stretch) a wait before may have left set.
         animator.SetInteger(IdleVariantParam, 0);
