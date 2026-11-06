@@ -20,6 +20,7 @@ static class StageStartToolbar
         {
             SessionState.EraseInt(GameFlow.StartStageKey);
             SessionState.EraseBool(GameFlow.StartAtEndKey);
+            SessionState.EraseBool(GameFlow.StartEndingKey);
         }
     };
 
@@ -65,6 +66,8 @@ static class StageStartToolbar
                 int index = i;
                 menu.AddItem(new GUIContent(StageName(index) + " End"), Pick == index && PickEnd, () => PickAndPlay(index, true));
             }
+            menu.AddSeparator("");
+            menu.AddItem(new GUIContent("Ending (from its first shot)"), false, PlayEnding);
         menu.DropDown(at);
     }
 
@@ -84,25 +87,40 @@ static class StageStartToolbar
     [MenuItem("Tools/Play From Stage/Stage 2 End")] static void PlayStage2End() => PlayFrom(2, true);
     [MenuItem("Tools/Play From Stage/Stage 3 End (out of the fog)")] static void PlayStage3End() => PlayFrom(3, true);
 
+    // The ending at once, from its first shot: the last stage, the girl already sitting by the stump.
+    [MenuItem("Tools/Play From Stage/Ending (from its first shot)")]
+    static void PlayEnding()
+    {
+        GameFlow flow = Object.FindAnyObjectByType<GameFlow>();
+        int last = flow != null && flow.Stages != null ? flow.Stages.Count - 1 : -1;
+        if (last < 1)
+        {
+            Debug.LogWarning("Stage start: no GameFlow with stages in the open scene.");
+            return;
+        }
+        if (PlayFrom(last, true))
+            SessionState.SetBool(GameFlow.StartEndingKey, true);
+    }
+
     static void PlayFromPick() => PlayFrom(Pick, PickEnd);
 
-    static void PlayFrom(int index, bool atEnd = false)
+    static bool PlayFrom(int index, bool atEnd = false)
     {
         if (EditorApplication.isPlaying)
         {
             Debug.LogWarning("Stage start: stop Play Mode first.");
-            return;
+            return false;
         }
         GameFlow flow = Object.FindAnyObjectByType<GameFlow>();
         if (flow == null || index >= flow.Stages.Count)
         {
             Debug.LogWarning($"Stage start: the open scene has no stage {index}.");
-            return;
+            return false;
         }
         if (EditorUtility.scriptCompilationFailed)
         {
             Debug.LogWarning("Stage start: fix the compile errors first.");
-            return;
+            return false;
         }
         Pick = index;
         PickEnd = atEnd;
@@ -110,6 +128,7 @@ static class StageStartToolbar
         SessionState.SetBool(GameFlow.StartAtEndKey, atEnd);
         Debug.Log($"Stage start: playing from {StageName(index)}{(atEnd ? " End" : "")}.");
         EditorApplication.isPlaying = true;
+        return true;
     }
 
     static string PickName() => StageName(Pick) + (PickEnd ? " End" : "");

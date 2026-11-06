@@ -99,6 +99,28 @@ public class CliffEnding : PathBlocker
         HoldSittingView(true);
     }
 
+#if UNITY_EDITOR
+    // Dev tool (the toolbar's Ending start): she is already sitting by the stump with the guide gone, and the ending plays from
+    // its first shot, without the bird's flight out over the cliff.
+    public void PlayEndingNow()
+    {
+        baby = Baby.Instance;
+        if (walking != null)
+            StopCoroutine(walking);
+        walking = null;
+        Vector3 seat = path.GetChild(path.childCount - 1).position;
+        Vector3 facing = Vector3.ProjectOnPlane(view.position - seat, Vector3.up);
+        baby.transform.SetPositionAndRotation(seat, facing.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(facing) : baby.transform.rotation);
+        if (guide != null)
+            guide.Gone();
+        resting = true;
+        ended = true;
+        baby.PlayEnding();
+        if (ending != null)
+            ending.Play(edge.forward, true);
+    }
+#endif
+
     // Along the path from where she is, through the points from this one on.
     float DistanceLeft(int next)
     {

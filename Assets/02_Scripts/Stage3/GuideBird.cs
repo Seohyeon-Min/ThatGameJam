@@ -74,6 +74,13 @@ public class GuideBird : CryListener
             transform.rotation = Quaternion.LookRotation(flat);
     }
 
+    // Already flown and gone (the dev tool that plays the ending at once).
+    public void Gone()
+    {
+        flewAt = Time.time - flyAwayTime;
+        gameObject.SetActive(false);
+    }
+
     // Back on the stump as at the start (CliffEnding, when a dev tool takes the girl back there).
     public void ResetToStump()
     {

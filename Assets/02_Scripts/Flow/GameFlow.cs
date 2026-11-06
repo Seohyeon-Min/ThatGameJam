@@ -60,6 +60,8 @@ public class GameFlow : MonoBehaviour
     public const string StartStageKey = "GameFlow.StartStage";
     // Set with it: start at the stage's end instead, at its last stop (the fog stage: just out of the fog, before the cliff).
     public const string StartAtEndKey = "GameFlow.StartAtEnd";
+    // Set with them: play the stage's ending at once (CliffEnding.PlayEndingNow), from its first shot.
+    public const string StartEndingKey = "GameFlow.StartEnding";
 #endif
 
     void Start()
@@ -70,8 +72,16 @@ public class GameFlow : MonoBehaviour
         UnityEditor.SessionState.EraseInt(StartStageKey);
         bool atEnd = UnityEditor.SessionState.GetBool(StartAtEndKey, false);
         UnityEditor.SessionState.EraseBool(StartAtEndKey);
+        bool ending = UnityEditor.SessionState.GetBool(StartEndingKey, false);
+        UnityEditor.SessionState.EraseBool(StartEndingKey);
         if (startStage > 0 && startStage < stages.Length)
         {
+            if (ending && cliffs[startStage] != null)
+            {
+                Debug.Log($"Stage start: skipping to the ending of stage {startStage} ({stages[startStage].name}).", stages[startStage]);
+                StartCoroutine(StartAtEnding(startStage));
+                return;
+            }
             Debug.Log($"Stage start: skipping the intro, starting at {(atEnd ? "the end of " : "")}stage {startStage} ({stages[startStage].name}).", stages[startStage]);
             StartCoroutine(StartAtStage(startStage, atEnd));
             return;
@@ -123,6 +133,16 @@ public class GameFlow : MonoBehaviour
         // One frame for the animator and the camera to settle there before she gets up.
         yield return null;
         Baby.Instance.WakeTimer.ResolveNaturally();
+    }
+#endif
+
+#if UNITY_EDITOR
+    // Dev tool (the toolbar's Ending): the stage's end, then after a frame for it to settle, its ending from the first shot.
+    System.Collections.IEnumerator StartAtEnding(int index)
+    {
+        yield return StartAtStage(index, true);
+        yield return null;
+        cliffs[index].PlayEndingNow();
     }
 #endif
 

@@ -92,6 +92,12 @@ public class Baby : CryListener
     // The ending's last shot: how far (0 to 1) she has come to looking up at the sky opening, and where it opens.
     float skyReach;
     Vector3 skyPoint;
+    // The ending's sleep shot: looking at the light beside her (her head only, coming down off her toes), blinks still to come
+    // close together, and lying asleep in it at the last.
+    bool watchingLight;
+    Vector3 lightPoint;
+    int quickBlinks;
+    bool asleepInEnding;
     Transform chest;
     Vector3 modelBasePosition;
     readonly List<Transform> feet = new();
@@ -169,14 +175,22 @@ public class Baby : CryListener
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
         bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
-        if (State == BabyState.Ending)
+        if (State == BabyState.Ending && !asleepInEnding)
             Blink();
         animator.transform.localPosition = modelBasePosition;
+        // Down off her toes, slowly, once she looks to the light instead.
+        if (watchingLight)
+            skyReach = Mathf.MoveTowards(skyReach, 0f, Time.deltaTime);
         if (State == BabyState.Ending && skyReach > 0f)
             ReachForSky();
         // A deliberate look at the bird (NoticeBird, or LookUp reacting to a cry / an opened blocker / waking, the ending)
         // always turns just the head, whatever she's doing otherwise.
-        if (noticingBird || lookingUpAtBird || watchingBird)
+        if (watchingLight)
+        {
+            lookPoint = lightPoint;
+            active = true;
+        }
+        else if (noticingBird || lookingUpAtBird || watchingBird)
         {
             lookPoint = BirdController.Instance.transform.position;
             active = true;
@@ -242,6 +256,8 @@ public class Baby : CryListener
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
+        watchingLight = false;
+        asleepInEnding = false;
         running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
@@ -265,6 +281,8 @@ public class Baby : CryListener
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
+        watchingLight = false;
+        asleepInEnding = false;
         running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
@@ -300,6 +318,8 @@ public class Baby : CryListener
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
+        watchingLight = false;
+        asleepInEnding = false;
         running = false;
         lookingAround = false;
         this.route = route;
@@ -328,6 +348,8 @@ public class Baby : CryListener
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
+        watchingLight = false;
+        asleepInEnding = false;
         // Run has no transitions, so asleep would not take her out of it.
         if (running)
             animator.Play(SleepState, 0, 0f);
@@ -720,6 +742,8 @@ public class Baby : CryListener
         animator.SetBool(AsleepParam, false);
         animator.SetBool(QuietWaitParam, true);
         animator.SetInteger(IdleVariantParam, 0);
+        watchingLight = false;
+        asleepInEnding = false;
         watchingBird = true;
         nextBlinkAt = Time.time + UnityEngine.Random.Range(0.8f, 2f);
     }
@@ -734,6 +758,36 @@ public class Baby : CryListener
         animator.SetInteger(IdleVariantParam, 0);
         skyPoint = point;
         skyReach = Mathf.Clamp01(reach);
+    }
+
+    // The ending's sleep shot (EndingFlight): she turns her head to the light beside her, coming down off her toes.
+    public void LookAtLight(Vector3 point)
+    {
+        watchingLight = true;
+        lightPoint = point;
+    }
+
+    // Blinks this many times, one right after another, from now.
+    public void BlinkQuickly(int times)
+    {
+        quickBlinks = times;
+        if (blinkStartedAt < 0f)
+            nextBlinkAt = Time.time;
+    }
+
+    // One frame of walking to the point, still looking at the light; true once there.
+    public bool WalkIntoLight(Vector3 point) => StepToward(point);
+
+    // Lies down where she is and sleeps, the ending's last.
+    public void LieDownInLight()
+    {
+        StandStill();
+        watchingLight = false;
+        asleepInEnding = true;
+        skyReach = 0f;
+        animator.SetBool(QuietWaitParam, false);
+        animator.SetBool(WalkingParam, false);
+        animator.SetBool(AsleepParam, true);
     }
 
     // Over the animation's pose (LateUpdate): the head toward the sky, then the body up onto the toes, leaning back a little.
@@ -764,14 +818,17 @@ public class Baby : CryListener
     {
         GameTuning tuning = GameTuning.Current;
         if (blinkStartedAt < 0f && Time.time >= nextBlinkAt)
+        {
             blinkStartedAt = Time.time;
+            quickBlinks = Mathf.Max(0, quickBlinks - 1);
+        }
         if (blinkStartedAt < 0f)
             return;
         float t = (Time.time - blinkStartedAt) / Mathf.Max(tuning.babyBlinkDuration, 0.01f);
         if (t >= 1f)
         {
             blinkStartedAt = -1f;
-            nextBlinkAt = Time.time + UnityEngine.Random.Range(tuning.babyBlinkIntervalMin, tuning.babyBlinkIntervalMax);
+            nextBlinkAt = Time.time + (quickBlinks > 0 ? 0.15f : UnityEngine.Random.Range(tuning.babyBlinkIntervalMin, tuning.babyBlinkIntervalMax));
             return;
         }
         // Closes faster than it opens.
