@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // The fog stage (ADR 0028). The girl stops at the start of the long straight way into the fog, and this leads her from there
-// through the forks. Each fork has an animal on its right way. When the bird cries, the first animal ahead of the bird along the
-// right route answers, and the girl runs to the bird along the ways she can reach: the one she is on and the two of the fork
+// through the forks. Each fork has an animal on its right way. When the bird cries, the first animal the bird has not passed
+// (in Z) answers, and the girl runs to the bird along the ways she can reach: the one she is on and the two of the fork
 // ahead. There she waits a moment for another cry, then walks on by herself. At a fork she takes the right way if its animal has
 // answered; otherwise she stands a moment, then picks one of the two at random. A dead end takes her to its wall and back,
 // unless its animal has answered: then she turns back at once. The fog is light, so the animals and the ways show through it.
@@ -29,9 +29,6 @@ public class FogMaze : PathBlocker
     // fork, so way i (0 to n - 1) ends at fork i.
     Vector3[][] ways;
     float[][] distances;
-    // Along the right route, from the start of the straight way: where each right way (and the straight way) starts.
-    float[] wayStart;
-    float[] animalAt;
     bool[] wallReached;
     Stage stage;
     Baby baby;
@@ -66,12 +63,6 @@ public class FogMaze : PathBlocker
             for (int p = 1; p < ways[i].Length; p++)
                 distances[i][p] = distances[i][p - 1] + Vector3.Distance(ways[i][p - 1], ways[i][p]);
         }
-        wayStart = new float[ForkCount + 1];
-        for (int i = 1; i <= ForkCount; i++)
-            wayStart[i] = wayStart[i - 1] + Length(i - 1);
-        animalAt = new float[ForkCount];
-        for (int i = 0; i < ForkCount; i++)
-            animalAt[i] = wayStart[RightWay(i)] + Project(RightWay(i), forks[i].Animal.transform.position);
         wallReached = new bool[ForkCount];
     }
 
@@ -146,25 +137,18 @@ public class FogMaze : PathBlocker
         routine = StartCoroutine(RunToBird(bird));
     }
 
-    // The first animal ahead of the bird along the right route answers. Above a dead end, the bird is where that dead end leaves.
+    // The first animal the bird has not passed answers. Every way runs forward (+Z), so passing an animal is getting ahead of it in Z,
+    // wherever the bird is: above a dead end too (ADR 0032).
     void AnswerAhead(Vector3 bird)
     {
-        int nearest = Nearest(bird, AllWays(), out float along);
-        float at = IsDeadEnd(nearest) ? wayStart[RightWay(ForkOfDeadEnd(nearest))] : wayStart[nearest] + along;
-        for (int i = 0; i < ForkCount; i++)
+        foreach (FogFork fork in forks)
         {
-            if (animalAt[i] > at)
+            if (fork.Animal.transform.position.z > bird.z)
             {
-                forks[i].Animal.Answer();
+                fork.Animal.Answer();
                 return;
             }
         }
-    }
-
-    IEnumerable<int> AllWays()
-    {
-        for (int i = 0; i < ways.Length; i++)
-            yield return i;
     }
 
     // The way she is on, and the two ways of the fork ahead. In a dead end, the fork it leaves is the one ahead.
