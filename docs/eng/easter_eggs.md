@@ -24,7 +24,7 @@ Found easter eggs are recorded in the encyclopedia. When an easter egg shows its
 | 2 | Ladybug in the stump | Click the stump left after the old tree has fallen: the bird pecks it and a ladybug crawls out |
 | 3 | Snow whirl | Click a snow pile: the bird circles round and round over it and makes a whirl |
 | 4 | Flower in the snow | Click the glowing snow: the bird pecks a hole and shows a flower |
-| 5 | Icicle xylophone | Click an icicle on the tree: it falls and rings on the rock below. Eight icicles, do re mi fa sol la ti do |
+| 5 | Icicle xylophone | Click an icicle on the tree: the bird goes and taps it with its beak, and the tapped icicle swings where it hangs and rings (changed by the director on 2026-11-06; before, it fell onto a rock below). Eight icicles, do re mi fa sol la ti do |
 | 6 | Squirrel in the tree hollow | The bird cries near the hollow: a squirrel peeks out, then goes back in |
 | 7 | Cornelian cherries | Click the berries on the tree (bush): the bird pecks one, eats it and puffs out its chest |
 | 8 | Cliff echo | On the last map, the bird cries toward the cliff and an echo comes back |
@@ -38,23 +38,23 @@ Found easter eggs are recorded in the encyclopedia. When an easter egg shows its
 
 ## 4. What is built (2026-11-06)
 
-Prefabs are in `Assets/03_Prefabs/EasterEggs/`, code in `Assets/02_Scripts/EasterEggs/`, and the builder is `AgentScripts/BuildEasterEggs.cs` (`BuildEasterEggs.Run`). Change models and places in the prefabs and the scene. Each prefab's `Discovery` holds its encyclopedia entry and photo subject.
+Prefabs are in `Assets/03_Prefabs/EasterEggs/`, code in `Assets/02_Scripts/EasterEggs/`, and the builder is `AgentScripts/BuildEasterEggs.cs` (`BuildEasterEggs.Run`; `BuildEasterEggs.BuildPrefabs` builds only the prefabs and leaves the open scene alone). Change models and places in the prefabs and the scene. The squirrel model is brought in first by `AgentScripts/SetupSquirrelModel.cs` (`Assets/01_Arts/Models/Squirrel/`). Each prefab's `Discovery` holds its encyclopedia entry and photo subject. Every prefab root but the snow on the bird and the migrating birds has a `ClickCatcher`: a click on the egg that is not a landing (an icicle, the flower in the snow once done, and so on) does not send the bird to the ground behind it.
 
 | Prefab | Model | Behaviour | Recorded in the encyclopedia |
 |---|---|---|---|
 | `SnowOnBird` (under `Bird`) | White sphere (placeholder) | In season 0, after the bird stands still on the ground or a branch for 1.5 s, it piles up over 8 s; moving shakes it off | When fully piled |
 | `StumpLadybug` | Cylinder stump (placeholder), ladybug `Ladybug.prefab` | Click: the bird lands, pecks twice, and the ladybug crawls out. Once only | When it has crawled out |
-| `SnowWhirl` | `Snowbank` pile | Click: the bird lands, then circles over it for 4 s. Snow particle whirl, sound `event:/SFX/spiral`. Can be played again afterwards | Halfway through the circling |
-| `SnowFlower` | Small `Snowbank` pile + `InteractiveSparkle`, flower `Flower01` | Click: the bird lands, pecks three times, the snow shrinks and the flower grows. Once only | When the flower is grown |
-| `IcicleXylophone` | Tommy's `icy tree.fbx` (8 icicles), rock (placeholder) | Click an icicle: it falls, rings one note on the rock, and grows back after 3 s. Longest first, do re mi fa sol la ti do. The sound is `event:/SFX/highpitch_0` at another pitch | The first note |
-| `HollowSquirrel` | Tommy's `thickTree.obj` (the hollow), capsule squirrel (placeholder) | A cry within 6 m of the hollow: the squirrel comes out and goes back in after 1.5 s | When it is out |
-| `CornelianCherry` | Tommy's `cornelian_cherry` (bush, 6 berries) | Click: the bird lands, pecks twice, a berry goes, and it puffs out its chest. Again while berries are left | After the chest puff |
+| `SnowWhirl` | `Snowbank` pile (SoftSnow material) | Click: the bird lands, then circles over it for 4 s. Once clicked, clicking elsewhere on the way does not stop it (`Perchable`'s `Locks Clicks`). Snow particle whirl, sound `event:/SFX/spiral`. Can be played again afterwards | Halfway through the circling |
+| `SnowFlower` | Small `Snowbank` pile (SoftSnow material) + `InteractiveSparkle`, flower `Flower01` | Click: the bird lands, pecks three times, the snow shrinks and the flower grows. Once only | When the flower is grown |
+| `IcicleXylophone` | Tommy's `icy tree.fbx` (8 icicles), prefab scale 1.6 | Each icicle has a `Perchable`. Click an icicle: the bird lands on its `TapFrom` on the branch it hangs from (in along the branch from the icicle, facing it; out along the branch facing in when the icicle is too near the trunk) and pecks once. As the beak reaches the bottom it rings one note, and the icicle swings side to side across the view about the top it hangs from, settling over 1.5 s (10°, 5 swings a second). Clicked again while standing there, it pecks again. Another icicle, and the bird goes there. Longest first, do re mi fa sol la ti do. The sound is `event:/SFX/highpitch_0` at another pitch | The first note |
+| `HollowSquirrel` | Tommy's `thickTree.obj` (the hollow), squirrel `Squirrel.prefab` (scale 0.5), prefab scale 2 | A cry within 6 m of the hollow: the squirrel comes up from below the hollow and sits on its lip. For 5 s it plays `SitIdle_LookAround` from the start and turns its body left, right (35°) and back to the front, then goes back in | When it is out |
+| `CornelianCherry` | Tommy's `cornelian_cherry` (bush, 6 berry clusters), prefab scale 2.5 | The clusters hang a little in from branch ends, the top of each stem on the bottom of its branch, as the model's own cluster does. Each is turned so its berries hang out along the branch, plus a different turn of -40° to 35° each (the builder finds branch ends in the mesh, the camera's side first). Click: the bird lands on the next cluster's `EatFrom` (back along the branch, facing the cluster), pecks twice, the cluster goes, and it puffs out its chest. Once the bird leaves, the perch moves to the next cluster. Again while clusters are left | After the chest puff |
 | `CliffEcho` | Low rock (cliff placeholder) | A cry within 8 m: the bird's cry (`event:/SFX/Bird`) comes back softer after 0.7 s and 1.4 s | The first echo |
-| `MigratingBirds` | 5 bird models (0.4 scale) | Holding the farthest zoom for 2 s, they fly across 7 m above the middle of the view. Once per game, from `From Stage` on (default 1; 0 on the one in the clearing, for testing) | As they pass the middle of the view |
+| `MigratingBirds` | 5 bird models (0.4 scale, turned 180° because the model faces -Z) | Holding the farthest zoom for 2 s, they fly across 7 m above the middle of the view. In flight they beat their wings once every 2 s (`GlideFlap`). Once per game, from `From Stage` on (default 1; 0 on the one in the clearing, for testing) | As they pass the middle of the view |
 
 Placeholders and stand-ins (no new art or sound on the `sam` branch):
 
-- There are no peck or chest-puff clips. `BirdController.Peck` and `PuffChest` tip and swell the body in code instead.
+- There are no peck or chest-puff clips. `BirdController.Peck` and `PuffChest` tip and swell the body in code instead. A peck tips the beak down 40° (before 2026-11-06 it tipped the head back).
 - Unity audio is off and sound is FMOD. The xylophone notes, the echo and the whirl use existing FMOD events. When their own sounds come, only the event on the prefab changes.
 - Tommy's models are not baked in watercolor. They keep Tommy's materials.
 

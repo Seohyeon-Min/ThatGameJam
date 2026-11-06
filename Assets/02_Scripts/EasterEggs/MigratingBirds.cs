@@ -5,6 +5,7 @@ using UnityEngine;
 public class MigratingBirds : MonoBehaviour
 {
     static readonly int MovingParam = Animator.StringToHash("Moving");
+    static readonly int GlideFlapState = Animator.StringToHash("GlideFlap");
 
     [SerializeField] Discovery discovery;
     [Tooltip("Hidden until it flies. Its children are the birds.")]
@@ -18,12 +19,16 @@ public class MigratingBirds : MonoBehaviour
     [Tooltip("How far either side of the middle of the view it starts and ends, in metres.")]
     [SerializeField, Min(1f)] float halfCrossing = 25f;
     [SerializeField, Min(0.1f)] float speed = 6f;
+    [Tooltip("Seconds between wing beats while it flies. Between them it glides.")]
+    [SerializeField, Min(0.5f)] float flapEvery = 2f;
 
     BirdCamera birdCamera;
     float zoomedOut;
     bool flown;
     Vector3 from, to;
     float travelled = -1f;
+    float sinceFlap;
+    Animator[] birds;
 
     void Start() => birdCamera = FindAnyObjectByType<BirdCamera>();
 
@@ -65,9 +70,11 @@ public class MigratingBirds : MonoBehaviour
         to = centre + across * halfCrossing;
         flock.SetPositionAndRotation(from, Quaternion.LookRotation(across));
         flock.gameObject.SetActive(true);
-        foreach (Animator bird in flock.GetComponentsInChildren<Animator>())
+        birds = flock.GetComponentsInChildren<Animator>();
+        foreach (Animator bird in birds)
             bird.SetBool(MovingParam, true);
         travelled = 0f;
+        sinceFlap = flapEvery;
     }
 
     void Fly()
@@ -75,6 +82,13 @@ public class MigratingBirds : MonoBehaviour
         float before = travelled;
         travelled += speed * Time.deltaTime;
         flock.position = Vector3.MoveTowards(from, to, travelled);
+        sinceFlap += Time.deltaTime;
+        if (sinceFlap >= flapEvery)
+        {
+            sinceFlap = 0f;
+            foreach (Animator bird in birds)
+                bird.CrossFadeInFixedTime(GlideFlapState, 0.15f);
+        }
         if (before < halfCrossing && travelled >= halfCrossing)
             discovery.Reveal();
         if (travelled >= halfCrossing * 2f)

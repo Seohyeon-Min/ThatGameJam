@@ -11,11 +11,12 @@ using Object = UnityEngine.Object;
 
 // Builds the easter egg prefabs (Assets/03_Prefabs/EasterEggs/) and, with Main open, a clearing behind the intro's start (-Z) with one of
 // each in it, for trying them before they get their places in the stages (docs/kor/easter_eggs.md). The models are placeholders where
-// there is none yet (stump, snow piles, squirrel, cliff). The puddle reflection is left out for now.
+// there is none yet (stump, snow piles, cliff). The puddle reflection is left out for now.
 // In Main: the intro's area reaches back over the clearing, the world forest keeps out of it (a Clear zone, and its bottom padding only
 // one row deep), and a second tree generator fills the ground behind it that the camera now sees. The snow cap goes under the bird.
 // Run BuildEncyclopedia first: the eggs find their entries in Assets/04_Data/Encyclopedia.
 // unity command script run --file AgentScripts/BuildEasterEggs.cs --entry BuildEasterEggs.Run
+// Prefabs only (the open scene is left alone): --entry BuildEasterEggs.BuildPrefabs
 public static class BuildEasterEggs
 {
     const string Folder = "Assets/03_Prefabs/EasterEggs";
@@ -28,6 +29,7 @@ public static class BuildEasterEggs
     const string CherryBushModel = "Assets/01_Arts/Mesh/cornelian_cherry/berries/Tube.obj";
     const string CherryModel = "Assets/01_Arts/Mesh/cornelian_cherry/tree_base/UV Sphere 2.obj";
     const string LadybugPrefab = "Assets/03_Prefabs/Ladybug.prefab";
+    const string SquirrelPrefab = "Assets/03_Prefabs/Squirrel.prefab";
     const string SnowbankPrefab = "Assets/03_Prefabs/Stage2/Snowbank.prefab";
     const string FlowerPrefab = "Assets/03_Prefabs/Flowers/Flower01.prefab";
     const string SparklePrefab = "Assets/03_Prefabs/InteractiveSparkle.prefab";
@@ -35,9 +37,15 @@ public static class BuildEasterEggs
     const string BirdController = "Assets/01_Arts/Models/Bird/Bird.controller";
     const string ParticleMaterial = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat";
     const string SnowMaterial = "Assets/01_Arts/Materials/Test/Snow.mat";
+    // The SoftSnow shader's material, the snow on the girl. The snow piles of the whirl and the flower use it.
+    const string SoftSnowMaterial = "Assets/01_Arts/Materials/SoftSnow.mat";
+    const float CherryScale = 2.5f;
+    // Where the bird's beak is at the bottom of a peck, from its feet: ahead and down, in metres.
+    const float PeckReach = 0.5f, PeckDrop = 0.12f;
+    // How far below an icicle's top the beak taps it, in metres.
+    const float IcicleTapBelowTop = 0.15f;
     const string RockMaterial = "Assets/01_Arts/Materials/Test/Rock.mat";
     const string TrunkMaterial = "Assets/01_Arts/Materials/Test/Trunk.mat";
-    const string AnimalMaterial = "Assets/01_Arts/Materials/Test/Animal.mat";
 
     // The clearing, in world X and Z. The bird reaches back to ClearingBirdZ (the intro's area), so every perch is in front of it.
     static readonly Rect Clearing = Rect.MinMaxRect(-14f, -36.5f, 14f, -24.5f);
@@ -50,6 +58,17 @@ public static class BuildEasterEggs
     static int interactableLayer;
 
     public static string Run()
+    {
+        Dictionary<string, GameObject> prefabs = BuildPrefabs();
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != MainScene)
+            return "built the prefabs in " + Folder + "; open " + MainScene + " and run again to place them";
+        PlaceInMain(prefabs);
+        return EditorSceneManager.SaveScene(scene) ? "built the prefabs and saved " + scene.path : "FAILED to save " + scene.path;
+    }
+
+    // Only the prefabs, leaving the open scene alone. The entry for changing a prefab whose instances are already placed.
+    public static Dictionary<string, GameObject> BuildPrefabs()
     {
         interactableLayer = LayerMask.NameToLayer(Interactable);
         if (!AssetDatabase.IsValidFolder(Folder))
@@ -67,12 +86,7 @@ public static class BuildEasterEggs
             ["MigratingBirds"] = MigratingBirds(),
         };
         AssetDatabase.SaveAssets();
-
-        Scene scene = SceneManager.GetActiveScene();
-        if (scene.path != MainScene)
-            return "built the prefabs in " + Folder + "; open " + MainScene + " and run again to place them";
-        PlaceInMain(prefabs);
-        return EditorSceneManager.SaveScene(scene) ? "built the prefabs and saved " + scene.path : "FAILED to save " + scene.path;
+        return prefabs;
     }
 
     // ---- Prefabs ----
@@ -94,6 +108,7 @@ public static class BuildEasterEggs
     static GameObject StumpLadybug()
     {
         var root = new GameObject("StumpLadybug");
+        root.AddComponent<ClickCatcher>();
         // Placeholder stump: the broken log's stump once the log has fallen.
         GameObject stump = Primitive(PrimitiveType.Cylinder, "Stump", root.transform, new Vector3(0f, 0.35f, 0f), new Vector3(0.9f, 0.35f, 0.9f), TrunkMaterial, true);
         stump.layer = interactableLayer;
@@ -119,8 +134,11 @@ public static class BuildEasterEggs
     static GameObject SnowWhirl()
     {
         var root = new GameObject("SnowWhirl");
+        root.AddComponent<ClickCatcher>();
         GameObject pile = Snowbank(root.transform, "SnowPile", new Vector3(2.2f, 0.6f, 2.2f));
         Perchable perch = AddPerchable(ClickSphere(root.transform, new Vector3(0f, 0.15f, 0f), 1.2f), Child(root.transform, "PerchPoint", new Vector3(0f, 0.3f, 0f)));
+        // Clicked, the bird goes on to the whirl even if the player clicks elsewhere on the way.
+        Set(perch, so => so.FindProperty("locksClicks").boolValue = true);
         Transform centre = Child(root.transform, "CircleCentre", new Vector3(0f, 1f, 0f));
         ParticleSystem whirl = Whirl(root.transform);
         var discovery = AddDiscovery(root, "03_SnowWhirl", pile.transform);
@@ -139,6 +157,7 @@ public static class BuildEasterEggs
     static GameObject SnowFlower()
     {
         var root = new GameObject("SnowFlower");
+        root.AddComponent<ClickCatcher>();
         GameObject snow = Snowbank(root.transform, "GlowingSnow", new Vector3(0.9f, 0.35f, 0.9f));
         var sparkle = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(SparklePrefab), root.transform);
         sparkle.transform.localPosition = new Vector3(0f, 0.2f, 0f);
@@ -160,16 +179,24 @@ public static class BuildEasterEggs
     static GameObject IcicleXylophone()
     {
         var root = new GameObject("IcicleXylophone");
+        root.AddComponent<ClickCatcher>();
+        root.transform.localScale = Vector3.one * 1.6f;
         var tree = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(IcyTreeModel), root.transform);
-        // The rock the icicles ring on (placeholder), under all eight.
-        Primitive(PrimitiveType.Cube, "Rock", root.transform, new Vector3(0.05f, 0.18f, 0.15f), new Vector3(3.8f, 0.36f, 1.1f), RockMaterial, true);
         // Longest is lowest: do re mi fa sol la ti do.
-        int[] scale = { 0, 2, 4, 5, 7, 9, 11, 12 };
+        int[] semitones = { 0, 2, 4, 5, 7, 9, 11, 12 };
         var icicles = tree.GetComponentsInChildren<MeshFilter>().Where(f => f.name.StartsWith("Cylinder"))
             .OrderByDescending(f => f.sharedMesh.bounds.size.y).ToArray();
-        if (icicles.Length != scale.Length)
-            throw new Exception($"BuildEasterEggs: {IcyTreeModel} has {icicles.Length} icicles, not {scale.Length}");
+        if (icicles.Length != semitones.Length)
+            throw new Exception($"BuildEasterEggs: {IcyTreeModel} has {icicles.Length} icicles, not {semitones.Length}");
+        // The trunk's axis, in the root's space: the middle of the foot of the tree.
+        Vector3[] treePoints = tree.GetComponentsInChildren<MeshFilter>().Where(f => !icicles.Contains(f))
+            .SelectMany(f => f.sharedMesh.vertices.Select(v => (root.transform.worldToLocalMatrix * f.transform.localToWorldMatrix).MultiplyPoint3x4(v))).ToArray();
+        float treeBottom = treePoints.Min(p => p.y), treeHeight = treePoints.Max(p => p.y) - treeBottom;
+        Vector3[] foot = treePoints.Where(p => p.y < treeBottom + treeHeight * 0.1f).ToArray();
+        var axis = new Vector3(foot.Average(p => p.x), 0f, foot.Average(p => p.z));
+        float scale = root.transform.localScale.x;
         var colliders = new List<Collider>();
+        var perches = new List<Perchable>();
         foreach (MeshFilter icicle in icicles)
         {
             icicle.gameObject.layer = interactableLayer;
@@ -179,6 +206,29 @@ public static class BuildEasterEggs
             // Wider than the icicle, so it is easy to click.
             box.size = new Vector3(Mathf.Max(b.size.x, 0.3f), b.size.y, Mathf.Max(b.size.z, 0.3f));
             colliders.Add(box);
+            // Where the bird stands to tap it: on the branch it hangs from, facing along it toward the icicle, so at the bottom of a peck
+            // the beak is a little below the icicle's top. In toward the trunk, unless the icicle is so near the trunk that the bird
+            // would stand in it: then out along the branch, facing in.
+            Matrix4x4 toRoot = root.transform.worldToLocalMatrix * icicle.transform.localToWorldMatrix;
+            Vector3[] corners = Corners(b).Select(c => toRoot.MultiplyPoint3x4(c)).ToArray();
+            var top = new Vector3(corners.Average(c => c.x), corners.Max(c => c.y), corners.Average(c => c.z));
+            Vector3 fromTrunk = Vector3.ProjectOnPlane(top - axis, Vector3.up);
+            Vector3 along = BranchDirection(treePoints, top, scale);
+            if (along == Vector3.zero)
+                along = fromTrunk.normalized;
+            if (Vector3.Dot(along, fromTrunk) < 0f)
+                along = -along;
+            Vector3 facing = fromTrunk.magnitude * scale > PeckReach + 0.3f ? along : -along;
+            Vector3 beak = top + Vector3.down * (IcicleTapBelowTop / scale);
+            Transform tapFrom = Child(root.transform, "TapFrom", beak - facing * (PeckReach / scale) + Vector3.up * (PeckDrop / scale));
+            tapFrom.localRotation = Quaternion.LookRotation(facing);
+            Perchable perch = AddPerchable(icicle.gameObject, tapFrom);
+            Set(perch, so =>
+            {
+                so.FindProperty("alignBird").boolValue = true;
+                so.FindProperty("faceForward").boolValue = true;
+            });
+            perches.Add(perch);
         }
         var discovery = AddDiscovery(root, "05_IcicleXylophone", tree.transform);
         IcicleXylophone egg = root.AddComponent<IcicleXylophone>();
@@ -190,7 +240,8 @@ public static class BuildEasterEggs
             for (int i = 0; i < colliders.Count; i++)
             {
                 list.GetArrayElementAtIndex(i).FindPropertyRelative("body").objectReferenceValue = colliders[i];
-                list.GetArrayElementAtIndex(i).FindPropertyRelative("semitone").intValue = scale[i];
+                list.GetArrayElementAtIndex(i).FindPropertyRelative("perch").objectReferenceValue = perches[i];
+                list.GetArrayElementAtIndex(i).FindPropertyRelative("semitone").intValue = semitones[i];
             }
         });
         SetSound(egg, "note", "event:/SFX/highpitch_0");
@@ -200,22 +251,27 @@ public static class BuildEasterEggs
     static GameObject HollowSquirrel()
     {
         var root = new GameObject("HollowSquirrel");
+        root.AddComponent<ClickCatcher>();
+        root.transform.localScale = Vector3.one * 2f;
         var tree = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(HollowTreeModel), root.transform);
-        // The hollow faces the model's -Z, about 0.7 m up the trunk.
-        Transform inside = Child(root.transform, "Inside", new Vector3(-0.03f, 0.72f, -0.05f));
-        Transform peek = Child(root.transform, "Peek", new Vector3(-0.03f, 0.72f, -0.4f));
-        inside.localRotation = peek.localRotation = Quaternion.LookRotation(Vector3.back);
-        // Placeholder squirrel: a small capsule lying along its way out.
+        // The hollow is on the model's +Z, about 0.6 m up the trunk. Turned around, it faces the prefab's -Z.
+        var back = Quaternion.Euler(0f, 180f, 0f);
+        tree.transform.localRotation = back;
+        // The squirrel's feet: hidden below the hollow's lip, and sitting on it.
+        Transform inside = Child(root.transform, "Inside", back * new Vector3(-0.02f, 0.3f, 0.12f));
+        Transform peek = Child(root.transform, "Peek", back * new Vector3(-0.02f, 0.55f, 0.35f));
+        inside.localRotation = peek.localRotation = back;
         var squirrel = new GameObject("Squirrel");
         squirrel.transform.SetParent(root.transform, false);
         squirrel.transform.SetLocalPositionAndRotation(inside.localPosition, inside.localRotation);
-        GameObject body = Primitive(PrimitiveType.Capsule, "Body", squirrel.transform, Vector3.zero, new Vector3(0.14f, 0.12f, 0.14f), AnimalMaterial);
-        body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(SquirrelPrefab), squirrel.transform);
+        model.transform.localScale = Vector3.one * 0.5f;
         var discovery = AddDiscovery(root, "06_HollowSquirrel", squirrel.transform);
         Set(root.AddComponent<HollowSquirrel>(), so =>
         {
             so.FindProperty("discovery").objectReferenceValue = discovery;
             so.FindProperty("squirrel").objectReferenceValue = squirrel.transform;
+            so.FindProperty("animator").objectReferenceValue = model.GetComponent<Animator>();
             so.FindProperty("inside").objectReferenceValue = inside;
             so.FindProperty("peek").objectReferenceValue = peek;
         });
@@ -225,29 +281,64 @@ public static class BuildEasterEggs
     static GameObject CornelianCherry()
     {
         var root = new GameObject("CornelianCherry");
+        root.AddComponent<ClickCatcher>();
+        root.transform.localScale = Vector3.one * CherryScale;
         var bush = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(CherryBushModel), root.transform);
-        // The berry model sits where it does on the bush in the model's space; each berry is moved by a parent at a spot on the bush.
-        var berryModel = Load<GameObject>(CherryModel);
-        Vector3 berryOffset = berryModel.GetComponentInChildren<MeshFilter>().sharedMesh.bounds.center;
-        var berries = new List<GameObject>();
-        foreach (Vector3 spot in BushSpots(bush, 6))
+        // The cluster model sits where it does on the bush in the model's space; each cluster is moved by a parent under a branch end.
+        var clusterModel = Load<GameObject>(CherryModel);
+        Mesh clusterMesh = clusterModel.GetComponentInChildren<MeshFilter>().sharedMesh;
+        Vector3 clusterOffset = clusterMesh.bounds.center;
+        float clusterTop = clusterMesh.bounds.extents.y * 0.5f;
+        // The top of its stem, from its middle: on the model it touches the bottom of its branch.
+        Vector3 stem = clusterMesh.vertices.OrderByDescending(v => v.y).First() - clusterOffset;
+        var berries = new List<(GameObject cluster, Transform eatFrom)>();
+        // Each cluster turned so its berries hang out along its branch, give or take a little, not all the same way round.
+        float[] turns = { 0f, 35f, -30f, 20f, -40f, 10f };
+        Vector3 hang = Vector3.ProjectOnPlane(-stem, Vector3.up);
+        int index = 0;
+        foreach ((Vector3 under, Vector3 outward) in BranchEnds(bush, 6))
         {
-            var berry = new GameObject("Berry");
-            berry.transform.SetParent(root.transform, false);
-            berry.transform.localPosition = spot;
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(berryModel, berry.transform);
-            model.transform.localPosition = -berryOffset;
-            berries.Add(berry);
+            Quaternion turn = Quaternion.AngleAxis(turns[index++ % turns.Length], Vector3.up) * Quaternion.FromToRotation(hang, outward);
+            // Turned about the top of its stem, a little up into the branch so no gap shows where the stem meets it.
+            Vector3 spot = under - turn * stem + Vector3.up * 0.01f;
+            var cluster = new GameObject("Berry");
+            cluster.transform.SetParent(root.transform, false);
+            cluster.transform.SetLocalPositionAndRotation(spot, turn);
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(clusterModel, cluster.transform);
+            model.transform.localPosition = -clusterOffset;
+            // Back along the branch, facing the cluster: at the bottom of a peck the beak is on the cluster's top.
+            Vector3 beak = spot + Vector3.up * clusterTop;
+            Transform eatFrom = Child(cluster.transform, "EatFrom", Vector3.zero);
+            eatFrom.SetPositionAndRotation(root.transform.TransformPoint(beak - outward * (PeckReach / CherryScale) + Vector3.up * (PeckDrop / CherryScale)),
+                root.transform.rotation * Quaternion.LookRotation(outward));
+            berries.Add((cluster, eatFrom));
+        }
+        if (berries.Count == 0)
+        {
+            Object.DestroyImmediate(root);
+            throw new Exception($"BuildEasterEggs: found no branch ends on {CherryBushModel}");
         }
         Bounds bounds = LocalBounds(bush);
-        Perchable perch = AddPerchable(ClickSphere(root.transform, bounds.center, bounds.extents.y),
-            Child(root.transform, "PerchPoint", new Vector3(bounds.center.x, bounds.max.y - 0.15f, bounds.center.z)));
+        Transform perchPoint = Child(root.transform, "PerchPoint", Vector3.zero);
+        perchPoint.SetPositionAndRotation(berries[0].eatFrom.position, berries[0].eatFrom.rotation);
+        Perchable perch = AddPerchable(ClickSphere(root.transform, bounds.center, bounds.extents.y), perchPoint);
+        Set(perch, so =>
+        {
+            so.FindProperty("alignBird").boolValue = true;
+            so.FindProperty("faceForward").boolValue = true;
+        });
         var discovery = AddDiscovery(root, "07_CornelianCherry", bush.transform);
         Set(root.AddComponent<CornelianCherry>(), so =>
         {
             so.FindProperty("discovery").objectReferenceValue = discovery;
             so.FindProperty("bush").objectReferenceValue = perch;
-            Objects(so.FindProperty("berries"), berries.ToArray());
+            SerializedProperty list = so.FindProperty("berries");
+            list.arraySize = berries.Count;
+            for (int i = 0; i < berries.Count; i++)
+            {
+                list.GetArrayElementAtIndex(i).FindPropertyRelative("cluster").objectReferenceValue = berries[i].cluster;
+                list.GetArrayElementAtIndex(i).FindPropertyRelative("eatFrom").objectReferenceValue = berries[i].eatFrom;
+            }
         });
         return Save(root);
     }
@@ -255,6 +346,7 @@ public static class BuildEasterEggs
     static GameObject CliffEcho()
     {
         var root = new GameObject("CliffEcho");
+        root.AddComponent<ClickCatcher>();
         // Placeholder for the cliff's edge: a low rock. The echo comes back from far out beyond it.
         GameObject edge = Primitive(PrimitiveType.Cube, "CliffEdge", root.transform, new Vector3(0f, 0.25f, 0f), new Vector3(3f, 0.5f, 1.5f), RockMaterial);
         Transform source = Child(root.transform, "EchoSource", new Vector3(0f, 0f, -20f));
@@ -275,12 +367,12 @@ public static class BuildEasterEggs
         var flock = new GameObject("Flock");
         flock.transform.SetParent(root.transform, false);
         var controller = Load<RuntimeAnimatorController>(BirdController);
-        // A V, the leader ahead (+Z, the way it flies).
+        // A V, the leader ahead (+Z, the way it flies). The model faces -Z, so each bird is turned around.
         Vector3[] places = { Vector3.zero, new(-1.6f, 0.1f, -1.4f), new(1.6f, -0.1f, -1.4f), new(-3.2f, 0.2f, -2.8f), new(3.2f, 0f, -2.8f) };
         foreach (Vector3 place in places)
         {
             var bird = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(BirdPrefab), flock.transform);
-            bird.transform.localPosition = place;
+            bird.transform.SetLocalPositionAndRotation(place, Quaternion.Euler(0f, 180f, 0f));
             bird.transform.localScale = Vector3.one * 0.4f;
             bird.GetComponent<Animator>().runtimeAnimatorController = controller;
         }
@@ -429,6 +521,8 @@ public static class BuildEasterEggs
         var bank = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(SnowbankPrefab), parent);
         bank.name = name;
         bank.transform.localScale = size;
+        foreach (Renderer renderer in bank.GetComponentsInChildren<Renderer>())
+            renderer.sharedMaterial = Load<Material>(SoftSnowMaterial);
         return bank;
     }
 
@@ -470,32 +564,70 @@ public static class BuildEasterEggs
         return whirl;
     }
 
-    // Spots on the bush's surface, found by rays toward its middle from around it, in the root's space.
-    static IEnumerable<Vector3> BushSpots(GameObject bush, int count)
+    // Up to count branch ends, the ones nearest the game camera's side first, in the root's space (model units): for each, a little in
+    // from its tip, the bottom of the branch, where a cluster's stem hangs from (as the model's one cluster does), and the way along the
+    // branch out to its tip.
+    static List<(Vector3 spot, Vector3 outward)> BranchEnds(GameObject bush, int count)
     {
         var filter = bush.GetComponentInChildren<MeshFilter>();
-        var collider = filter.gameObject.AddComponent<MeshCollider>();
-        collider.sharedMesh = filter.sharedMesh;
+        Matrix4x4 toRoot = bush.transform.parent.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+        Vector3[] points = filter.sharedMesh.vertices.Select(v => toRoot.MultiplyPoint3x4(v)).ToArray();
         Bounds bounds = LocalBounds(bush);
-        var spots = new List<Vector3>();
-        try
-        {
-            for (int i = 0; i < count; i++)
+        // The trunk's axis: the middle of its foot.
+        Vector3[] foot = points.Where(p => p.y < bounds.min.y + bounds.size.y * 0.1f).ToArray();
+        var axis = new Vector3(foot.Average(p => p.x), 0f, foot.Average(p => p.z));
+        Vector3 middle = axis + Vector3.up * (bounds.min.y + bounds.size.y * 0.5f);
+        // The farthest point each way round the bush, from level to steeply up, is the tip of a branch. The trunk's top is not one.
+        var tips = new List<Vector3>();
+        for (int angle = 0; angle < 360; angle += 10)
+            foreach (float rise in new[] { -0.2f, 0f, 0.3f, 0.6f })
             {
-                float angle = (i * 360f / count + 20f) * Mathf.Deg2Rad;
-                float height = Mathf.Lerp(bounds.min.y + bounds.size.y * 0.35f, bounds.max.y - bounds.size.y * 0.15f, i % 3 / 2f);
-                var target = new Vector3(bounds.center.x, height, bounds.center.z);
-                Vector3 start = target + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (bounds.extents.magnitude + 1f);
-                Vector3 worldStart = bush.transform.parent.TransformPoint(start), worldTarget = bush.transform.parent.TransformPoint(target);
-                if (collider.Raycast(new Ray(worldStart, worldTarget - worldStart), out RaycastHit hit, 100f))
-                    spots.Add(bush.transform.parent.InverseTransformPoint(hit.point));
+                Vector3 way = Quaternion.Euler(0f, angle, 0f) * new Vector3(Mathf.Cos(rise), Mathf.Sin(rise), 0f);
+                Vector3 tip = points.OrderByDescending(p => Vector3.Dot(p - middle, way)).First();
+                Vector3 off = tip - axis;
+                if (new Vector2(off.x, off.z).magnitude > bounds.size.y * 0.25f && tips.All(t => Vector3.Distance(t, tip) > bounds.size.y * 0.1f))
+                    tips.Add(tip);
             }
-        }
-        finally
+        var cameraSide = new Vector3(1f, 0f, -1f).normalized;
+        var ends = new List<(Vector3 spot, Vector3 outward)>();
+        foreach (Vector3 tip in tips.OrderByDescending(t => Vector3.Dot(Vector3.ProjectOnPlane(t - axis, Vector3.up).normalized, cameraSide)))
         {
-            Object.DestroyImmediate(collider);
+            float reach = bounds.size.y * 0.12f;
+            Vector3[] near = points.Where(p => Vector3.Distance(p, tip) > reach * 0.5f && Vector3.Distance(p, tip) < reach).ToArray();
+            if (near.Length == 0)
+                continue;
+            var branch = new Vector3(near.Average(p => p.x), near.Average(p => p.y), near.Average(p => p.z));
+            Vector3 outward = Vector3.ProjectOnPlane(tip - branch, Vector3.up).normalized;
+            // The bottom of the branch there: the lowest point of the branch's surface around its middle.
+            Vector3[] around = points.Where(p => Vector3.Distance(p, branch) < reach * 0.35f).ToArray();
+            if (around.Length == 0)
+                continue;
+            ends.Add((around.OrderBy(p => p.y).First(), outward));
+            if (ends.Count == count)
+                break;
         }
-        return spots;
+        return ends;
+    }
+
+    // The level way the branch runs at a point on it: the long axis of the tree's surface near it, at about its height. In the space of
+    // the points; scale is how many metres one unit of it is. Zero if there is too little surface there.
+    static Vector3 BranchDirection(Vector3[] treePoints, Vector3 at, float scale)
+    {
+        Vector3[] near = treePoints.Where(p => Mathf.Abs(p.y - at.y) < 0.2f / scale
+            && new Vector2(p.x - at.x, p.z - at.z).magnitude < 0.5f / scale).ToArray();
+        if (near.Length < 2)
+            return Vector3.zero;
+        float meanX = near.Average(p => p.x), meanZ = near.Average(p => p.z);
+        float xx = 0f, zz = 0f, xz = 0f;
+        foreach (Vector3 p in near)
+        {
+            float dx = p.x - meanX, dz = p.z - meanZ;
+            xx += dx * dx;
+            zz += dz * dz;
+            xz += dx * dz;
+        }
+        float angle = 0.5f * Mathf.Atan2(2f * xz, xx - zz);
+        return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
     }
 
     static Bounds LocalBounds(GameObject model)
