@@ -9,39 +9,37 @@ using UnityEngine;
 // Builds stage 3, the fog maze (ADR 0028), in Main after stage 2: a long straight way into the fog, then six forks, each with an
 // animal on its right way. Past the maze, with no sunlit spot between, the ending (CliffEnding, ADR 0029): the forest thins out
 // toward a cliff where the ground ends, and a big stone stands before it. Rerunning rebuilds the stage's content under its Stage,
-// which stays, so what refers to it keeps working. It also makes room on the ground past stage 2 (WorldGap), clears the world's
-// forest over the maze and the ending and grows it again, stretches the click plane out over the drop, and adds the girl's Run state.
+// which stays, so what refers to it keeps working; the DreamFog and HiddenUntilSeason set on that content are carried over. It also
+// makes room on the ground past stage 2 (WorldGap), stretches the click plane out over the drop, and adds the girl's Run state.
+// The stage's trees are the world's forest (TreeGenerator, ADR 0031): its zones here keep every way clear, with edges that wander,
+// and thin the forest out toward the cliff, and it grows again.
 // unity command script run --file AgentScripts/BuildStage3.cs --entry BuildStage3.Run
 public static class BuildStage3
 {
     const string MainPath = "Assets/00_Scenes/Main.unity";
     const string AnimalPrefabPath = "Assets/03_Prefabs/Stage3/FogForkAnimal.prefab";
-    const string AnimalMaterialPath = "Assets/01_Arts/Materials/Test/Animal.mat";
-    const string RingMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat";
     const string FogMaterialPath = "Assets/01_Arts/Materials/Fog.mat";
     const string StoneMaterialPath = "Assets/01_Arts/Materials/Watercolor/WC_Rock.mat";
     const string GirlControllerPath = "Assets/01_Arts/Models/Girl/Girl.controller";
     const string GirlModelPath = "Assets/01_Arts/Models/Girl/NPC-Girl-Animated.fbx";
-    const string MazeZoneName = "Stage3 Maze";
-    const string EndingZoneName = "Stage3 Ending";
-    static readonly string[] TreePrefabPaths =
-    {
-        "Assets/03_Prefabs/Trees/Tree_1_Bare.prefab", "Assets/03_Prefabs/Trees/Tree_2_Bare.prefab", "Assets/03_Prefabs/Trees/Tree_3_Bare.prefab",
-    };
+    // The TreeGenerator's zones for this stage, under this child of it. The two before them are what earlier builds left.
+    const string ZonesName = "Stage3 Zones";
+    static readonly string[] OldZoneNames = { "Stage3 Maze", "Stage3 Ending" };
 
     // Fog the forest fades into, thinner over the ways (FogMaze), so both ways of every fork and the animals show through it.
     // Many thin layers up to about 2.6 m, so it reads as fog, not a ground sheet.
     const float FogDensity = 0.9f;
-    const int FogResolution = 256;
+    const int FogResolution = 512;
     const int FogLayers = 7;
     const float FogLayerStep = 0.4f;
-    // Every way is lined on both sides with a row of trees this far from its middle, so the forks read clearly.
-    const float EdgeOffset = 2.6f;
-    const float EdgeStep = 1.5f;
-    // The forest between the ways keeps this far from the middle of a way, so the edge rows stand out.
-    const float WayClearance = 4.4f;
-    const float MazeTreeSpacing = 3.2f;
-    // The maze's own forest, and its fog, cover this far either side of x 0. The world's forest stands beyond.
+    // The forest keeps off every way in pieces this long, each edge of a piece this far from the way's middle, drawn anew for every
+    // piece and side, so the edges wander instead of running straight.
+    static readonly Vector2 WayPieceLength = new(3f, 6f);
+    static readonly Vector2 WayHalfWidth = new(1.8f, 3.2f);
+    // Where the ways meet or turn, and around each animal, a square this wide is kept clear.
+    const float CornerClear = 5f;
+    const float AnimalClear = 3f;
+    // The fog covers this far either side of x 0.
     const float MazeHalfWidth = 21f;
     // The girl turns back this far before a wall.
     const float WallStop = 1f;
@@ -52,7 +50,7 @@ public static class BuildStage3
     // The animal stands on the right way this far from its fork, this far to the side away from the dead end.
     const float AnimalAlong = 3.5f;
     const float AnimalSide = 1.3f;
-    // Past the goal: the maze's forest and the fog end this far on. The fog thins out to none over its last metres.
+    // Past the goal: the fog ends this far on, and thins out to none over its last metres. The forest starts thinning 2 m past that.
     const float FogPastGoal = 6.5f;
     const float FogFadeOut = 8f;
     // The ending. The ground ends this far past the goal, in the cliff; the big stone stands before it, and she rests beside it
@@ -69,10 +67,9 @@ public static class BuildStage3
     static readonly Vector3 CameraFromGround = new(4f, 0f, -4f);
     // The camera locks when the bird crosses this far before the edge, and unlocks when it flies back past 1.5 m before that.
     const float CameraTriggerBeforeCliff = 6f;
-    // The ending's own trees, on the world forest's grid, thin out from all of them where the maze's forest ends to this share
-    // at the cliff.
-    const float EndingTreeSpacing = 3f;
+    // Toward the cliff the forest thins out to this share (a Thin zone), and keeps this far off the stone.
     const float EndingTreesAtCliff = 0.04f;
+    const float StoneClear = 3.5f;
     // The ground is stretched here, a little into the straight way, where it is flat.
     const float JoinPastEntry = 4f;
     // Where the map starts, in the frame of the stage's root, which the stage spacing (Stage.AdjustSpacing) moves.
@@ -81,7 +78,8 @@ public static class BuildStage3
     // In the quarter view (camera yaw 315) R runs straight right on the screen and U straight up, so the two ways of every fork
     // part at a right angle on the screen. Z runs up and to the right.
     static readonly Vector3 R = new Vector3(1f, 0f, 1f).normalized, U = new Vector3(-1f, 0f, 1f).normalized, Z = Vector3.forward;
-    // Every way at least twice as long as in ADR 0027's map: right ways 22 to 28 m, dead ends 14 to 18 m.
+    // Right ways 22 to 28 m, dead ends 14 to 18 m: the first map of ADR 0028. ADR 0031 made them twice and one and a half times as
+    // long; the director had them back to these.
     static readonly (Vector3, float)[][] RightMoves =
     {
         new[] { (R, 8f), (Z, 16f) },
@@ -142,7 +140,12 @@ public static class BuildStage3
         float cliffZ = terrain.transform.position.z + terrain.terrainData.size.z;
         float fogEnd = goal.z + FogPastGoal;
         float stageEnd = cliffZ + AreaPastCliff;
+        // Wide enough for the farthest way, with room for its forest edge.
+        float halfWidth = Mathf.Max(MazeHalfWidth, rightWays.Concat(deadEnds).SelectMany(path => path).Max(point => Mathf.Abs(point.x)) + 4f);
 
+        string dreamFog = Saved<DreamFog>(stage, "FogMaze/Fog");
+        string mazeHidden = Saved<HiddenUntilSeason>(stage, "FogMaze");
+        string endingHidden = Saved<HiddenUntilSeason>(stage, "CliffEnding");
         foreach (Transform child in stage.transform.Cast<Transform>().ToArray())
             UnityEngine.Object.DestroyImmediate(child.gameObject);
         GameObject root = stage.gameObject;
@@ -150,12 +153,14 @@ public static class BuildStage3
         stage.birdStart = Child(root, "BirdStart", wake + new Vector3(1.5f, 2.5f, -1f)).transform;
         stage.birdAltitude = 4f;
         float areaStart = entry.z - 9f;
-        stage.area = new Bounds(new Vector3(0f, 0f, (areaStart + stageEnd) / 2f), new Vector3(39f, 1f, stageEnd - areaStart));
+        stage.area = new Bounds(new Vector3(0f, 0f, (areaStart + stageEnd) / 2f), new Vector3(2f * halfWidth - 3f, 1f, stageEnd - areaStart));
 
         GameObject mazeRoot = Child(root, "FogMaze", start);
-        FogField field = Fog(mazeRoot, start.z, fogEnd);
+        FogField field = Fog(mazeRoot, start.z, fogEnd, halfWidth);
+        if (Restore<DreamFog>(field.gameObject, dreamFog) is DreamFog fog)
+            Set(fog, so => so.FindProperty("field").objectReferenceValue = field);
         GameObject approachPath = Path(mazeRoot, "Approach", approach);
-        GameObject animalPrefab = AnimalPrefab();
+        var animalPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AnimalPrefabPath);
         var forks = new FogFork[rightWays.Count];
         for (int i = 0; i < forks.Length; i++)
             forks[i] = Fork(mazeRoot, i, rightWays[i], deadEnds[i], animalPrefab);
@@ -166,8 +171,10 @@ public static class BuildStage3
             so.FindProperty("approach").objectReferenceValue = approachPath.transform;
             Objects(so.FindProperty("forks"), forks);
         });
+        Restore<HiddenUntilSeason>(mazeRoot, mazeHidden);
 
         (CliffEnding ending, Vector3[] endingPath, Vector3 stone) = Ending(root, goal, cliffZ, stageEnd);
+        Restore<HiddenUntilSeason>(ending.gameObject, endingHidden);
         // The maze leads her to its goal, and the ending from there to the stone.
         GameObject route = Path(root, "BabyRoute", new[] { approach[0], goal });
         stage.route = route.AddComponent<BabyRoute>();
@@ -180,11 +187,13 @@ public static class BuildStage3
             so.FindProperty("pose").enumValueIndex = (int)WaitPose.Sit;
         });
 
-        float mazeFrom = entry.z - 1f;
-        float mazeTo = fogEnd + 2f;
-        int mazeTrees = Trees(root, approach, rightWays, deadEnds, forks, goal, endingPath, mazeFrom, mazeTo);
-        int endingTrees = EndingTrees(ending.gameObject, endingPath, stone, mazeTo, cliffZ);
-        string world = RegrowWorld(mazeFrom, mazeTo, cliffZ);
+        var ways = new List<Vector3[]> { approach };
+        ways.AddRange(rightWays);
+        ways.AddRange(deadEnds);
+        ways.Add(endingPath);
+        int zones = Zones(ways, forks.Select(f => f.Animal.transform.position), stone, fogEnd + 2f, cliffZ);
+        string road = EndRoad(start.z);
+        string world = RegrowWorld();
         string clicks = StretchClickPlane(stageEnd);
         string run = AddRunState();
 
@@ -193,8 +202,25 @@ public static class BuildStage3
         EditorSceneManager.SaveScene(scene);
         float right = approach.Length > 0 ? Vector3.Distance(approach[0], approach[^1]) + rightWays.Sum(Length) : 0f;
         return $"Stage 3: {forks.Length} forks, right route {right:0} m, dead ends {deadEnds.Sum(Length):0} m, goal z {goal.z:0.0}, "
-            + $"{mazeTrees} maze trees; cliff z {cliffZ:0.0}, ending walk {Length(endingPath):0.0} m, {endingTrees} ending trees. "
-            + $"{room} {world} {clicks} Run state {run}.";
+            + $"half width {halfWidth:0.0}; cliff z {cliffZ:0.0}, ending walk {Length(endingPath):0.0} m; {zones} tree zones. "
+            + $"Carried over: DreamFog {dreamFog != null}, hidden maze {mazeHidden != null}, hidden ending {endingHidden != null}. "
+            + $"{room} {road} {world} {clicks} Run state {run}.";
+    }
+
+    // A component on the stage's content as JSON, to put back on the rebuilt content (Restore). Null if it isn't there.
+    static string Saved<T>(Stage stage, string path) where T : Component
+    {
+        Transform target = stage.transform.Find(path);
+        return target != null && target.TryGetComponent(out T component) ? EditorJsonUtility.ToJson(component) : null;
+    }
+
+    static T Restore<T>(GameObject target, string json) where T : Component
+    {
+        if (json == null)
+            return null;
+        T component = target.AddComponent<T>();
+        EditorJsonUtility.FromJsonOverwrite(json, component);
+        return component;
     }
 
     static Vector3[] Walk(Vector3 from, (Vector3 direction, float length)[] moves)
@@ -218,20 +244,25 @@ public static class BuildStage3
 
     static Vector3[] OnGround(Vector3[] points) => points.Select(Ground).ToArray();
 
-    // Opens the ground at joinZ (WorldGap) until it reaches endZ. Nothing when it already does, so rerunning keeps the ground.
+    // Makes the ground end at endZ (WorldGap): opened at joinZ, or closed by taking out the ground just past joinZ, which an
+    // earlier opening drew out there. Nothing when it already ends there, so rerunning keeps the ground.
     static string MakeRoom(float joinZ, float endZ)
     {
         float far = terrain.transform.position.z + terrain.terrainData.size.z;
-        if (endZ <= far + 0.01f)
-            return $"Ground already reaches z {far:0.0}.";
-        WorldGap.Open(joinZ, endZ - far);
-        return $"Ground opened by {endZ - far:0.0} m at z {joinZ:0.0}, now to z {endZ:0.0}.";
+        float size = endZ - far;
+        if (Mathf.Abs(size) <= 0.01f)
+            return $"Ground already ends at z {far:0.0}.";
+        if (size > 0f)
+            WorldGap.Open(joinZ, size);
+        else
+            WorldGap.Open(joinZ - size, size);
+        return $"Ground {(size > 0f ? "opened" : "closed")} by {Mathf.Abs(size):0.0} m at z {joinZ:0.0}, now to z {endZ:0.0}.";
     }
 
-    static FogField Fog(GameObject parent, float fromZ, float toZ)
+    static FogField Fog(GameObject parent, float fromZ, float toZ, float halfWidth)
     {
         var center = new Vector3(0f, 0f, (fromZ + toZ) / 2f);
-        var size = new Vector2(MazeHalfWidth * 2f, toZ - fromZ);
+        var size = new Vector2(halfWidth * 2f, toZ - fromZ);
         GameObject root = Child(parent, "Fog", center);
         var material = AssetDatabase.LoadAssetAtPath<Material>(FogMaterialPath);
         var layers = new Renderer[FogLayers];
@@ -269,7 +300,6 @@ public static class BuildStage3
         Vector3[] walked = dead.ToArray();
         walked[^1] = wall + back * WallStop;
         GameObject deadEnd = Path(root, "DeadEnd", walked.Skip(1).ToArray());
-        WallTrees(root, wall, back, index);
 
         // On the right way, to the side away from the dead end, facing along the right way.
         Vector3 along = (right[1] - right[0]).normalized;
@@ -290,106 +320,6 @@ public static class BuildStage3
             so.FindProperty("deadEnd").objectReferenceValue = deadEnd.transform;
         });
         return fork;
-    }
-
-    // The wall closing a dead end: five trees close together across its end. Trees for now; maybe rocks later.
-    static void WallTrees(GameObject parent, Vector3 wall, Vector3 back, int index)
-    {
-        GameObject root = Child(parent, "Wall", wall);
-        Vector3 across = Vector3.Cross(Vector3.up, back);
-        GameObject[] prefabs = TreePrefabs();
-        for (int i = -2; i <= 2; i++)
-        {
-            GameObject tree = Tree(prefabs[(index + i + 6) % prefabs.Length], root);
-            tree.transform.SetPositionAndRotation(Ground(wall + across * (EdgeOffset / 2f * i) + back * (0.25f * Mathf.Abs(i))), Quaternion.Euler(0f, 90f * (index + i), 0f));
-        }
-    }
-
-    // The forest of the maze. Every way is lined on both sides with a row of trees, and every fork has a wedge of trees between its
-    // two ways; behind them a looser jittered grid fills the rest, kept off the ways and away from the walls, animals and the goal.
-    static int Trees(GameObject parent, Vector3[] approach, List<Vector3[]> rightWays, List<Vector3[]> deadEnds, FogFork[] forks,
-        Vector3 goal, Vector3[] endingPath, float fromZ, float toZ)
-    {
-        GameObject root = Child(parent, "MazeTrees", Vector3.zero);
-        // Where the girl walks: the dead ends only up to where she turns back.
-        var walked = new List<(Vector3, Vector3)>();
-        // What gets lined with trees: the dead ends all the way to their walls.
-        var lined = new List<(Vector3, Vector3)>();
-        void AddPath(List<(Vector3, Vector3)> list, IList<Vector3> path)
-        {
-            for (int i = 1; i < path.Count; i++)
-                list.Add((path[i - 1], path[i]));
-        }
-        foreach (var list in new[] { walked, lined })
-        {
-            AddPath(list, approach);
-            foreach (Vector3[] path in rightWays)
-                AddPath(list, path);
-        }
-        foreach (Vector3[] path in deadEnds)
-        {
-            Vector3 wall = path[^1];
-            AddPath(walked, path.Take(path.Length - 1).Append(wall + (path[^2] - wall).normalized * WallStop).ToArray());
-            AddPath(lined, path);
-        }
-        // Out of the maze toward the stone, through its last trees: kept clear but not lined.
-        AddPath(walked, endingPath);
-        var walls = deadEnds.Select(path => path[^1]).ToArray();
-        var animals = forks.Select(fork => fork.Animal.transform.position).ToArray();
-        // The wall trees stand across the dead end's width at a wall point.
-        var placed = new List<Vector3>(walls);
-
-        GameObject[] prefabs = TreePrefabs();
-        var random = new System.Random(28);
-        bool Free(Vector3 position, float clearance, float gap) =>
-            !walked.Any(s => DistanceToSegment(position, s.Item1, s.Item2) < clearance)
-            && !walls.Any(w => Flat(position, w) < EdgeOffset + 0.4f)
-            && !animals.Any(a => Flat(position, a) < 1.5f)
-            && Flat(position, goal) >= 4f
-            && !placed.Any(p => Flat(position, p) < gap);
-        void Plant(Vector3 position)
-        {
-            GameObject tree = Tree(prefabs[random.Next(prefabs.Length)], root);
-            tree.transform.SetPositionAndRotation(Ground(position), Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
-            tree.transform.localScale = Vector3.one * Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
-            placed.Add(position);
-        }
-
-        foreach ((Vector3 a, Vector3 b) in lined)
-        {
-            Vector3 along = (b - a).normalized;
-            Vector3 side = Vector3.Cross(Vector3.up, along);
-            float length = Vector3.Distance(a, b);
-            for (float d = 0f; d <= length; d += EdgeStep)
-                foreach (float sign in new[] { -1f, 1f })
-                {
-                    Vector3 position = a + along * d + side * (sign * EdgeOffset) + Jitter(random, 0.15f);
-                    if (Free(position, EdgeOffset - 0.3f, 1f))
-                        Plant(position);
-                }
-        }
-        // A wedge between the two ways of every fork, so the split shows.
-        for (int i = 0; i < rightWays.Count; i++)
-        {
-            Vector3 origin = rightWays[i][0];
-            Vector3 bisector = ((rightWays[i][1] - origin).normalized + (deadEnds[i][1] - origin).normalized).normalized;
-            Vector3 across = Vector3.Cross(Vector3.up, bisector);
-            for (float d = 1f; d <= 7f; d += 1.1f)
-                foreach (float sideways in new[] { 0f, -0.9f, 0.9f })
-                {
-                    Vector3 position = origin + bisector * d + across * sideways;
-                    if (Free(position, EdgeOffset - 0.3f, 0.9f))
-                        Plant(position);
-                }
-        }
-        for (float x = -MazeHalfWidth; x <= MazeHalfWidth; x += MazeTreeSpacing)
-            for (float z = fromZ; z <= toZ; z += MazeTreeSpacing)
-            {
-                Vector3 position = new Vector3(x, 0f, z) + Jitter(random, MazeTreeSpacing * 0.3f);
-                if (Mathf.Abs(position.x) <= MazeHalfWidth && Free(position, WayClearance, 1.2f))
-                    Plant(position);
-            }
-        return placed.Count - walls.Length;
     }
 
     // The ending past the maze: from its goal she walks to the big stone before the cliff and rests beside it (CliffEnding). The
@@ -448,40 +378,6 @@ public static class BuildStage3
         return (ending, walk, stone);
     }
 
-    // The forest past the maze, on the world forest's grid across the whole ground, thinning out from all of it where the maze's
-    // forest ends to almost none at the cliff, so the forest fades out instead of stopping. Kept off her walk and the stone.
-    static int EndingTrees(GameObject parent, Vector3[] walk, Vector3 stone, float fromZ, float cliffZ)
-    {
-        GameObject root = Child(parent, "Trees", Vector3.zero);
-        GameObject[] prefabs = TreePrefabs();
-        var random = new System.Random(29);
-        float padding = new SerializedObject(GameObject.Find("01_SYSTEM/TreeGenerator").GetComponent<TreeGenerator>())
-            .FindProperty("edgePadding").floatValue;
-        float minX = terrain.transform.position.x + padding;
-        float maxX = terrain.transform.position.x + terrain.terrainData.size.x - padding;
-        int count = 0;
-        for (float x = minX; x <= maxX; x += EndingTreeSpacing)
-            for (float z = fromZ; z <= cliffZ; z += EndingTreeSpacing)
-            {
-                Vector3 position = new Vector3(x, 0f, z) + Jitter(random, EndingTreeSpacing * 0.3f);
-                // Drawn for every grid point, so a change in what is kept clear doesn't move the trees after it.
-                float keep = (float)random.NextDouble();
-                float yaw = (float)random.NextDouble() * 360f;
-                float scale = Mathf.Lerp(0.85f, 1.15f, (float)random.NextDouble());
-                int which = random.Next(prefabs.Length);
-                float share = Mathf.Lerp(1f, EndingTreesAtCliff, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(fromZ, cliffZ - 4f, position.z)));
-                bool clear = position.z < cliffZ - 1.2f && Flat(position, stone) >= 3.5f
-                    && Enumerable.Range(1, walk.Length - 1).All(i => DistanceToSegment(position, walk[i - 1], walk[i]) >= 2.5f);
-                if (keep > share || !clear)
-                    continue;
-                GameObject tree = Tree(prefabs[which], root);
-                tree.transform.SetPositionAndRotation(Ground(position), Quaternion.Euler(0f, yaw, 0f));
-                tree.transform.localScale = Vector3.one * scale;
-                count++;
-            }
-        return count;
-    }
-
     // The world's click plane, under the ground, reaches out over the drop past where the bird may fly, so a click there takes it.
     static string StretchClickPlane(float toZ)
     {
@@ -502,31 +398,88 @@ public static class BuildStage3
 
     static float Flat(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
 
-    static Vector3 Jitter(System.Random random, float amount) =>
-        new(((float)random.NextDouble() * 2f - 1f) * amount, 0f, ((float)random.NextDouble() * 2f - 1f) * amount);
-
-    static float DistanceToSegment(Vector3 point, Vector3 a, Vector3 b)
+    // The TreeGenerator's zones for this stage, made again under ZonesName: every way kept clear in pieces whose edges wander (each edge
+    // of each piece drawn anew), a square at every corner and fork and around each animal and the stone, and from where the fog ends
+    // the forest thinning out across the whole ground to the cliff. Returns how many zones.
+    static int Zones(List<Vector3[]> ways, IEnumerable<Vector3> animals, Vector3 stone, float thinFrom, float cliffZ)
     {
-        point.y = a.y = b.y = 0f;
-        Vector3 ab = b - a;
-        float t = Mathf.Clamp01(Vector3.Dot(point - a, ab) / ab.sqrMagnitude);
-        return Vector3.Distance(point, a + ab * t);
-    }
-
-    // The world's forest stays off the maze (a Clear zone over it, as the road has) and off the ending, across the whole ground there
-    // (its own trees thin out to the cliff), and grows again: the ground opened past stage 2 is bare until it does. The cliff closes
-    // the road off now, so the forest no longer closes its top end (its top padding). The flowers and grass of stage 3 follow its new
-    // area; past the cliff there is no ground for them.
-    static string RegrowWorld(float fromZ, float toZ, float cliffZ)
-    {
-        var trees = GameObject.Find("01_SYSTEM/TreeGenerator").GetComponent<TreeGenerator>();
-        ClearZone(trees, MazeZoneName, new Vector3(0f, 0f, (fromZ + toZ) / 2f), new Vector3(MazeHalfWidth * 2f, 1f, toZ - fromZ));
+        Transform trees = GameObject.Find("01_SYSTEM/TreeGenerator").transform;
+        foreach (string name in OldZoneNames.Append(ZonesName))
+        {
+            Transform old = trees.Find(name);
+            if (old != null)
+                UnityEngine.Object.DestroyImmediate(old.gameObject);
+        }
+        GameObject root = Child(trees.gameObject, ZonesName, Vector3.zero);
+        var random = new System.Random(31);
+        float Draw(Vector2 range) => Mathf.Lerp(range.x, range.y, (float)random.NextDouble());
+        foreach (Vector3[] way in ways)
+            for (int i = 1; i < way.Length; i++)
+            {
+                Vector3 a = way[i - 1], b = way[i];
+                Vector3 along = Vector3.ProjectOnPlane(b - a, Vector3.up).normalized;
+                Vector3 side = Vector3.Cross(Vector3.up, along);
+                float length = Flat(a, b);
+                for (float from = 0f; from < length;)
+                {
+                    float to = Mathf.Min(from + Draw(WayPieceLength), length);
+                    float left = Draw(WayHalfWidth), right = Draw(WayHalfWidth);
+                    Vector3 middle = a + along * ((from + to) / 2f) + side * ((right - left) / 2f);
+                    // A little longer than the piece, so no tree slips in between two pieces.
+                    Zone(root, TreeZone.Kind.Clear, middle, along, new Vector3(left + right, 1f, to - from + 0.5f));
+                    from = to;
+                }
+            }
+        foreach (Vector3 corner in ways.SelectMany(way => way))
+            Zone(root, TreeZone.Kind.Clear, corner, Vector3.forward, new Vector3(CornerClear, 1f, CornerClear));
+        foreach (Vector3 animal in animals)
+            Zone(root, TreeZone.Kind.Clear, animal, Vector3.forward, new Vector3(AnimalClear, 1f, AnimalClear));
+        Zone(root, TreeZone.Kind.Clear, stone, Vector3.forward, new Vector3(StoneClear * 2f, 1f, StoneClear * 2f));
         TerrainData data = terrain.terrainData;
         float middleX = terrain.transform.position.x + data.size.x / 2f;
-        ClearZone(trees, EndingZoneName, new Vector3(middleX, 0f, (toZ + cliffZ + 1f) / 2f), new Vector3(data.size.x + 2f, 1f, cliffZ + 1f - toZ));
+        TreeZone thin = Zone(root, TreeZone.Kind.Thin, new Vector3(middleX, 0f, (thinFrom + cliffZ) / 2f), Vector3.forward,
+            new Vector3(data.size.x + 2f, 1f, cliffZ - thinFrom));
+        thin.farShare = EndingTreesAtCliff;
+        return root.transform.childCount;
+    }
+
+    // The road's Clear zone, from the stages before, ends where the maze starts: past it the stage's own zones keep the ways clear.
+    // Opening the ground (WorldGap) stretches it across the join, so it would run on straight through the maze.
+    static string EndRoad(float endZ)
+    {
+        var box = GameObject.Find("01_SYSTEM/TreeGenerator/Road").GetComponent<BoxCollider>();
+        float nearZ = box.transform.TransformPoint(box.center - Vector3.forward * box.size.z / 2f).z;
+        float farZ = box.transform.TransformPoint(box.center + Vector3.forward * box.size.z / 2f).z;
+        if (farZ <= endZ)
+            return $"Road zone ends at z {farZ:0.0}.";
+        Vector3 size = box.size;
+        size.z = endZ - nearZ;
+        box.size = size;
+        box.center = box.transform.InverseTransformPoint(new Vector3(0f, 0f, (nearZ + endZ) / 2f)).z * Vector3.forward + new Vector3(box.center.x, box.center.y, 0f);
+        EditorUtility.SetDirty(box);
+        return $"Road zone cut from z {farZ:0.0} to {endZ:0.0}.";
+    }
+
+    static TreeZone Zone(GameObject parent, TreeZone.Kind kind, Vector3 center, Vector3 forward, Vector3 size)
+    {
+        var zoneObject = new GameObject(kind.ToString(), typeof(BoxCollider), typeof(TreeZone));
+        zoneObject.transform.SetParent(parent.transform);
+        zoneObject.transform.SetPositionAndRotation(new Vector3(center.x, 0f, center.z), Quaternion.LookRotation(forward));
+        zoneObject.GetComponent<BoxCollider>().size = size;
+        var zone = zoneObject.GetComponent<TreeZone>();
+        zone.kind = kind;
+        return zone;
+    }
+
+    // The world's forest grows again over the stage's new zones: the ground opened past stage 2 is bare until it does. The cliff closes
+    // the road off now, so the forest no longer closes its top end (its top padding). The flowers and grass of stage 3 follow its new
+    // area; past the cliff there is no ground for them.
+    static string RegrowWorld()
+    {
+        var trees = GameObject.Find("01_SYSTEM/TreeGenerator").GetComponent<TreeGenerator>();
         Set(trees, so => so.FindProperty("topPadding").floatValue = 0f);
         trees.Generate();
-        var parts = new List<string> { $"world trees {trees.TreeCount}" };
+        var parts = new List<string> { $"world trees {trees.TreeCount} ({trees.CanLeafCount} can leaf, {trees.OakCount} oaks)" };
         foreach (string name in new[] { "01_SYSTEM/FlowerGenerator", "01_SYSTEM/GrassGenerator" })
         {
             var scatter = GameObject.Find(name).GetComponent<ScatterGenerator>();
@@ -534,23 +487,6 @@ public static class BuildStage3
             parts.Add($"{scatter.name} {scatter.MadeCount}");
         }
         return string.Join(", ", parts) + ".";
-    }
-
-    static void ClearZone(TreeGenerator trees, string name, Vector3 center, Vector3 size)
-    {
-        Transform zoneTransform = trees.transform.Find(name);
-        if (zoneTransform == null)
-        {
-            var zoneObject = new GameObject(name, typeof(BoxCollider), typeof(TreeZone));
-            zoneObject.transform.SetParent(trees.transform);
-            zoneTransform = zoneObject.transform;
-        }
-        zoneTransform.GetComponent<TreeZone>().kind = TreeZone.Kind.Clear;
-        zoneTransform.SetPositionAndRotation(center, Quaternion.identity);
-        zoneTransform.localScale = Vector3.one;
-        var box = zoneTransform.GetComponent<BoxCollider>();
-        box.center = Vector3.zero;
-        box.size = size;
     }
 
     // Run, played directly by Baby (CrossFade) as BalanceWalk and Jump are, so without transitions. Kept if it is there.
@@ -565,54 +501,6 @@ public static class BuildStage3
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();
         return "added";
-    }
-
-    // The fork's animal: a placeholder capsule on the ground, and the ring of sound it shows when it answers. Saved over the old
-    // prefab, so its GUID stays.
-    static GameObject AnimalPrefab()
-    {
-        if (!AssetDatabase.IsValidFolder("Assets/03_Prefabs/Stage3"))
-            AssetDatabase.CreateFolder("Assets/03_Prefabs", "Stage3");
-        var root = new GameObject("FogForkAnimal");
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.name = "Body";
-        UnityEngine.Object.DestroyImmediate(body.GetComponent<Collider>());
-        body.transform.SetParent(root.transform);
-        body.transform.SetLocalPositionAndRotation(new Vector3(0f, 0.5f, 0f), Quaternion.Euler(90f, 0f, 0f));
-        body.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(AnimalMaterialPath);
-
-        var ringObject = new GameObject("CryRing", typeof(LineRenderer), typeof(CryRing));
-        ringObject.transform.SetParent(root.transform);
-        var line = ringObject.GetComponent<LineRenderer>();
-        line.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(RingMaterialPath);
-        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        line.receiveShadows = false;
-        line.alignment = LineAlignment.View;
-        line.numCapVertices = 0;
-        line.numCornerVertices = 2;
-        // After the fog, which is in the same transparent queue at order 0.
-        line.sortingOrder = 1;
-
-        var animal = root.AddComponent<FogForkAnimal>();
-        Set(animal, so =>
-        {
-            so.FindProperty("body").objectReferenceValue = body.GetComponent<Renderer>();
-            so.FindProperty("ring").objectReferenceValue = ringObject.GetComponent<CryRing>();
-        });
-        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, AnimalPrefabPath);
-        UnityEngine.Object.DestroyImmediate(root);
-        return prefab;
-    }
-
-    static GameObject[] TreePrefabs() => TreePrefabPaths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
-
-    // A tree painted in watercolor as the world's trees are: the world's TreeGenerator bakes every model of a kind together, so
-    // these take its bake (and its fade when they stand between the camera and the bird or the girl) when it grows again.
-    static GameObject Tree(GameObject prefab, GameObject parent)
-    {
-        var tree = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent.transform);
-        tree.AddComponent<WatercolorPaintedModel>();
-        return tree;
     }
 
     static GameObject Path(GameObject parent, string name, Vector3[] points)

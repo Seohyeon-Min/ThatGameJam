@@ -25,20 +25,19 @@ public static class BuildEncyclopedia
     static readonly Vector3 RabbitPosition = new Vector3(2.5f, 0f, -2.5f);
     const float RabbitYaw = 135f;
 
-    // The director's list (order_from_director.md), in its order.
+    // The director's list (docs/kor/easter_eggs.md 4절), by stage: the intro, stages 1, 2 and 3, then the migrating birds of any stage.
     static readonly (string file, string title)[] Entries =
     {
-        ("01_IcicleXylophone", "Icicle Xylophone"),
-        ("02_HollowSquirrel", "Squirrel in the Hollow"),
-        ("03_FrozenRiver", "Frozen River and Trout"),
-        ("04_MigratingBirds", "Migrating Birds"),
-        ("05_SnowFlower", "Flower in the Snow"),
-        ("06_Swallowtail", "Swallowtail Butterfly"),
+        ("01_SnowOnBird", "Snow on the Bird"),
+        ("02_StumpLadybug", "Ladybug in the Stump"),
+        ("03_SnowWhirl", "Snow Whirl"),
+        ("04_SnowFlower", "Flower in the Snow"),
+        ("05_IcicleXylophone", "Icicle Xylophone"),
+        ("06_HollowSquirrel", "Squirrel in the Hollow"),
         ("07_CornelianCherry", "Cornelian Cherries"),
-        ("08_PuddleReflection", "Puddle Reflection"),
-        ("09_StumpLadybug", "Ladybug in the Stump"),
-        ("10_CliffEcho", "Cliff Echo"),
-        ("11_SnowWhirl", "Snow Whirl"),
+        ("08_CliffEcho", "Cliff Echo"),
+        ("09_PuddleReflection", "Puddle Reflection"),
+        ("10_MigratingBirds", "Migrating Birds"),
     };
 
     const float CardWidth = 394f;
@@ -233,7 +232,7 @@ public static class BuildEncyclopedia
         return popup;
     }
 
-    // Under 01_SYSTEM. No test rabbit: Main gets only the encyclopedia until the easter eggs exist.
+    // Under 01_SYSTEM. No test rabbit: the easter eggs (BuildEasterEggs) find the entries.
     static void PlaceInMain(Scene scene, GameObject prefab)
     {
         Transform system = scene.GetRootGameObjects().First(g => g.name == "01_SYSTEM").transform;

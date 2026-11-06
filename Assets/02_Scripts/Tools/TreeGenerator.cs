@@ -6,7 +6,7 @@ using UnityEditor;
 #endif
 
 // One generator for the trees of the whole world. The areas are its child TreeZones: trees grow on a jittered grid over the whole terrain
-// (Cover Ground) or inside the Trees zones, and outside the Clear zones except in the top and bottom paddings, which close off the road, each turned and sized at random, neighbours never sharing a kind if it can be helped. Inside a Pines zone a
+// (Cover Ground) or inside the Trees zones, and outside the Clear zones except in the top and bottom paddings, which close off the road, fewer in the Thin zones, each turned and sized at random, neighbours never sharing a kind if it can be helped. Inside a Pines zone a
 // share of those same trees are pines, so pines replace trees rather than add to them. Generate and Clear are inspector buttons
 // (TreeGeneratorEditor); the same seed and settings give the same trees.
 // Leaves: every tree draws its own number from 0 to 1 when it is made, and has leaves at a season level whose share is above that number.
@@ -237,6 +237,8 @@ public class TreeGenerator : MonoBehaviour
         var random = new System.Random(seed);
         // Its own sequence, so adding oaks didn't move a single tree.
         var oakRandom = new System.Random(seed + 7919);
+        // Its own sequence too, so adding the Thin zones didn't move a single tree.
+        var thinRandom = new System.Random(seed + 104729);
         var made = new List<GameObject>();
         var plantedNow = new List<Planted>();
         var painted = new Dictionary<GameObject, WatercolorPaintedModel>();
@@ -258,9 +260,12 @@ public class TreeGenerator : MonoBehaviour
                 float pineRoll = (float)random.NextDouble();
                 int pineKind = random.Next(Mathf.Max(pines.Length, 1));
                 int kindRoll = random.Next(1000);
+                float thinRoll = (float)thinRandom.NextDouble();
                 if (!coverGround && !zones.Exists(zone => zone.kind == TreeZone.Kind.Trees && zone.Contains(position)))
                     continue;
                 if (position.z >= clearFrom && position.z <= clearTo && zones.Exists(zone => zone.kind == TreeZone.Kind.Clear && zone.Contains(position)))
+                    continue;
+                if (zones.Exists(zone => zone.kind == TreeZone.Kind.Thin && thinRoll > zone.KeptShare(position)))
                     continue;
                 if (terrain != null)
                     position.y = terrain.transform.position.y + terrain.SampleHeight(position);

@@ -114,6 +114,8 @@ public class GameTuning : ScriptableObject
     // so landing on a branch far across the screen reads as the camera snapping there unasked; being sent to
     // the nearest branch when refused (Refuse) is unrestricted, by design.
     public float birdIdlePerchRadius = 2.5f;
+    // A press on a branch let go within this many seconds lands on it; held longer, the bird follows the pointer instead.
+    public float birdPerchClickSeconds = 0.2f;
     // How fast the bird's horizontal speed ramps toward birdSpeed (and toward 0 when slowing for a landing).
     public float birdAcceleration = 10f;
     // How hard it brakes approaching a perch: speed near the branch is sqrt(2 * this * remaining distance).
