@@ -38,7 +38,7 @@ Found easter eggs are recorded in the encyclopedia. When an easter egg shows its
 
 ## 4. What is built (2026-11-06)
 
-Prefabs are in `Assets/03_Prefabs/EasterEggs/`, code in `Assets/02_Scripts/EasterEggs/`, and the builder is `AgentScripts/BuildEasterEggs.cs` (`BuildEasterEggs.Run`). Change models and places in the prefabs and the scene. Each prefab's `Discovery` holds its encyclopedia entry and photo subject.
+Prefabs are in `Assets/03_Prefabs/EasterEggs/`, code in `Assets/02_Scripts/EasterEggs/`, and the builder is `AgentScripts/BuildEasterEggs.cs` (`BuildEasterEggs.Run`). Change models and places in the prefabs and the scene. The squirrel model is brought in first by `AgentScripts/SetupSquirrelModel.cs` (`Assets/01_Arts/Models/Squirrel/`). Each prefab's `Discovery` holds its encyclopedia entry and photo subject.
 
 | Prefab | Model | Behaviour | Recorded in the encyclopedia |
 |---|---|---|---|
@@ -47,7 +47,7 @@ Prefabs are in `Assets/03_Prefabs/EasterEggs/`, code in `Assets/02_Scripts/Easte
 | `SnowWhirl` | `Snowbank` pile | Click: the bird lands, then circles over it for 4 s. Snow particle whirl, sound `event:/SFX/spiral`. Can be played again afterwards | Halfway through the circling |
 | `SnowFlower` | Small `Snowbank` pile + `InteractiveSparkle`, flower `Flower01` | Click: the bird lands, pecks three times, the snow shrinks and the flower grows. Once only | When the flower is grown |
 | `IcicleXylophone` | Tommy's `icy tree.fbx` (8 icicles), rock (placeholder) | Click an icicle: it falls, rings one note on the rock, and grows back after 3 s. Longest first, do re mi fa sol la ti do. The sound is `event:/SFX/highpitch_0` at another pitch | The first note |
-| `HollowSquirrel` | Tommy's `thickTree.obj` (the hollow), capsule squirrel (placeholder) | A cry within 6 m of the hollow: the squirrel comes out and goes back in after 1.5 s | When it is out |
+| `HollowSquirrel` | Tommy's `thickTree.obj` (the hollow), squirrel `Squirrel.prefab` (scale 0.5) | A cry within 6 m of the hollow: the squirrel comes up from below the hollow and sits on its lip. For 5 s it plays `SitIdle_LookAround` from the start and turns its body left, right (35°) and back to the front, then goes back in | When it is out |
 | `CornelianCherry` | Tommy's `cornelian_cherry` (bush, 6 berries) | Click: the bird lands, pecks twice, a berry goes, and it puffs out its chest. Again while berries are left | After the chest puff |
 | `CliffEcho` | Low rock (cliff placeholder) | A cry within 8 m: the bird's cry (`event:/SFX/Bird`) comes back softer after 0.7 s and 1.4 s | The first echo |
 | `MigratingBirds` | 5 bird models (0.4 scale) | Holding the farthest zoom for 2 s, they fly across 7 m above the middle of the view. Once per game, from `From Stage` on (default 1; 0 on the one in the clearing, for testing) | As they pass the middle of the view |

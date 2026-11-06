@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 
 // Builds the easter egg prefabs (Assets/03_Prefabs/EasterEggs/) and, with Main open, a clearing behind the intro's start (-Z) with one of
 // each in it, for trying them before they get their places in the stages (docs/kor/easter_eggs.md). The models are placeholders where
-// there is none yet (stump, snow piles, squirrel, cliff). The puddle reflection is left out for now.
+// there is none yet (stump, snow piles, cliff). The puddle reflection is left out for now.
 // In Main: the intro's area reaches back over the clearing, the world forest keeps out of it (a Clear zone, and its bottom padding only
 // one row deep), and a second tree generator fills the ground behind it that the camera now sees. The snow cap goes under the bird.
 // Run BuildEncyclopedia first: the eggs find their entries in Assets/04_Data/Encyclopedia.
@@ -28,6 +28,7 @@ public static class BuildEasterEggs
     const string CherryBushModel = "Assets/01_Arts/Mesh/cornelian_cherry/berries/Tube.obj";
     const string CherryModel = "Assets/01_Arts/Mesh/cornelian_cherry/tree_base/UV Sphere 2.obj";
     const string LadybugPrefab = "Assets/03_Prefabs/Ladybug.prefab";
+    const string SquirrelPrefab = "Assets/03_Prefabs/Squirrel.prefab";
     const string SnowbankPrefab = "Assets/03_Prefabs/Stage2/Snowbank.prefab";
     const string FlowerPrefab = "Assets/03_Prefabs/Flowers/Flower01.prefab";
     const string SparklePrefab = "Assets/03_Prefabs/InteractiveSparkle.prefab";
@@ -37,7 +38,6 @@ public static class BuildEasterEggs
     const string SnowMaterial = "Assets/01_Arts/Materials/Test/Snow.mat";
     const string RockMaterial = "Assets/01_Arts/Materials/Test/Rock.mat";
     const string TrunkMaterial = "Assets/01_Arts/Materials/Test/Trunk.mat";
-    const string AnimalMaterial = "Assets/01_Arts/Materials/Test/Animal.mat";
 
     // The clearing, in world X and Z. The bird reaches back to ClearingBirdZ (the intro's area), so every perch is in front of it.
     static readonly Rect Clearing = Rect.MinMaxRect(-14f, -36.5f, 14f, -24.5f);
@@ -201,21 +201,24 @@ public static class BuildEasterEggs
     {
         var root = new GameObject("HollowSquirrel");
         var tree = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(HollowTreeModel), root.transform);
-        // The hollow faces the model's -Z, about 0.7 m up the trunk.
-        Transform inside = Child(root.transform, "Inside", new Vector3(-0.03f, 0.72f, -0.05f));
-        Transform peek = Child(root.transform, "Peek", new Vector3(-0.03f, 0.72f, -0.4f));
-        inside.localRotation = peek.localRotation = Quaternion.LookRotation(Vector3.back);
-        // Placeholder squirrel: a small capsule lying along its way out.
+        // The hollow is on the model's +Z, about 0.6 m up the trunk. Turned around, it faces the prefab's -Z.
+        var back = Quaternion.Euler(0f, 180f, 0f);
+        tree.transform.localRotation = back;
+        // The squirrel's feet: hidden below the hollow's lip, and sitting on it.
+        Transform inside = Child(root.transform, "Inside", back * new Vector3(-0.02f, 0.3f, 0.12f));
+        Transform peek = Child(root.transform, "Peek", back * new Vector3(-0.02f, 0.55f, 0.35f));
+        inside.localRotation = peek.localRotation = back;
         var squirrel = new GameObject("Squirrel");
         squirrel.transform.SetParent(root.transform, false);
         squirrel.transform.SetLocalPositionAndRotation(inside.localPosition, inside.localRotation);
-        GameObject body = Primitive(PrimitiveType.Capsule, "Body", squirrel.transform, Vector3.zero, new Vector3(0.14f, 0.12f, 0.14f), AnimalMaterial);
-        body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(SquirrelPrefab), squirrel.transform);
+        model.transform.localScale = Vector3.one * 0.5f;
         var discovery = AddDiscovery(root, "06_HollowSquirrel", squirrel.transform);
         Set(root.AddComponent<HollowSquirrel>(), so =>
         {
             so.FindProperty("discovery").objectReferenceValue = discovery;
             so.FindProperty("squirrel").objectReferenceValue = squirrel.transform;
+            so.FindProperty("animator").objectReferenceValue = model.GetComponent<Animator>();
             so.FindProperty("inside").objectReferenceValue = inside;
             so.FindProperty("peek").objectReferenceValue = peek;
         });

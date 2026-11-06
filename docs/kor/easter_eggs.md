@@ -38,7 +38,7 @@
 
 ## 4. 지금 구현 (2026-11-06)
 
-프리팹은 `Assets/03_Prefabs/EasterEggs/`, 코드는 `Assets/02_Scripts/EasterEggs/`, 빌더는 `AgentScripts/BuildEasterEggs.cs` (`BuildEasterEggs.Run`) 다. 모델과 위치는 프리팹과 씬에서 바꾸면 된다. 프리팹마다 `Discovery` 가 사전 항목과 사진 대상을 가진다.
+프리팹은 `Assets/03_Prefabs/EasterEggs/`, 코드는 `Assets/02_Scripts/EasterEggs/`, 빌더는 `AgentScripts/BuildEasterEggs.cs` (`BuildEasterEggs.Run`) 다. 모델과 위치는 프리팹과 씬에서 바꾸면 된다. 다람쥐 모델은 `AgentScripts/SetupSquirrelModel.cs` 가 먼저 가져온다(`Assets/01_Arts/Models/Squirrel/`). 프리팹마다 `Discovery` 가 사전 항목과 사진 대상을 가진다.
 
 | 프리팹 | 모델 | 동작 | 사전에 오르는 때 |
 |---|---|---|---|
@@ -47,7 +47,7 @@
 | `SnowWhirl` | `Snowbank` 눈더미 | 클릭하면 새가 앉았다가 4 초 동안 위를 돈다. 눈 파티클 회오리, 소리는 `event:/SFX/spiral`. 끝나면 다시 할 수 있다 | 도는 중간 |
 | `SnowFlower` | `Snowbank` 작은 눈더미 + `InteractiveSparkle`, 꽃 `Flower01` | 클릭하면 새가 앉아 3 번 쪼고, 눈이 줄며 꽃이 자란다. 한 번만 | 꽃이 다 자랐을 때 |
 | `IcicleXylophone` | 토미의 `icy tree.fbx` (고드름 8 개), 바위 (자리 표시) | 고드름을 클릭하면 떨어져 바위에서 한 음을 내고 3 초 뒤 다시 생긴다. 긴 것부터 도레미파솔라시도. 소리는 `event:/SFX/highpitch_0` 의 pitch 를 바꾼 것이다 | 처음 울릴 때 |
-| `HollowSquirrel` | 토미의 `thickTree.obj` (구멍), 다람쥐는 캡슐 (자리 표시) | 구멍에서 6 m 안에서 울면 다람쥐가 나왔다가 1.5 초 뒤 들어간다 | 나왔을 때 |
+| `HollowSquirrel` | 토미의 `thickTree.obj` (구멍), 다람쥐 `Squirrel.prefab` (0.5 배) | 구멍에서 6 m 안에서 울면 다람쥐가 구멍 아래에서 올라와 입구에 앉는다. 5 초 동안 `SitIdle_LookAround` 를 처음부터 틀고 몸을 왼쪽, 오른쪽(35°), 앞으로 돌린 뒤 들어간다 | 나왔을 때 |
 | `CornelianCherry` | 토미의 `cornelian_cherry` (덤불, 열매 6 개) | 클릭하면 새가 앉아 2 번 쪼고 열매 하나가 없어지고 가슴을 부풀린다. 열매가 남아 있으면 다시 할 수 있다 | 가슴을 부풀린 뒤 |
 | `CliffEcho` | 낮은 바위 (낭떠러지 자리 표시) | 8 m 안에서 울면 0.7 초, 1.4 초 뒤 새 울음(`event:/SFX/Bird`)이 작게 돌아온다 | 첫 메아리 |
 | `MigratingBirds` | 새 모델 5 마리 (0.4 배) | 최대 줌아웃을 2 초 유지하면 화면 가운데 위 7 m 를 가로질러 날아간다. 게임당 1 번. `From Stage` 부터 (기본 1, 공터의 것은 시험용 0) | 화면 가운데를 지날 때 |
