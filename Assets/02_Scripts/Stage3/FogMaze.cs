@@ -1,13 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 // The fog stage (ADR 0028). The girl stops at the start of the long straight way into the fog, and this leads her from there
 // through the forks. Each fork has an animal on its right way. When the bird cries, the first animal the bird has not passed
-// (in Z) answers, and the girl runs to the bird along the ways she can reach: the one she is on and the two of the fork
-// ahead. There she waits a moment for another cry, then walks on by herself. At a fork she takes the right way if its animal has
-// answered; otherwise she stands a moment, then picks one of the two at random. A dead end takes her to its wall and back,
-// unless its animal has answered: then she turns back at once. The fog is light, so the animals and the ways show through it.
+// (in Z) answers, and the girl runs along the ways to the point of the maze nearest the bird, behind her too (ADR 0033). There
+// she waits a moment for another cry, then walks on by herself. At a fork she takes the right way if its animal has answered or
+// she has been to its dead end's wall; otherwise she stands a moment, then picks one of the two at random. A dead end takes her to
+// its wall and back, unless its animal has answered or she has been to its wall: then she turns back at once.
+// The fog is light, so the animals and the ways show through it.
 public class FogMaze : PathBlocker
 {
     [SerializeField] FogField field;
@@ -151,23 +153,14 @@ public class FogMaze : PathBlocker
         }
     }
 
-    // The way she is on, and the two ways of the fork ahead. In a dead end, the fork it leaves is the one ahead.
-    IEnumerable<int> Reachable()
-    {
-        yield return way;
-        if (IsDeadEnd(way))
-            yield return RightWay(ForkOfDeadEnd(way));
-        else if (way < ForkCount)
-        {
-            yield return RightWay(way);
-            yield return DeadEnd(way);
-        }
-    }
+    // The way a way leaves from: a right way from the way before it, a dead end from the way ending at its fork. -1 for the straight way.
+    int Parent(int index) => IsDeadEnd(index) ? ForkOfDeadEnd(index) : index - 1;
 
     IEnumerator RunToBird(Vector3 bird)
     {
         helped = true;
-        int target = Nearest(bird, Reachable(), out float along);
+        // Anywhere in the maze, behind her too (ADR 0033).
+        int target = Nearest(bird, Enumerable.Range(0, ways.Length), out float along);
         yield return Travel(target, along, true);
         for (float time = 0f; time < GameTuning.Current.fogRunIdleTime; time += Time.deltaTime)
         {
@@ -194,10 +187,11 @@ public class FogMaze : PathBlocker
             yield return Along(way, Length(way), false);
             int fork = way;
             baby.StandStill();
-            for (float time = 0f; time < tuning.fogForkWaitTime && !forks[fork].Animal.HasAnswered; time += Time.deltaTime)
+            // Where she has been to the dead end's wall already (called back past it), she knows the way.
+            for (float time = 0f; time < tuning.fogForkWaitTime && !forks[fork].Animal.HasAnswered && !wallReached[fork]; time += Time.deltaTime)
                 yield return null;
             helped |= forks[fork].Animal.HasAnswered;
-            if (!forks[fork].Animal.HasAnswered && Random.value < 0.5f)
+            if (!forks[fork].Animal.HasAnswered && !wallReached[fork] && Random.value < 0.5f)
             {
                 way = DeadEnd(fork);
                 yield return ToWall(fork);
@@ -218,14 +212,31 @@ public class FogMaze : PathBlocker
         yield return new WaitForSeconds(GameTuning.Current.fogWallPauseTime);
     }
 
-    // To a point on a reachable way: off the way she is on at the fork the target way leaves from, then along it.
+    // To a point on any way, along the ways: back through the forks behind her as far as the way the target's ways leave from, then
+    // out along those ways, each to its end, and along the target way to the point.
     IEnumerator Travel(int target, float along, bool run)
     {
-        if (target != way)
+        var behind = new List<int>();
+        for (int index = way; index >= 0; index = Parent(index))
+            behind.Add(index);
+        var ahead = new List<int>();
+        int common = target;
+        while (!behind.Contains(common))
         {
-            // A dead end leaves its fork at its start; the straight way and a right way reach the fork ahead at their end.
-            yield return Along(way, IsDeadEnd(way) ? 0f : Length(way), run);
-            way = target;
+            ahead.Add(common);
+            common = Parent(common);
+        }
+        // Each way back to its start, which is on the way it leaves from.
+        while (way != common)
+        {
+            yield return Along(way, 0f, run);
+            way = Parent(way);
+        }
+        // Each way it passes through to its end, where the next leaves from.
+        for (int i = ahead.Count - 1; i >= 0; i--)
+        {
+            yield return Along(way, Length(way), run);
+            way = ahead[i];
         }
         yield return Along(way, along, run);
     }
