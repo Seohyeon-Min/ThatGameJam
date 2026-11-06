@@ -232061,15 +232061,14 @@ MonoBehaviour:
   dipDepth: 0.45
   dipSeconds: 0.6
   waveSpeed: 10
-  rippleHeight: 0.35
-  rippleSeconds: 0.6
-  rippleReach: 14
-  shakeStrength: 0.08
-  shakeAngle: 0.45
-  shakeSeconds: 0.6
+  rippleHeight: 0.9
+  rippleSeconds: 0.9
+  rippleReach: 22
+  cameraRide: 0.35
+  cameraTip: 1.5
   lowShot: {fileID: 1390872090}
   gapCentre: {fileID: 620021108}
-  gapRadius: 8
+  gapRadius: 6
   openSeconds: 4
   openCurve:
     serializedVersion: 2
@@ -378036,6 +378035,7 @@ GameObject:
   - component: {fileID: 731069348}
   - component: {fileID: 731069349}
   - component: {fileID: 731069350}
+  - component: {fileID: 731069351}
   m_Layer: 0
   m_Name: Fog
   m_TagString: Untagged
@@ -378125,6 +378125,22 @@ MonoBehaviour:
   grain: 0.04
   showClearing: 0
   clearedLeft: 0.45
+--- !u!114 &731069351
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731069347}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 819eaa8b7c5f5d842b2f5ad9a5514bbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ForestMist
+  field: {fileID: 731069349}
+  strength: 1
+  ease: 1.5
+  look: {fileID: 2100000, guid: 29620c783651d1a4a9165d55db6c3d37, type: 2}
 --- !u!1001 &731565422
 PrefabInstance:
   m_ObjectHideFlags: 0

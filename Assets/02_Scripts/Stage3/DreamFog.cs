@@ -21,6 +21,7 @@ public class DreamFog : MonoBehaviour
     static readonly int BirdId = Shader.PropertyToID("_DreamBird");
     static readonly int BabyId = Shader.PropertyToID("_DreamBaby");
     static readonly int PrismAmountId = Shader.PropertyToID("_PrismAmount");
+    static readonly int AlphaId = Shader.PropertyToID("_DreamAlpha");
 
     // The layer the baby's body is on: PC_Renderer's BabyPrism feature draws it again over the fog, glowing white (PrismOverlay).
     public const string BabyLayer = "Baby";
@@ -109,8 +110,9 @@ public class DreamFog : MonoBehaviour
         Weight = Mathf.SmoothStep(0f, 1f, weight);
 
         Shader.SetGlobalFloat(WeightId, Weight);
-        // The baby's white glow comes in with the fog.
-        Shader.SetGlobalFloat(PrismAmountId, Weight);
+        // The baby's white glow comes in with the fog, and goes with the Look's Dream Fog Alpha.
+        float alpha = look != null && look.HasFloat(AlphaId) ? look.GetFloat(AlphaId) : 1f;
+        Shader.SetGlobalFloat(PrismAmountId, Weight * alpha);
         Shader.SetGlobalVector(SunId, new Vector4(lightOnScreen.x, lightOnScreen.y, lightSize.x, lightSize.y));
         // A cleared floor of 1 leaves the dream fog full everywhere, whatever the cells say.
         Shader.SetGlobalVector(RaysId, new Vector4(rays, grain, showClearing ? clearedLeft : 1f, 0f));

@@ -66,6 +66,11 @@ public class GameTuning : ScriptableObject
     public float babyBlinkDuration = 0.18f;
     public float babyBlinkIntervalMin = 2f;
     public float babyBlinkIntervalMax = 4.5f;
+    // The ending's last shot, as the sky opens (Baby.LookUpAtSky), all at full reach: metres she rises onto her toes, degrees her
+    // feet tip down to stand on them, and degrees she leans back. Her arms stay as the Idle animation has them.
+    public float babySkyTiptoeHeight = 0.05f;
+    public float babySkyTiptoeAngle = 30f;
+    public float babySkyLeanBack = 10f;
     // Stepping onto/off a balance beam (JumpTo): extra height added at the arc's midpoint, on top of the
     // straight start-to-target rise, so the hop reads as a hop and not a diagonal slide up a ramp.
     public float babyJumpArcHeight = 0.25f;

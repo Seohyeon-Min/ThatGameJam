@@ -13,6 +13,7 @@ Shader "Hidden/ThatGameJam/DreamFog"
 {
     Properties
     {
+        _DreamAlpha ("Dream Fog Alpha (0 = none at all, just the path)", Range(0, 1)) = 1
         _DreamLow ("Fog Bottom", Color) = (1, 0.87, 0.8, 1)
         _DreamHigh ("Fog Top", Color) = (0.99, 0.86, 0.9, 1)
         _DreamBlob ("Drifting Patches (alpha = strength)", Color) = (0.93, 0.84, 0.97, 0.3)
@@ -55,6 +56,7 @@ Shader "Hidden/ThatGameJam/DreamFog"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             float _DreamFogWeight;     // 0 = off, 1 = full
+            float _DreamAlpha;         // the material's overall amount: 0 = no dream fog, the scene as it is
             float4 _DreamLow;          // rgb fog colour at the bottom of the picture
             float4 _DreamHigh;         // rgb fog colour at the top
             float4 _DreamSunColor;     // rgb light colour
@@ -317,7 +319,7 @@ Shader "Hidden/ThatGameJam/DreamFog"
                 }
                 // Coming in, the scene first lifts into the fog's colours (a screen blend: brighter and clearer, never greyer), and the
                 // shadowed dream comes over it later. A plain mix halfway in averaged the scene's cool shadows with the pink into grey.
-                float w = saturate(_DreamFogWeight * local);
+                float w = saturate(_DreamFogWeight * local * _DreamAlpha);
                 half3 lifted = 1.0 - (1.0 - scene) * (1.0 - saturate(fog) * 0.8);
                 half3 start = lerp(scene, lifted, saturate(w * 2.0));
                 return half4(lerp(start, dream, w * w), 1.0);

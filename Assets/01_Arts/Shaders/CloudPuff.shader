@@ -25,6 +25,9 @@ Shader "ThatGameJam/CloudPuff"
         _RimAlpha ("Rim Opacity", Range(0, 1)) = 0.55
         _CoreWidth ("Rim Width", Range(0.01, 1)) = 0.25
         _BillowSpeed ("Billow Speed", Float) = 0.08
+        // Set per puff (a MaterialPropertyBlock) by whatever moves puffs: the place its shape is picked from, so moving it
+        // doesn't turn it into another puff every frame. W = 0: picked from where it is.
+        [HideInInspector] _ShapeFrom ("Shape From", Vector) = (0, 0, 0, 0)
 
         [Header(Near The Camera)]
         _NearFadeStart ("Gone Within", Float) = 3
@@ -68,6 +71,7 @@ Shader "ThatGameJam/CloudPuff"
                 half _RimAlpha;
                 half _CoreWidth;
                 float _BillowSpeed;
+                float4 _ShapeFrom;
                 float _NearFadeStart;
                 float _NearFadeEnd;
                 half4 _DarkColor;
@@ -106,7 +110,8 @@ Shader "ThatGameJam/CloudPuff"
                 float3 positionWS = originWS + output.right * input.positionOS.x * scaleX + output.up * input.positionOS.y * scaleY;
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.uv = input.uv * 2.0 - 1.0;
-                output.seed = SunPoolHash(originWS.xz + originWS.y) * 100.0;
+                float3 shapeFrom = _ShapeFrom.w > 0.5 ? _ShapeFrom.xyz : originWS;
+                output.seed = SunPoolHash(shapeFrom.xz + shapeFrom.y) * 100.0;
                 float distanceToCamera = length(originWS - GetCameraPositionWS());
                 output.nearFade = saturate((distanceToCamera - _NearFadeStart) / max(_NearFadeEnd - _NearFadeStart, 1e-3));
                 // Across the ground only, since clouds are far above the point. From the puff's centre, so a puff is one tone.

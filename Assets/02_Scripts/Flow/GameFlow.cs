@@ -101,6 +101,10 @@ public class GameFlow : MonoBehaviour
         Stage stage = stages[index];
         BeginStage(index);
         season.SetSeason(season.Level + index);
+        // The stage's look at once: no ring or crossfade for the change just made.
+        WatercolorSeasonLooks looks = FindAnyObjectByType<WatercolorSeasonLooks>();
+        if (looks != null)
+            looks.JumpTo(season.Level);
         Baby.Instance.PlaceAsleep(stage.babyStart, stage.route);
         BirdController.Instance.Teleport(stage.birdStart.position);
         BirdController.Instance.SetAltitude(stage.birdAltitude, true);

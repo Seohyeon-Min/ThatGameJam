@@ -166,6 +166,29 @@ public class WatercolorSeasonLooks : MonoBehaviour
     WatercolorLook LookFor(int level) => level >= 0 && level < looks.Length ? looks[level] : null;
 
 #if UNITY_EDITOR
+    // Dev tool (GameFlow's stage start): this level's look at once, with no ring, crossfade or blend. Otherwise a cutscene starting
+    // right after (the baby waking) remembers the look halfway through the change and puts that back when it ends.
+    public void JumpTo(int level)
+    {
+        if (manager == null)
+            manager = FindAnyObjectByType<WatercolorManager>();
+        if (volume == null)
+            volume = FindSceneVolume();
+        currentLevel = level;
+        to = null;
+        wipeCheckFrom = 0;
+        SeasonWipe.Release();
+        if (incoming != null)
+            incoming.weight = 0f;
+        volumeBlend = 1f;
+        WatercolorLook look = LookAtLevel(level);
+        if (look == null || manager == null)
+            return;
+        manager.Apply(look.settings, 1f);
+        if (volume != null && look.volumeProfile != null)
+            volume.sharedProfile = look.volumeProfile;
+    }
+
     // Season preview in the Editor: the look the game shows at this level, which is the nearest level at or below it that has one.
     public WatercolorLook LookAtLevel(int level)
     {

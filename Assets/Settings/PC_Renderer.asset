@@ -58,6 +58,20 @@ MonoBehaviour:
       restoreCamera: 1
       offset: {x: 0, y: 0, z: 0, w: 0}
       cameraFieldOfView: 60
+--- !u!114 &-4738831112513508633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8174ef9a15d73b646ab2b865381b407a, type: 3}
+  m_Name: ForestMist
+  m_EditorClassIdentifier: Assembly-CSharp::ForestMistFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 5a06c4330c1ae234a82ecc34b6732482, type: 3}
 --- !u!114 &-4074364379582627839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -146,10 +160,11 @@ MonoBehaviour:
   - {fileID: -4074364379582627839}
   - {fileID: 2830710763801503158}
   - {fileID: -6909916961520376234}
+  - {fileID: -4738831112513508633}
   - {fileID: -340777391107591180}
   - {fileID: -6587109528150381837}
   - {fileID: 3976157135740223514}
-  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b4482756a62141220b1ba0f4338cafc45045fbf36a01bec8e295a41a40ee2ed9252e37
+  m_RendererFeatureMap: ad6b866f10d7b46cf098945e19b06601a157a8afb0428d0d4008f2834a0caf17010079052ff374c7b665432271b4482756a62141220b1ba0e72a10e8354a3cbef4338cafc45045fbf36a01bec8e295a41a40ee2ed9252e37
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

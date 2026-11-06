@@ -15,7 +15,7 @@ using UnityEngine.Rendering;
 // 4. Top Shot: just over the top of the clouds, looking across them. A moment of clouds only, then the bird bursts up through
 //    them (Rise Curve: slow in the cloud, a rush out of it, easing over the top), hangs a beat and dives back in (the dive clip).
 //    The camera tilts after it a beat late, a little, up and down only, never down below the clouds; it dips as the bird dives and springs back. Where
-//    the bird goes in, the clouds jolt in a ring that spreads out (Wave Speed), and the camera shakes when the ring reaches it.
+//    the bird goes in, the clouds swell in a ring that spreads out (Wave Speed), and the camera rides up and down on it as it passes under.
 // 5. Low Shot: down by the girl's feet, looking up past her at the clouds from below. Over them a gap opens from nothing, the
 //    clouds there drawing back, and thin shafts of light come down through it one after another, each brightening slowly. It
 //    holds there.
@@ -101,13 +101,12 @@ public class EndingFlight : MonoBehaviour
     [Tooltip("Metres per second the wave spreads out across the clouds from where the bird went in.")]
     [SerializeField, Min(0.1f)] float waveSpeed = 10f;
     [Tooltip("The wave, like a crowd's wave going round: each puff near where the bird went in rises once and settles as it passes. How high (metres), for how long at each puff, and how far out from there it goes before it has died away.")]
-    [SerializeField, Min(0f)] float rippleHeight = 0.35f;
-    [SerializeField, Min(0.05f)] float rippleSeconds = 0.6f;
-    [SerializeField, Min(1f)] float rippleReach = 14f;
-    [Tooltip("The camera's shake when the ring reaches it: metres, degrees, seconds.")]
-    [SerializeField, Min(0f)] float shakeStrength = 0.08f;
-    [SerializeField, Min(0f)] float shakeAngle = 0.45f;
-    [SerializeField, Min(0.05f)] float shakeSeconds = 0.6f;
+    [SerializeField, Min(0f)] float rippleHeight = 0.9f;
+    [SerializeField, Min(0.05f)] float rippleSeconds = 0.9f;
+    [SerializeField, Min(1f)] float rippleReach = 22f;
+    [Tooltip("The camera riding the ring as it passes under it, with the clouds: metres up and down, and degrees it tips with the slope (no shaking).")]
+    [SerializeField, Min(0f)] float cameraRide = 0.35f;
+    [SerializeField, Min(0f)] float cameraTip = 1.5f;
 
     [Header("Low Shot")]
     [SerializeField] CinemachineCamera lowShot;
@@ -129,6 +128,7 @@ public class EndingFlight : MonoBehaviour
 
     static readonly int ShaftIntensityId = Shader.PropertyToID("_Intensity");
     static readonly int PoolIntensityId = Shader.PropertyToID("_PoolIntensity");
+    static readonly int ShapeFromId = Shader.PropertyToID("_ShapeFrom");
 
     const int ShotPriority = 100;
     const int SamplesPerSegment = 16;
@@ -308,10 +308,7 @@ public class EndingFlight : MonoBehaviour
         Vector3 lookVelocity = Vector3.zero;
         float lift = 0f, liftVelocity = 0f;
         float dipFrom = -1f, impactAt = -1f;
-        var puffs = new List<(Transform puff, Vector3 rest)>();
-        if (topClouds != null)
-            foreach (Renderer puff in topClouds.GetComponentsInChildren<Renderer>())
-                puffs.Add((puff.transform, puff.transform.position));
+        List<(Transform puff, Vector3 rest)> puffs = Movable(topClouds);
 
         void Frame()
         {
@@ -338,14 +335,13 @@ public class EndingFlight : MonoBehaviour
             if (impactAt >= 0f)
             {
                 // The ring reaches the camera after it has crossed the clouds to it.
-                float reached = Time.time - impactAt - FlatDistance(surface, at) / waveSpeed;
-                if (reached > 0f && reached < shakeSeconds)
+                // The ring reaches the camera after crossing the clouds to it, and lifts it once and lets it down, as it lifts them;
+                // tipping back a little as the front comes under it, and forward as it goes on past.
+                float reached = (Time.time - impactAt - FlatDistance(surface, at) / waveSpeed) / rippleSeconds;
+                if (reached > 0f && reached < 1f)
                 {
-                    float fade = 1f - reached / shakeSeconds;
-                    fade *= fade;
-                    float w = reached * 2f * Mathf.PI;
-                    at += (shot.right * Mathf.Sin(w * 13f) + shot.up * Mathf.Sin(w * 17f + 1.3f)) * shakeStrength * fade;
-                    rotation *= Quaternion.Euler(Mathf.Sin(w * 15f + 0.7f) * shakeAngle * fade, 0f, Mathf.Sin(w * 11f + 2.1f) * shakeAngle * fade);
+                    at += Vector3.up * cameraRide * Mathf.Sin(reached * Mathf.PI);
+                    rotation *= Quaternion.Euler(-cameraTip * Mathf.Sin(reached * 2f * Mathf.PI), 0f, 0f);
                 }
                 Ripple(puffs, surface, Time.time - impactAt);
             }
@@ -394,8 +390,8 @@ public class EndingFlight : MonoBehaviour
         }
         if (impactAt < 0f)
             impactAt = Time.time;
-        // The wave goes on spreading and the camera shakes as it would reach it; then it holds.
-        float until = Time.time + Mathf.Max(rippleSeconds + rippleReach / waveSpeed, FlatDistance(surface, basePosition) / waveSpeed + shakeSeconds);
+        // The wave goes on spreading and the camera rides it as it reaches it; then it holds.
+        float until = Time.time + Mathf.Max(rippleReach / waveSpeed, FlatDistance(surface, basePosition) / waveSpeed) + rippleSeconds;
         while (Time.time < until)
         {
             Frame();
@@ -410,10 +406,7 @@ public class EndingFlight : MonoBehaviour
         Show(lowShot);
         if (topClouds != null)
             DrawFrom(topClouds, lowShot.transform.position);
-        var puffs = new List<(Transform puff, Vector3 rest)>();
-        if (topClouds != null)
-            foreach (Renderer puff in topClouds.GetComponentsInChildren<Renderer>())
-                puffs.Add((puff.transform, puff.transform.position));
+        List<(Transform puff, Vector3 rest)> puffs = Movable(topClouds);
         // Each shaft brightens from nothing to its material's own brightness.
         var shafts = new List<(Renderer renderer, float shaft, float pool)>();
         var props = new MaterialPropertyBlock();
@@ -428,15 +421,21 @@ public class EndingFlight : MonoBehaviour
             beam.gameObject.SetActive(true);
         }
 
+        Vector3 centre = gapCentre.position;
+        Baby baby = Baby.Instance;
+        // She looks ahead at first, no longer after the bird, until the clouds start to part.
+        if (baby != null)
+            baby.LookUpAtSky(centre, 0f);
         for (float t = 0f; t < lowLead; t += Time.deltaTime)
             yield return null;
-        Vector3 centre = gapCentre.position;
         float lightFrom = -1f;
         float lightUntil = shaftStagger * Mathf.Max(0, shafts.Count - 1) + shaftFade;
         for (float t = 0f; t <= openSeconds || lightFrom < 0f || t - lightFrom <= lightUntil; t += Time.deltaTime)
         {
             float open = openCurve.Evaluate(Mathf.Clamp01(t / openSeconds));
             Part(puffs, centre, gapRadius * open);
+            if (baby != null)
+                baby.LookUpAtSky(centre, open / 0.8f);
             // The light comes once there is a gap to come through: one shaft, then the next, each slowly.
             if (lightFrom < 0f && open >= firstShaftAt)
                 lightFrom = t;
@@ -458,6 +457,25 @@ public class EndingFlight : MonoBehaviour
         puffs.Sort((a, b) => (b.transform.position - camera).sqrMagnitude.CompareTo((a.transform.position - camera).sqrMagnitude));
         for (int i = 0; i < puffs.Count; i++)
             puffs[i].sortingOrder = CloudGenerator.MiddleOrder + i;
+    }
+
+    // The puffs of these clouds, each with where it rests. Each keeps the shape it has there while it moves (CloudPuff picks a
+    // puff's shape from its position, so otherwise it would become another puff every frame and the clouds would shiver).
+    static List<(Transform puff, Vector3 rest)> Movable(GameObject clouds)
+    {
+        var puffs = new List<(Transform puff, Vector3 rest)>();
+        if (clouds == null)
+            return puffs;
+        var props = new MaterialPropertyBlock();
+        foreach (Renderer puff in clouds.GetComponentsInChildren<Renderer>())
+        {
+            Vector3 rest = puff.transform.position;
+            puff.GetPropertyBlock(props);
+            props.SetVector(ShapeFromId, new Vector4(rest.x, rest.y, rest.z, 1f));
+            puff.SetPropertyBlock(props);
+            puffs.Add((puff.transform, rest));
+        }
+        return puffs;
     }
 
     static void SetShaft(Renderer renderer, MaterialPropertyBlock props, float shaft, float pool)

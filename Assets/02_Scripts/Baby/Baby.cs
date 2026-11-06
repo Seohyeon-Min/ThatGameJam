@@ -89,6 +89,12 @@ public class Baby : CryListener
     readonly List<(SkinnedMeshRenderer renderer, int shape)> blinkShapes = new();
     float nextBlinkAt;
     float blinkStartedAt = -1f;
+    // The ending's last shot: how far (0 to 1) she has come to looking up at the sky opening, and where it opens.
+    float skyReach;
+    Vector3 skyPoint;
+    Transform chest;
+    Vector3 modelBasePosition;
+    readonly List<Transform> feet = new();
     // Per-instance offset into the noise fields below, so a second baby (if one ever exists) doesn't wobble in lockstep.
     float noiseSeed;
     Quaternion modelBaseRotation;
@@ -114,6 +120,15 @@ public class Baby : CryListener
         curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
         birdNoticeCooldown = GameTuning.Current.babyBirdNoticeCooldown;
         headBone = animator.transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
+        modelBasePosition = animator.transform.localPosition;
+        Transform hips = animator.transform.Find("NPC-Girl-Rig/ROOT/Hips");
+        chest = animator.transform.Find("NPC-Girl-Rig/ROOT/Hips/Spine/Chest");
+        foreach (string side in new[] { "L", "R" })
+        {
+            Transform foot = hips != null ? hips.Find($"Thigh.{side}/Shin.{side}/Foot.{side}") : null;
+            if (foot != null)
+                feet.Add(foot);
+        }
         foreach (SkinnedMeshRenderer skinned in GetComponentsInChildren<SkinnedMeshRenderer>(true))
         {
             int shape = skinned.sharedMesh != null ? skinned.sharedMesh.GetBlendShapeIndex("Blink") : -1;
@@ -154,8 +169,11 @@ public class Baby : CryListener
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
         bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
-        if (watchingBird)
+        if (State == BabyState.Ending)
             Blink();
+        animator.transform.localPosition = modelBasePosition;
+        if (State == BabyState.Ending && skyReach > 0f)
+            ReachForSky();
         // A deliberate look at the bird (NoticeBird, or LookUp reacting to a cry / an opened blocker / waking, the ending)
         // always turns just the head, whatever she's doing otherwise.
         if (noticingBird || lookingUpAtBird || watchingBird)
@@ -223,6 +241,7 @@ public class Baby : CryListener
         StopAllCoroutines();
         gettingUp = false;
         watchingBird = false;
+        skyReach = 0f;
         running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
@@ -245,6 +264,7 @@ public class Baby : CryListener
         StopAllCoroutines();
         gettingUp = false;
         watchingBird = false;
+        skyReach = 0f;
         running = false;
         lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
@@ -279,6 +299,7 @@ public class Baby : CryListener
         StopAllCoroutines();
         gettingUp = false;
         watchingBird = false;
+        skyReach = 0f;
         running = false;
         lookingAround = false;
         this.route = route;
@@ -306,6 +327,7 @@ public class Baby : CryListener
         StopAllCoroutines();
         gettingUp = false;
         watchingBird = false;
+        skyReach = 0f;
         // Run has no transitions, so asleep would not take her out of it.
         if (running)
             animator.Play(SleepState, 0, 0f);
@@ -697,8 +719,44 @@ public class Baby : CryListener
         animator.SetBool(LookAroundParam, false);
         animator.SetBool(AsleepParam, false);
         animator.SetBool(QuietWaitParam, true);
+        animator.SetInteger(IdleVariantParam, 0);
         watchingBird = true;
         nextBlinkAt = Time.time + UnityEngine.Random.Range(0.8f, 2f);
+    }
+
+    // The ending's last shot (EndingFlight): she stops watching the bird, her head going back to the front, and as the sky opens
+    // (reach 0 to 1) she looks up at it, her head first, then rising onto her toes. The Idle animation plays under it.
+    public void LookUpAtSky(Vector3 point, float reach)
+    {
+        watchingBird = false;
+        animator.SetBool(QuietWaitParam, false);
+        // Plain Idle only, not the variant (Hum, Stretch) a wait before may have left set.
+        animator.SetInteger(IdleVariantParam, 0);
+        skyPoint = point;
+        skyReach = Mathf.Clamp01(reach);
+    }
+
+    // Over the animation's pose (LateUpdate): the head toward the sky, then the body up onto the toes, leaning back a little.
+    void ReachForSky()
+    {
+        GameTuning tuning = GameTuning.Current;
+        float look = Mathf.SmoothStep(0f, 1f, skyReach / 0.6f);
+        float rise = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 1f, skyReach));
+        Vector3 right = transform.right;
+
+        // Onto her toes: the whole body up, and the feet tipped down so they stand on their toes.
+        animator.transform.localPosition = modelBasePosition
+            + animator.transform.parent.InverseTransformVector(Vector3.up * tuning.babySkyTiptoeHeight * rise);
+        foreach (Transform foot in feet)
+            foot.rotation = Quaternion.AngleAxis(tuning.babySkyTiptoeAngle * rise, right) * foot.rotation;
+        if (chest != null)
+            chest.rotation = Quaternion.AngleAxis(-tuning.babySkyLeanBack * rise, right) * chest.rotation;
+        if (headBone != null)
+        {
+            Vector3 toSky = (skyPoint - headBone.position).normalized;
+            Vector3 direction = Vector3.RotateTowards(headBone.forward, toSky, Mathf.Deg2Rad * tuning.babyGazeMaxAngle, 0f);
+            headBone.rotation = Quaternion.Slerp(headBone.rotation, Quaternion.LookRotation(direction, headBone.up), look);
+        }
     }
 
     // Now and then a quick blink: the Blink shapes close and open again, over what the animation has them at.
