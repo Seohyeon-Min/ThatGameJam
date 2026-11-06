@@ -59,3 +59,55 @@ Placeholders and stand-ins (no new art or sound on the `sam` branch):
 - Tommy's models are not baked in watercolor. They keep Tommy's materials.
 
 The clearing: `Stages/Intro/EasterEggs` in `Main`, x -14 to 14, z -36.5 to -24.5. The intro's bird area now reaches z -35. The world forest has a Clear zone over the clearing and its bottom padding is down to 1.5 m (one row stays behind the clearing). `01_SYSTEM/TreeGenerator_ClearingBack` fills the ground toward the terrain's edge that the camera now sees.
+
+### Clearing layout (top view)
+
+Coordinates are world coordinates (m). `Stages/Intro` and `EasterEggs` sit at the world origin, so the prefab positions are world positions. In the figures, up is +Z and right is +X. The camera looks from +X, -Z, so the top-left of the figure (-X, +Z) is the top of the game screen. That is why the tall things (the icy tree, the hollow tree) are on the left (-X).
+
+Overview (1 column = 1 m across; rows are not to scale):
+
+```
+     x:  -25 -19.5 -14            0            14  19.5             35
+               |                                     |                  intro stage (bird area x -19.5 to 19.5), continues toward +Z
+z -22          |                  *                  |                  * start: baby (0, -22), bird (1.5, -23)
+z -24.5        |    +===========================+    |                  easter egg clearing, x -14 to 14 (next figure)
+               |    |                           |    |                  a Clear zone of the world forest: no trees
+z -35          - - -|- - - - - - - - - - - - - -|- - -                  end of the intro's bird area (z -35)
+z -36.5             +===========================+
+         ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^  one row of the world forest (padding 1.5 m)
+z -38.6  +-----------------------------------------------------------+  TreeGenerator_ClearingBack
+         | ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ |  x -25 to 35, seed 7
+z -48.2  +-----------------------------------------------------------+  toward the terrain's edge
+```
+
+Inside the clearing (1 column = 0.5 m across; rows are not to scale). The numbers are the # in the table in section 2:
+
+```
+        x:  -14   -11         -5         0         5.5        11    14
+            +---------------------------------------------------------+
+  z -24.5   |                                                         |
+            |                                                         |
+  z -27.5   |     [5]                   [3]                  [10]     |
+  z -28     |                                      [2]                |
+            |                                                         |
+  z -30.5   |                 [7]                                     |
+            |                                                         |
+  z -33     |     [6]                   [4]                   [8]     |
+            |                                                         |
+  z -35     |- - - - - - - - - - - - - - - - - - - - - - - - - - - - -|  <- end of the bird's area
+  z -36.5   +---------------------------------------------------------+
+```
+
+| Mark | Prefab | Position (x, z) | Facing (y rotation) |
+|---|---|---|---|
+| [5] | `IcicleXylophone` | (-11, -27.5) | 0° |
+| [6] | `HollowSquirrel` | (-11, -33) | -45°. The hollow faces +X, -Z (toward the camera) |
+| [7] | `CornelianCherry` | (-5, -30.5) | 0° |
+| [3] | `SnowWhirl` | (0, -27.5) | 0° |
+| [4] | `SnowFlower` | (0, -33) | 0° |
+| [2] | `StumpLadybug` | (5.5, -28) | 0° |
+| [10] | `MigratingBirds` | (11, -27.5) | 0°. Not visible until it flies. This one has `From Stage` 0 |
+| [8] | `CliffEcho` | (11, -33) | 135°. Its `EchoSource` is 20 m away toward -X, +Z (the top of the screen) |
+| [1] | `SnowOnBird` | under `02_WORLD/Bird` | Moves with the bird |
+
+The builder sets the height (y) to the terrain's height. The puddle (9) is not built yet.
