@@ -963,7 +963,11 @@ public class BirdController : MonoBehaviour
         onCry.Invoke();
         StartCoroutine(CryPulse());
         if (cryPulse != null)
+        {
+            if (cryPulse.TryGetComponent(out CryTail tail))
+                tail.Aim();
             cryPulse.Play();
+        }
     }
 
     // Placeholder until the cry animation exists.
