@@ -47,6 +47,18 @@ public class BurrowRabbit : MonoBehaviour
         PlayIdle();
     }
 
+    public IEnumerator TurnTo(Quaternion rotation)
+    {
+        Quaternion from = transform.rotation;
+        const float seconds = 0.4f;
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            transform.rotation = Quaternion.Slerp(from, rotation, t / seconds);
+            yield return null;
+        }
+        transform.rotation = rotation;
+    }
+
     // From hidden in the hole out to the point.
     public IEnumerator ComeOut(Vector3 hole, Vector3 point)
     {

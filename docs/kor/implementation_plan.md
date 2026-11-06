@@ -245,16 +245,18 @@ GameFlow ──시작──▶ Stage ──▶ Baby (잠든 채 배치)
 2026-11-06 에 새 기획(길토끼와 막힌 토끼 굴)으로 바꿨다([ADR 0036](decisions/0036-스테이지-2-를-막힌-토끼-굴로-바꾼다.md)). 예전 설계(시연 새, 눈 쌓인 가지, 잠든 토끼 가족, 옆길)와 그 스크립트(`RabbitFamily`, `RabbitActor`, `SnowBranch`, `BranchDemo`), `SnowBranch.prefab` 은 지웠다. `Sam_Test` 의 예전 스테이지 2 는 고치지 않아 빠진 스크립트로 남는다.
 
 - `Main` 의 `Stage2/RabbitStage`. 빌더는 `AgentScripts/BuildStage2.cs`, `BuildStage2.Run`. 다시 돌리면 `RabbitStage` 의 두 눈둑(`RightBank`, `LeftOuterBank`)과 루트의 `HiddenUntilSeason`, `Stage2SnowMelt` 는 두고 나머지를 다시 만든다. 위치는 `Stage2` 루트 기준이라 스테이지 간격을 따라간다.
-- 길: 소녀는 z 51(`Stage2` 기준 34)의 `StopPoint` 에서 멈추고, 기다리는 동안 굴 구멍을 본다. 길토끼 3마리(`BabyRabbit.prefab`)가 바로 앞 길 위(z 52.5 ~ 53.2)에 앉아 있다.
-- 굴: 왼쪽 눈둑의 구멍(x −3.45, z 53)과 그 앞의 입구 눈 더미(`EntranceSnow`, `Snowbank.prefab`). 굴토끼 2마리(`Rabbit.prefab`)는 구멍 안에 꺼진 채로 있다. 구멍(어두운 구)과 눈 더미는 자리 표시용이다.
+- 길: 소녀는 z 50.3(`Stage2` 기준 33.3)의 `StopPoint` 에서 멈추고, 기다리는 동안 굴 구멍을 본다. 길토끼 3마리(`BabyRabbit.prefab`)가 바로 앞 길 위(z 52.5 ~ 53.2)에 앉아 있다.
+- 굴: 왼쪽 눈둑 위 늙은 나무 밑동의 구멍이다. 나무는 이스터에그 나무 구멍 다람쥐의 `thickTree.obj`(2배)이고, 구멍이 낮게 오도록 0.65 m 묻었다. 구멍은 길과 카메라 쪽(+X, −Z)을 본다. 구멍 안쪽에 어두운 구(`HoleDeep`), 위 테두리와 양옆에 눈(`LipSnow`, `RimSnow`), 앞에 입구 눈 더미(`EntranceSnow`)가 있다. 굴토끼 2마리(`Rabbit.prefab`)는 구멍 안에 꺼진 채로 있다. 둘레에 풀(`Grass01`) 4개.
+- 눈둑: `LeftBank`, `RightBank` 는 각각 납작한 눈 더미(`Snowbank.prefab`) 4 ~ 5개를 크기와 각도를 달리해 겹친 묶음이다. 눈은 모두 `SoftSnow` 머티리얼이다.
 - `RabbitBurrow`(`PathBlocker`): 입구 눈을 0 → 1 로 파 들어간다.
   - 울음(`CryListener.Cried`): 구멍에서 수평 `burrowCryRadius`(10 m) 안이면 굴토끼가 새와 같은 울음(`BirdCryPulse`)으로 대답하고, 그때부터 안에서 판다.
   - 좌클릭: 눈 더미가 `Perchable`(Interactable 레이어, 노란 반짝임)이다. 새는 그 앞 땅(`PerchPoint`)에 내려앉아 눈 쪽을 보고 쪼기(`BirdController.Peck`)를 되풀이한다. 앉아 있는 동안만 판다. 다른 곳을 누르면 멈추고 판 만큼은 남는다.
-  - 속도: 굴토끼와 새가 각각 혼자 `burrowDigTime`(8 초)에 다 파고, 함께면 속도가 더해져 4 초다. 굴토끼가 팔 때 눈 더미가 떨린다. 판 만큼 눈 더미가 낮아진다.
+  - 속도: 굴토끼와 새가 각각 혼자 `burrowDigTime`(8 초)에 다 파고, 함께면 속도가 더해져 4 초다. 굴토끼가 팔 때 눈 더미가 떨린다. 판 만큼 눈 더미가 낮아진다. 파는 동안 눈가루(`DigSnow`, `Snow.mat`)가 튄다: 새가 쫄 때마다 6개, 굴토끼가 파는 동안 0.25 초마다 3개, 뚫릴 때 20개.
+  - 서성임: 굴이 막혀 있는 동안, 이 스테이지가 되면 3 ~ 6 초마다 길토끼 하나가 눈 더미 앞(`PacePoint`)까지 뛰어가 1.5 초 있다가 제자리로 돌아온다. 굴이 뚫리면 멈춘다.
   - 자연 해결: `NaturalTimer`(`RabbitBurrow`, 30 초)는 소녀가 멈췄을 때 시작한다. 남은 시간이 8 초가 되면 굴토끼가 스스로 파기 시작해 30 초에 뚫린다. 대기 신호는 노란 반짝임뿐이다.
   - 뚫리면: 울음이나 쪼기로 새가 조금이라도 도왔으면 새가 도운 것이다(`ResolveByBird`). 눈 더미가 사라지고, 굴토끼가 나와 앉고, 길토끼가 0.35 초 간격으로 구멍에 들어간 뒤 길이 열린다(뚫리고 약 7 초). 그 뒤 굴토끼도 들어간다. 소녀는 구멍을 본 뒤, 새가 도왔으면 새를 올려다보고 걷는다.
   - 소녀가 오기 전에 뚫어도 된다. 그때 소녀는 기다리지 않고 반응만 한다.
-- `BurrowRabbit`: 앉아서 `SitIdle` 변형과 `Sniff` 를 3 ~ 6 초마다 바꾼다. `Hop` 으로 정해진 점까지 뛰고(새끼 0.9 m/s, 어미 1.1 m/s), 구멍에서는 0.3 m 가라앉으며 사라진다.
+- `BurrowRabbit`: 앉아서 `SitIdle` 변형과 `Sniff` 를 3 ~ 6 초마다 바꾼다. `Hop` 으로 정해진 점까지 뛰고(새끼 0.9 m/s, 어미 1.1 m/s), 구멍에서는 0.3 m 가라앉으며 사라진다. 두 토끼 프리팹에 `FootprintMaker`(네 발, 0.05 × 0.08 m)가 있어 뛸 때 눈에 작은 발자국이 남는다.
 - 카메라: `CameraZone_Burrow` 세미락. 굴이 뚫리면 풀린다.
 - 계절 3 에서 두 눈둑이 낮아져 사라진다(`Stage2SnowMelt`).
 - 검증: `AgentScripts/VerifyStage2.cs`. `Prepare` 뒤 Play Mode 에 들어가서 `Natural`, `CryOnly`, `Clear`, `Both`, `Partial`, `Early` 중 하나를 돌린다.

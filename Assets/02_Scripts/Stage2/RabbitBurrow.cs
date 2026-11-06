@@ -26,6 +26,11 @@ public class RabbitBurrow : PathBlocker
     [SerializeField] Transform[] waitPoints;
     [Tooltip("Seconds between the road's rabbits setting off for the hole.")]
     [SerializeField, Min(0f)] float stagger = 0.35f;
+    [Tooltip("Snow thrown up while it is dug: a burst on each peck, and a little all the time the rabbits dig.")]
+    [SerializeField] ParticleSystem digSnow;
+    [Tooltip("While the burrow is shut, now and then a road rabbit hops over here, sniffs at the snow and hops back.")]
+    [SerializeField] Transform pacePoint;
+    [SerializeField] Vector2 paceSeconds = new(3f, 6f);
 
     public override NaturalTimer Timer => timer;
 
@@ -37,6 +42,8 @@ public class RabbitBurrow : PathBlocker
     bool birdHelped;
     bool opening;
     float nextPeck;
+    float nextDigSnow;
+    Coroutine pacing;
 
     void Awake()
     {
@@ -45,6 +52,8 @@ public class RabbitBurrow : PathBlocker
         snowRotation = snow.localRotation;
         timer.Resolved += OnResolved;
     }
+
+    void Start() => pacing = StartCoroutine(Pace());
 
     void OnDestroy() => timer.Resolved -= OnResolved;
 
@@ -77,8 +86,16 @@ public class RabbitBurrow : PathBlocker
         BirdController bird = BirdController.Instance;
         bool pecking = bird != null && bird.IsPerched && bird.Perch == snowPerch;
         if (pecking && Time.time >= nextPeck)
+        {
             nextPeck = Time.time + bird.Peck(1) + 0.15f;
+            digSnow.Emit(6);
+        }
         bool digging = called || timer.IsRunning && timer.Elapsed >= timer.Duration - tuning.burrowDigTime;
+        if (digging && Time.time >= nextDigSnow)
+        {
+            nextDigSnow = Time.time + 0.25f;
+            digSnow.Emit(3);
+        }
         birdHelped |= pecking;
 
         // Dug from inside, the snow trembles.
@@ -110,6 +127,7 @@ public class RabbitBurrow : PathBlocker
     IEnumerator OpenWay(bool byBird)
     {
         opening = true;
+        StopCoroutine(pacing);
         snowPerch.CanPerch = false;
         snowPerch.Release();
         snow.localRotation = snowRotation;
@@ -123,12 +141,33 @@ public class RabbitBurrow : PathBlocker
             yield return null;
         }
         snow.gameObject.SetActive(false);
+        digSnow.Emit(20);
 
         yield return Together(burrowRabbits.Length, i => burrowRabbits[i].ComeOut(hole.position, waitPoints[i].position));
         yield return new WaitForSeconds(0.4f);
         yield return Together(roadRabbits.Length, i => Delayed(i * stagger, roadRabbits[i].GoIn(hole.position)));
         Open(byBird);
         yield return Together(burrowRabbits.Length, i => burrowRabbits[i].GoIn(hole.position));
+    }
+
+    // The road's rabbits want to go in: one at a time hops to the snow and back to its place, leaving tracks (FootprintMaker).
+    // Only once its stage has come, so no tracks show up from nowhere while the burrow is still hidden.
+    IEnumerator Pace()
+    {
+        Stage stage = GetComponentInParent<Stage>();
+        while (true)
+        {
+            yield return new WaitForSeconds(UnityEngine.Random.Range(paceSeconds.x, paceSeconds.y));
+            if (GameFlow.Instance == null || GameFlow.Instance.CurrentStage != stage)
+                continue;
+            BurrowRabbit rabbit = roadRabbits[UnityEngine.Random.Range(0, roadRabbits.Length)];
+            Vector3 seat = rabbit.transform.position;
+            Quaternion facing = rabbit.transform.rotation;
+            yield return rabbit.HopTo(pacePoint.position + pacePoint.forward * UnityEngine.Random.Range(-0.3f, 0.3f));
+            yield return new WaitForSeconds(1.5f);
+            yield return rabbit.HopTo(seat);
+            yield return rabbit.TurnTo(facing);
+        }
     }
 
     IEnumerator Together(int count, Func<int, IEnumerator> routine)
