@@ -67,6 +67,8 @@ public class BirdController : MonoBehaviour
     public Vector3 SkyForward { get; set; } = Vector3.forward;
 
     public bool IsPerched => state == State.Perched;
+    // What it is on or heading to land on, or null.
+    public Perchable Perch => perch;
     // Standing on a perch or on the ground.
     public bool IsOnFoot => state is State.Perched or State.Walking;
     // Sitting on a perch or on the way to one.
@@ -394,8 +396,11 @@ public class BirdController : MonoBehaviour
         altitude = FlightAltitude();
 
         Ray ray = Camera.main.ScreenPointToRay(pointAction.ReadValue<Vector2>());
-        Perchable hovered = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide)
-            ? PerchableAt(hit) : null;
+        bool hitAny = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, clickMask, QueryTriggerInteraction.Collide);
+        Perchable hovered = hitAny ? PerchableAt(hit) : null;
+        // An easter egg the click is for: the bird stays out of it.
+        bool caught = hovered == null && hitAny && hit.collider.gameObject.layer == interactableLayer
+            && hit.collider.GetComponentInParent<ClickCatcher>() != null;
         // Where it flies to: the ground or water under the pointer, behind any branch there.
         bool onGround = Physics.Raycast(ray, out RaycastHit ground, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore);
         bool held = moveAction.IsPressed();
@@ -418,6 +423,8 @@ public class BirdController : MonoBehaviour
             pressedPerch = hovered;
             pressedTime = Time.time;
         }
+        else if (pressed && caught)
+            following = false;
         else if (pressed && onGround)
             Click(ground);
         else if (pressedPerch != null)
@@ -604,7 +611,11 @@ public class BirdController : MonoBehaviour
     {
         IsSheltering = false;
         following = false;
-        if (perchable != perch || state != State.Perched)
+        if (perchable == perch && state == State.Perched)
+            return;
+        if (perchable.LocksClicks)
+            PerchOn(perchable);
+        else
             StartPerch(perchable);
     }
 
@@ -907,12 +918,12 @@ public class BirdController : MonoBehaviour
         }
     }
 
-    // Facing along the perch point's forward axis, the way nearer the current heading.
+    // Facing along the perch point's forward axis, the way nearer the current heading (or its forward itself, FacesForward).
     Quaternion AlongPerch()
     {
         Vector3 axis = perch.PerchPoint.forward;
         axis.y = 0f;
-        if (Vector3.Dot(axis, transform.forward) < 0f)
+        if (!perch.FacesForward && Vector3.Dot(axis, transform.forward) < 0f)
             axis = -axis;
         return axis.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(axis) : transform.rotation;
     }
@@ -982,10 +993,11 @@ public class BirdController : MonoBehaviour
 
     IEnumerator PeckRoutine(int times, float eachSeconds)
     {
+        // Negative pitch is nose down on this rig (the model faces -Z under visualRoot's 180° turn).
         const float depth = 40f;
         for (float t = 0f; t < times * eachSeconds; t += Time.deltaTime)
         {
-            bodyPitch = depth * Mathf.Sin(Mathf.PI * (t % eachSeconds) / eachSeconds);
+            bodyPitch = -depth * Mathf.Sin(Mathf.PI * (t % eachSeconds) / eachSeconds);
             yield return null;
         }
         bodyPitch = 0f;

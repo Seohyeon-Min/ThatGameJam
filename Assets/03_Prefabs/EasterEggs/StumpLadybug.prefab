@@ -162,6 +162,8 @@ MonoBehaviour:
   idleSpot: 0
   alwaysExempt: 1
   alignBird: 0
+  faceForward: 0
+  locksClicks: 0
   onPerched:
     m_PersistentCalls:
       m_Calls: []
@@ -174,6 +176,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8554688912082389577}
+  - component: {fileID: 4480864625864428914}
   - component: {fileID: 8266549213284763549}
   - component: {fileID: 1473361075751229522}
   m_Layer: 0
@@ -203,6 +206,18 @@ Transform:
   - {fileID: 8262518964587836532}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4480864625864428914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4070224217359033006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 899dd3a0aa8044d41935328302c2618d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClickCatcher
 --- !u!114 &8266549213284763549
 MonoBehaviour:
   m_ObjectHideFlags: 0

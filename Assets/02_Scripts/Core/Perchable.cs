@@ -19,6 +19,10 @@ public class Perchable : MonoBehaviour
     // While landing, the bird turns to face along the perch point's forward axis, whichever way is nearer its heading (roadside
     // branches: the axis runs across the branch, so its feet hold the branch). Off, it keeps the heading it flew in with (devices).
     [SerializeField] bool alignBird;
+    // With alignBird, it faces the perch point's forward itself, not whichever way along the axis is nearer (the cherry bush: toward the berry).
+    [SerializeField] bool faceForward;
+    // Once the player clicks it, the bird goes there and lands, and the player's clicks don't count until it has (the snow whirl).
+    [SerializeField] bool locksClicks;
     [SerializeField] UnityEvent onPerched;
 
     public static IReadOnlyList<Perchable> All => all;
@@ -32,6 +36,8 @@ public class Perchable : MonoBehaviour
     public Transform PerchPoint => perchPoint != null ? perchPoint : transform;
     public bool IsIdleSpot => idleSpot;
     public bool AlignsBird => alignBird;
+    public bool FacesForward => faceForward;
+    public bool LocksClicks => locksClicks;
 
     // The whole object this perch belongs to (for a tree's branch, the tree itself), not just this collider's own
     // renderer, so camera-fade can be held off the whole thing instead of only the branch the bird's feet touch.
