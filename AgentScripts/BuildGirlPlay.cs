@@ -24,6 +24,10 @@ public static class BuildGirlPlay
     const float TreeStandOff = 1.5f;
     const float TreeLookHeight = 3.5f;
     const float RunRadius = 2.2f;
+    const string HeadPath = "NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head";
+    // Where the Zs start, in metres from the head bone as she lies: along the head away from her body, and up.
+    const float ZzzPastHead = 0.5f;
+    const float ZzzAboveHead = 0.3f;
 
     public static string Run()
     {
@@ -134,18 +138,39 @@ public static class BuildGirlPlay
     {
         GameObject prefab = BuildZzzPrefab();
         Baby baby = UnityEngine.Object.FindAnyObjectByType<Baby>();
-        Transform head = baby.transform.Find("NPC-Girl-Animated/NPC-Girl-Rig/ROOT/Hips/Spine/Chest/Neck/Head");
+        Transform head = baby.transform.Find("NPC-Girl-Animated/" + HeadPath);
         Transform old = head.Find(prefab.name);
         if (old != null)
             Undo.DestroyObjectImmediate(old.gameObject);
         var zzz = (GameObject)PrefabUtility.InstantiatePrefab(prefab, head);
         Undo.RegisterCreatedObjectUndo(zzz, "Sleep Zzz");
-        zzz.transform.localPosition = Vector3.zero;
+        zzz.transform.localPosition = ZzzLocalPosition(baby);
         zzz.transform.localRotation = Quaternion.identity;
         var so = new SerializedObject(baby);
         so.FindProperty("sleepZzz").objectReferenceValue = zzz.GetComponent<ParticleSystem>();
         so.ApplyModifiedProperties();
         return "Zzz under " + head.name + ", head lying at " + head.position;
+    }
+
+    // Past the top of her head as she lies asleep (Girl_Sleep), away from her body and a little up: the head bone's local position for
+    // that point, found on a copy of her model posed that way.
+    static Vector3 ZzzLocalPosition(Baby baby)
+    {
+        Transform model = baby.transform.Find("NPC-Girl-Animated");
+        AnimationClip sleep = AssetDatabase.LoadAllAssetsAtPath(ModelPath).OfType<AnimationClip>().First(c => c.name == "Girl_Sleep");
+        var copy = (GameObject)UnityEngine.Object.Instantiate(model.gameObject, model.position, model.rotation);
+        copy.hideFlags = HideFlags.HideAndDontSave;
+        try
+        {
+            copy.transform.localScale = model.lossyScale;
+            sleep.SampleAnimation(copy, 0f);
+            Transform head = copy.transform.Find(HeadPath);
+            return head.InverseTransformVector(head.up * ZzzPastHead + Vector3.up * ZzzAboveHead);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(copy);
+        }
     }
 
     static GameObject BuildZzzPrefab()
@@ -174,7 +199,7 @@ public static class BuildGirlPlay
             main.duration = 2f;
             main.startLifetime = 3f;
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.9f, 1.1f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 0.75f);
             // Blue, to read on the snow and in the sunlit spot's light.
             main.startColor = new Color(0.72f, 0.82f, 1f);
             main.simulationSpace = ParticleSystemSimulationSpace.World;

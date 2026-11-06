@@ -44,7 +44,7 @@ public class Baby : CryListener
     [SerializeField, Min(0)] int eyeSparkleFrame;
     // The baby is asleep at the rest spot when this has played.
     [SerializeField] AnimationClip lieDownClip;
-    [Tooltip("Zs rising off her head while she lies fully down: asleep, and the lying ends of lying down and getting up.")]
+    [Tooltip("Zs rising off her head while she lies fully down: asleep, and the end of lying down.")]
     [SerializeField] ParticleSystem sleepZzz;
     [Tooltip("Her head lower than this above her feet (in the model's own units) counts as lying fully down.")]
     [SerializeField] float lyingHeadHeight = 0.18f;
@@ -143,13 +143,13 @@ public class Baby : CryListener
         animator.transform.localRotation = modelBaseRotation * Quaternion.Euler(x, 0f, z);
     }
 
-    // Lying fully down (asleep, or the lying ends of lying down and getting up): her head is near the ground then.
+    // Lying fully down asleep, or at the end of lying down: her head is near the ground then. Not while getting up.
     void UpdateSleepZzz()
     {
         // Scenes built before the Zs (Sam_Test) have none.
         if (sleepZzz == null || headBone == null)
             return;
-        bool lying = State is BabyState.Sleeping or BabyState.Resting or BabyState.Waking
+        bool lying = State is BabyState.Sleeping or BabyState.Resting
             && headBone.position.y - transform.position.y < lyingHeadHeight * animator.transform.lossyScale.y;
         if (lying && !sleepZzz.isEmitting)
             sleepZzz.Play();
