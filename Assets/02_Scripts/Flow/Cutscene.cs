@@ -45,6 +45,8 @@ public class Cutscene : MonoBehaviour
     // A cutscene with Lock Player is playing: the bird takes no clicks or cries and stays where it is.
     public static bool PlayerLocked => locking > 0;
     public bool IsPlaying { get; private set; }
+    // Raised once this cutscene has ended, whether it ran to the end of its Timeline or was cut short by Stop.
+    public event System.Action Finished;
 
     void Awake()
     {
@@ -170,6 +172,7 @@ public class Cutscene : MonoBehaviour
                 volume.sharedProfile = profileBefore;
             volume = null;
         }
+        Finished?.Invoke();
     }
 
     void SwitchVolume()

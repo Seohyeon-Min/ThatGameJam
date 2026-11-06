@@ -420407,6 +420407,64 @@ MonoBehaviour:
     m_Center: {x: -0.016359925, y: 3.11203, z: 0.118933916}
     m_Extent: {x: 2.002778, y: 3.2361467, z: 1.1268272}
   variation: 121
+--- !u!1 &752505689
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 752505690}
+  - component: {fileID: 752505691}
+  m_Layer: 10
+  m_Name: MusicManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &752505690
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 752505689}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1547571809}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &752505691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 752505689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e94a56885b9cebb4cb5047f2ff0e15ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MusicManager
+  musicEvent:
+    Guid:
+      Data1: 1164837269
+      Data2: 1111875929
+      Data3: 2101061286
+      Data4: -337490302
+    Path: event:/Music/backgroundmusic
+  fadeSeconds: 3
+  layerParameters:
+  - Layer1
+  - Layer2
+  - Layer3
+  startCutscene: {fileID: 1728537430}
+  season: {fileID: 0}
 --- !u!1001 &752807261
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -827714,6 +827772,7 @@ Transform:
   - {fileID: 50630730}
   - {fileID: 1075039323}
   - {fileID: 248301718}
+  - {fileID: 752505690}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1548196101
