@@ -78,25 +78,25 @@ public static class BuildStage3
     // In the quarter view (camera yaw 315) R runs straight right on the screen and U straight up, so the two ways of every fork
     // part at a right angle on the screen. Z runs up and to the right.
     static readonly Vector3 R = new Vector3(1f, 0f, 1f).normalized, U = new Vector3(-1f, 0f, 1f).normalized, Z = Vector3.forward;
-    // Right ways 44 to 56 m, dead ends 21 to 27 m: twice and one and a half times the first map of ADR 0028, where they felt short
-    // (ADR 0031).
+    // Right ways 22 to 28 m, dead ends 14 to 18 m: the first map of ADR 0028. ADR 0031 made them twice and one and a half times as
+    // long; the director had them back to these.
     static readonly (Vector3, float)[][] RightMoves =
     {
-        new[] { (R, 16f), (Z, 32f) },
-        new[] { (U, 32f), (Z, 20f) },
-        new[] { (U, 12f), (Z, 20f), (R, 24f) },
-        new[] { (R, 20f), (Z, 28f) },
-        new[] { (R, 12f), (Z, 20f), (U, 24f) },
-        new[] { (U, 16f), (Z, 28f) },
+        new[] { (R, 8f), (Z, 16f) },
+        new[] { (U, 16f), (Z, 10f) },
+        new[] { (U, 6f), (Z, 10f), (R, 12f) },
+        new[] { (R, 10f), (Z, 14f) },
+        new[] { (R, 6f), (Z, 10f), (U, 12f) },
+        new[] { (U, 8f), (Z, 14f) },
     };
     static readonly (Vector3, float)[][] DeadMoves =
     {
-        new[] { (U, 12f), (Z, 15f) },
-        new[] { (R, 12f), (Z, 15f) },
-        new[] { (R, 12f), (Z, 9f) },
-        new[] { (U, 12f), (Z, 15f) },
-        new[] { (U, 12f), (Z, 9f) },
-        new[] { (R, 12f), (Z, 15f) },
+        new[] { (U, 8f), (Z, 10f) },
+        new[] { (R, 8f), (Z, 10f) },
+        new[] { (R, 8f), (Z, 6f) },
+        new[] { (U, 8f), (Z, 10f) },
+        new[] { (U, 8f), (Z, 6f) },
+        new[] { (R, 8f), (Z, 10f) },
     };
     // One animal per fork, in order. Placeholder capsules sized roughly like each.
     static readonly (string name, float scale)[] Animals =
@@ -244,14 +244,19 @@ public static class BuildStage3
 
     static Vector3[] OnGround(Vector3[] points) => points.Select(Ground).ToArray();
 
-    // Opens the ground at joinZ (WorldGap) until it reaches endZ. Nothing when it already does, so rerunning keeps the ground.
+    // Makes the ground end at endZ (WorldGap): opened at joinZ, or closed by taking out the ground just past joinZ, which an
+    // earlier opening drew out there. Nothing when it already ends there, so rerunning keeps the ground.
     static string MakeRoom(float joinZ, float endZ)
     {
         float far = terrain.transform.position.z + terrain.terrainData.size.z;
-        if (endZ <= far + 0.01f)
-            return $"Ground already reaches z {far:0.0}.";
-        WorldGap.Open(joinZ, endZ - far);
-        return $"Ground opened by {endZ - far:0.0} m at z {joinZ:0.0}, now to z {endZ:0.0}.";
+        float size = endZ - far;
+        if (Mathf.Abs(size) <= 0.01f)
+            return $"Ground already ends at z {far:0.0}.";
+        if (size > 0f)
+            WorldGap.Open(joinZ, size);
+        else
+            WorldGap.Open(joinZ - size, size);
+        return $"Ground {(size > 0f ? "opened" : "closed")} by {Mathf.Abs(size):0.0} m at z {joinZ:0.0}, now to z {endZ:0.0}.";
     }
 
     static FogField Fog(GameObject parent, float fromZ, float toZ, float halfWidth)
