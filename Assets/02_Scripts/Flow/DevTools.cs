@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // Development controls, only in the Editor and development builds (plan 4.18): a row of buttons along the top of the screen,
-// each describing itself while the pointer is on it. The keys F1 to F9 do the same as the buttons.
+// each describing itself while the pointer is on it. Each has its own key (shown in its tooltip) that does the same as clicking it.
 public class DevTools : MonoBehaviour
 {
     const int MaxTimeScale = 3;
@@ -12,10 +12,9 @@ public class DevTools : MonoBehaviour
     const float Top = 8f;
     const float TooltipWidth = 320f;
 
-    static readonly Key[] Keys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10, Key.F11, Key.F12 };
     static DevTools active;
 
-    (System.Func<string> label, string tooltip, System.Action action)[] buttons;
+    (Key key, System.Func<string> label, string tooltip, System.Action action)[] buttons;
     GUIStyle tooltipStyle;
 
     // True when a screen point (pixels, origin bottom-left) is on the button row, so the click is not also a game click.
@@ -28,31 +27,33 @@ public class DevTools : MonoBehaviour
         if (!Debug.isDebugBuild)
             enabled = false;
 
-        // In the order of Keys. English only: the built-in font has no Korean in a web build.
-        buttons = new (System.Func<string>, string, System.Action)[]
+        buttons = new (Key, System.Func<string>, string, System.Action)[]
         {
-            (() => $"x{Time.timeScale:0.##}", "Game speed. Each click goes x1, x2, x3, then back to x1. (F1)", CycleSpeed),
-            (() => "Natural",
+            (Key.F1, () => $"x{Time.timeScale:0.##}", "Game speed. Each click goes x1, x2, x3, then back to x1. (F1)", CycleSpeed),
+            (Key.F2, () => "Natural",
                 "Resolves what the baby waits for now (waking up, or the device ahead) as if its time ran out. The baby does not look up. (F2)",
                 () => CurrentTimer()?.ResolveNaturally()),
-            (() => "By bird", "Resolves what the baby waits for now as if the bird did it. The baby looks up at the bird. (F3)",
+            (Key.F3, () => "By bird", "Resolves what the baby waits for now as if the bird did it. The baby looks up at the bird. (F3)",
                 () => CurrentTimer()?.ResolveByBird()),
-            (() => "Next stage", "Puts the baby asleep at this stage's sunlit spot, as if it had walked the stage: the season advances and the next stage starts there. The bird comes along. (F4)",
+            (Key.F4, () => "Next stage", "Puts the baby asleep at this stage's sunlit spot, as if it had walked the stage: the season advances and the next stage starts there. The bird comes along. (F4)",
                 () => GameFlow.Instance.SkipToNextStage()),
-            (() => "Ring", "Plays the ring from the sunlit spot nearest the baby, as when it falls asleep there. (F5)", SunlitSpot.PlayRingNearestBaby),
-            (() => "Lie down", "The baby lies down at this stage's sunlit spot, with its animation: when it's done, the season advances and the next stage starts, as at the end of a walk. The bird comes along. (F6)",
+            (Key.F5, () => "Ring", "Plays the ring from the sunlit spot nearest the baby, as when it falls asleep there. (F5)", SunlitSpot.PlayRingNearestBaby),
+            (Key.F6, () => "Lie down", "The baby lies down at this stage's sunlit spot, with its animation: when it's done, the season advances and the next stage starts, as at the end of a walk. The bird comes along. (F6)",
                 () => GameFlow.Instance.LieDownAtSunlitSpot()),
-            (() => "Back", "Back one stage and one season, to watch the season change again. The baby sleeps at that stage's start; opened devices stay open. (F7)",
+            (Key.F7, () => "Back", "Back one stage and one season, to watch the season change again. The baby sleeps at that stage's start; opened devices stay open. (F7)",
                 () => GameFlow.Instance.BackOneStage()),
-            (() => GameFlow.Instance.CameraLocked ? "Cam: locked" : "Cam: bird", "Holds the camera on this stage's sunlit spot, or lets it follow the bird again. (F8)",
+            (Key.F8, () => GameFlow.Instance.CameraLocked ? "Cam: locked" : "Cam: bird", "Holds the camera on this stage's sunlit spot, or lets it follow the bird again. (F8)",
                 () => GameFlow.Instance.ToggleCameraLock()),
-            (() => "Cutscene", "Plays this stage's wake cutscene from the start, or stops it if it is playing. The baby stays where it is. (F9)", ToggleCutscene),
-            (() => IntroSfx.HighPitchLabel, "Plays the next HighPitch variant (the intro's bird-appears stinger), to audition it without replaying the intro. (F10)",
+            (Key.F9, () => "Cutscene", "Plays this stage's wake cutscene from the start, or stops it if it is playing. The baby stays where it is. (F9)", ToggleCutscene),
+            (Key.F10, () => IntroSfx.HighPitchLabel, "Plays the next HighPitch variant (the intro's bird-appears stinger), to audition it without replaying the intro. (F10)",
                 IntroSfx.CycleHighPitch),
-            (() => IntroSfx.SwooshLabel, "Plays the next Swoosh variant (the intro's bird-dives stinger), to audition it without replaying the intro. (F11)",
+            (Key.F11, () => IntroSfx.SwooshLabel, "Plays the next Swoosh variant (the intro's bird-dives stinger), to audition it without replaying the intro. (F11)",
                 IntroSfx.CycleSwoosh),
-            (() => "Flap", "Plays the wing-flap stinger on demand, same as the baked animation event does mid-flight (roughly every ~2s of continuous gliding, so it's easy to miss in normal play). (F12)",
+            (Key.F12, () => "Flap", "Plays the wing-flap stinger on demand, same as the baked animation event does mid-flight (roughly every ~2s of continuous gliding, so it's easy to miss in normal play). (F12)",
                 PlayFlap),
+            (Key.M, () => MusicManager.Instance != null && MusicManager.Instance.Muted ? "Music: off" : "Music: on",
+                "Mutes or unmutes the stage BGM, to test without it playing. Picks up where it left off on unmute. (M)",
+                () => MusicManager.Instance?.ToggleMute()),
         };
     }
 
@@ -70,8 +71,8 @@ public class DevTools : MonoBehaviour
         if (keyboard == null)
             return;
 
-        for (int i = 0; i < Keys.Length; i++)
-            if (keyboard[Keys[i]].wasPressedThisFrame)
+        for (int i = 0; i < buttons.Length; i++)
+            if (keyboard[buttons[i].key].wasPressedThisFrame)
                 buttons[i].action();
     }
 
@@ -101,7 +102,8 @@ public class DevTools : MonoBehaviour
     // The row is centred at the top of the screen. GUI coordinates: origin top-left.
     static Rect BarRect()
     {
-        float width = Keys.Length * ButtonWidth + (Keys.Length - 1) * Gap;
+        int count = active.buttons.Length;
+        float width = count * ButtonWidth + (count - 1) * Gap;
         return new Rect((Screen.width - width) / 2f, Top, width, ButtonHeight);
     }
 

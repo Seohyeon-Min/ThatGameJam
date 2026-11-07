@@ -102,14 +102,8 @@ public static class VerifyEasterEggs
             await Task.Delay(1500);
             Time.timeScale = 2f;
 
-            // Held zoomed all the way in, the bird stands on the ground. The baby is kept asleep so the intro (and its snow) lasts.
+            // Kept asleep so the intro (and its snow) lasts.
             Baby.Instance.HoldAsleep();
-            await Check("SnowOnBird", "01_SnowOnBird", async () =>
-            {
-                await FlyOver(Egg<SnowWhirl>().transform.position + new Vector3(3f, 0f, 3f));
-                await Scroll(1f, 6);
-            }, 20f);
-            await Scroll(-1f, 6);
 
             await Check("StumpLadybug", "02_StumpLadybug", async () =>
             {

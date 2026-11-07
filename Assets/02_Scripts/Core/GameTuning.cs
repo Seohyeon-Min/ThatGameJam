@@ -50,11 +50,11 @@ public class GameTuning : ScriptableObject
     public float babySpeedVariationFrequency = 0.6f;
     public float babyWanderAngle = 12f;
     public float babyWanderFrequency = 0.3f;
-    // How often (seconds, random between the two) the baby pauses mid-walk to look around.
+    // How often (seconds, random between the two) the baby checks mid-walk for a nearby PointOfInterest worth a glance.
+    // No stop if nothing's there - she just keeps walking (real kids don't halt to scan empty air).
     public float babyCuriousPauseIntervalMin = 4f;
     public float babyCuriousPauseIntervalMax = 9f;
-    // Glancing at a nearby PointOfInterest (a tree, a landmark) instead of stopping to look around at
-    // nothing: shares the curious-pause cooldown above, but keeps walking and only turns the head.
+    // Glancing at a nearby PointOfInterest (a tree, a landmark): keeps walking, only turns the head.
     public float babyGazeRadius = 6f;
     public float babyGazeDuration = 1.5f;
     // Max degrees the head may turn off the animated pose. Clamps so a POI behind the baby never
