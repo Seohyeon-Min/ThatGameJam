@@ -660,6 +660,11 @@ public class BirdController : MonoBehaviour
     static bool CanShelter() => GameFlow.Instance.CurrentStage.snowShelter
         && Baby.Instance.State is BabyState.Walking or BabyState.Reacting or BabyState.Waiting;
 
+    // The fog maze's trees: the bird has no horizontal avoidance for them (only vertical clearance over logs/banks underfoot),
+    // so while it's the current stage the target is kept within FogMaze's corridor around the baby's path instead.
+    static Vector3 ClampToFogCorridor(Vector3 point) =>
+        FogMaze.Instance != null && GameFlow.Instance.CurrentStage == FogMaze.Instance.Stage ? FogMaze.Instance.ClampToCorridor(point) : point;
+
     // A click on the baby toggles sheltering on; a second click there (or anywhere else, via Click) turns it off again.
     void ToggleShelter()
     {
@@ -796,7 +801,7 @@ public class BirdController : MonoBehaviour
         // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
         var from = new Vector3(position.x, 0f, position.z);
-        Vector3 to = Limit(new Vector3(target.x, 0f, target.z));
+        Vector3 to = ClampToFogCorridor(Limit(new Vector3(target.x, 0f, target.z)));
         // Slower the nearer where it is going is (the pointer), up to its full speed far off.
         GameTuning speeds = GameTuning.Current;
         float far = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(speeds.birdSlowDistance, speeds.birdFastDistance, Vector3.Distance(from, to)));
@@ -883,7 +888,7 @@ public class BirdController : MonoBehaviour
     void Walk()
     {
         Vector3 position = transform.position;
-        Vector3 goal = Limit(new Vector3(target.x, 0f, target.z));
+        Vector3 goal = ClampToFogCorridor(Limit(new Vector3(target.x, 0f, target.z)));
         // Setting off from standing, it hops for a moment before it settles into walking.
         bool going = (goal - new Vector3(position.x, 0f, position.z)).sqrMagnitude > 1e-6f;
         if (going && !wasWalking)
