@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using FMODUnity;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -162,8 +163,16 @@ public class EndingFlight : MonoBehaviour
     [SerializeField, Min(0f)] float pullRise = 0.2f;
     [SerializeField, Min(0f)] float pullRiseFast = 1.1f;
     [SerializeField, Min(0f)] float pullPan = 0.3f;
-    [Tooltip("Seconds after she lies down that the season turns to the last (the ending's), as the camera starts to climb: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
+    [Tooltip("Seconds after she lies down that the season turns to the last (the ending's), as the camera starts to climb: the flowers round her bloom with it (RingBloom). The ring itself is cued separately below, by the ending audio.")]
     [SerializeField, Min(0f)] float seasonAfterLying = 0f;
+
+    [Header("Ending audio & ring")]
+    [Tooltip("Starts alongside the flight (Play's call), non-diegetic. Empty plays nothing.")]
+    [SerializeField] EventReference endingAudio;
+    [Tooltip("The sunlit spot where she lies down to sleep (BloomSpot: a SunlitSpot with no shafts). Its Reacts To Season should be off, since this plays its ring directly instead.")]
+    [SerializeField] SunlitSpot bloomSpot;
+    [Tooltip("Seconds into the ending audio that the sunlit spot's ring plays.")]
+    [SerializeField, Min(0f)] float ringAtSeconds = 26f;
 
     static readonly int ShaftIntensityId = Shader.PropertyToID("_Intensity");
     static readonly int PoolIntensityId = Shader.PropertyToID("_PoolIntensity");
@@ -199,6 +208,11 @@ public class EndingFlight : MonoBehaviour
         bird.BeginScripted();
         // The game's camera stays exactly where it is, so the bird flies out of the picture.
         GameFlow.Instance.BirdCamera.Freeze();
+
+        if (!endingAudio.IsNull)
+            RuntimeManager.PlayOneShot(endingAudio);
+        if (bloomSpot != null)
+            StartCoroutine(PlayRingAt(ringAtSeconds));
         nextBeatAt = Time.time;
 
         Vector3 way = (outward * Mathf.Cos(outClimb * Mathf.Deg2Rad) + Vector3.up * Mathf.Sin(outClimb * Mathf.Deg2Rad)).normalized;
@@ -530,13 +544,21 @@ public class EndingFlight : MonoBehaviour
         yield return new WaitForSeconds(lieSeconds);
     }
 
-    // The season turns to the last a moment after she lies down; the ring and the flowers follow the season on their own.
+    // The season turns to the last a moment after she lies down; the flowers follow the season on their own (the ring plays
+    // separately, cued by the ending audio - see PlayRingAt).
     IEnumerator LastSeason()
     {
         yield return new WaitForSeconds(seasonAfterLying);
         Season season = FindAnyObjectByType<Season>();
         if (season != null)
             season.AdvanceSeason();
+    }
+
+    // The sunlit spot's ring, timed to a beat in the ending audio rather than to anything she does.
+    IEnumerator PlayRingAt(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        bloomSpot.PlayRing();
     }
 
     // When she lay down in the sleep shot (below 0 until then).

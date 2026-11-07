@@ -17,6 +17,8 @@ public class SunlitSpot : MonoBehaviour
 
     [Tooltip("How many shafts are on, counted from the first child.")]
     [SerializeField, Min(0)] int level = 1;
+    [Tooltip("Off for a spot whose ring is cued some other way (EndingFlight's audio-timed ring), so the season's own rise doesn't play it a second time.")]
+    [SerializeField] bool reactsToSeason = true;
 
     SpringRing ring;
     Season season;
@@ -77,7 +79,7 @@ public class SunlitSpot : MonoBehaviour
     {
         bool rose = level > lastSeason;
         lastSeason = level;
-        if (rose && NearestTo(Baby.Instance.transform.position) == this)
+        if (reactsToSeason && rose && NearestTo(Baby.Instance.transform.position) == this)
             PlayRing();
     }
 
@@ -126,7 +128,7 @@ public class SunlitSpot : MonoBehaviour
 
     public static void PlayRingNearestBaby() => NearestTo(Baby.Instance.transform.position)?.PlayRing();
 
-    void PlayRing()
+    public void PlayRing()
     {
         if (ring == null)
         {
