@@ -34058,6 +34058,96 @@ MonoBehaviour:
     m_Center: {x: -0.016359925, y: 3.11203, z: 0.118933916}
     m_Extent: {x: 2.002778, y: 3.2361467, z: 1.1268272}
   variation: 71
+--- !u!1 &56742664
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 56742665}
+  - component: {fileID: 56742667}
+  - component: {fileID: 56742666}
+  m_Layer: 0
+  m_Name: Body
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &56742665
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 56742664}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalScale: {x: 0.530303, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 979907777}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &56742666
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 56742664}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 258589bb8f6d46fbbf08159da541bb18, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &56742667
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 56742664}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &56865112 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7789057167458759897, guid: 3dbece10d586327438325424b45fbac7, type: 3}
@@ -292726,6 +292816,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Animal_Bear
       objectReference: {fileID: 0}
+    - target: {fileID: 9132833431028465303, guid: f54df8c90c320be4d94a39b49e08c897, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.2789
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -323658,6 +323752,10 @@ PrefabInstance:
     - target: {fileID: 2582380178122985865, guid: f54df8c90c320be4d94a39b49e08c897, type: 3}
       propertyPath: m_Name
       value: Animal_Elk
+      objectReference: {fileID: 0}
+    - target: {fileID: 9132833431028465303, guid: f54df8c90c320be4d94a39b49e08c897, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.6572
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -548089,6 +548187,38 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1183587633}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &979907776
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 979907777}
+  m_Layer: 0
+  m_Name: Animal_Doe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &979907777
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 979907776}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.38268322, z: -0, w: 0.9238797}
+  m_LocalPosition: {x: 4.030508, y: 0, z: 0.3535614}
+  m_LocalScale: {x: 0.736, y: 0.736, z: 0.736}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 56742665}
+  m_Father: {fileID: 1048507785}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &980169356
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -559116,6 +559246,10 @@ PrefabInstance:
     - target: {fileID: 2582380178122985865, guid: f54df8c90c320be4d94a39b49e08c897, type: 3}
       propertyPath: m_Name
       value: Animal_Deer
+      objectReference: {fileID: 0}
+    - target: {fileID: 9132833431028465303, guid: f54df8c90c320be4d94a39b49e08c897, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.6419
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -583553,6 +583687,7 @@ Transform:
   - {fileID: 880706369}
   - {fileID: 1914639038}
   - {fileID: 999522514}
+  - {fileID: 979907777}
   m_Father: {fileID: 1255176048}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1048507786
