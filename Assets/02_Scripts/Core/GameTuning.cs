@@ -140,7 +140,8 @@ public class GameTuning : ScriptableObject
     public float birdAltitudeSpeed = 3f;
     // Arriving at a perch until perched: the Bird_Landing clip's GripComplete event, when the toes have gripped.
     public float birdPerchDuration = 1.2f;
-    public float birdCryCooldown = 0.8f;
+    // At least the bird call's own clip length (event:/SFX/bird, ~1.88s), so spamming the cry can't stack overlapping calls.
+    public float birdCryCooldown = 1.9f;
     // Seconds the bird hovers without input before it lands on the nearest roadside branch.
     public float birdIdlePerchDelay = 2f;
     // How close (world units) a branch must be for idling to auto-perch on it. The camera follows the bird,

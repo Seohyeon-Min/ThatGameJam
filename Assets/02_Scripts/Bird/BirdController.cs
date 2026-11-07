@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -1065,6 +1066,8 @@ public class BirdController : MonoBehaviour
         nextCryTime = Time.time + GameTuning.Current.birdCryCooldown;
         CryListener.Broadcast(transform.position);
         onCry.Invoke();
+        // Gated by the same cooldown as the ring (above), so the call sounds exactly as often as it shows.
+        RuntimeManager.PlayOneShot("event:/SFX/bird", transform.position);
         StartCoroutine(CryPulse());
         if (cryPulse != null)
         {
