@@ -137,7 +137,10 @@ public class SunlitSpot : MonoBehaviour
         }
         ring.enabled = true;
         ring.Play();
-        RuntimeManager.PlayOneShot("event:/SFX/spiral");
+        // Not for the ending's last ring (as she sleeps): the ending's music is playing then.
+        EndingFlight ending = FindAnyObjectByType<EndingFlight>();
+        if (ending == null || !ending.IsPlaying)
+            RuntimeManager.PlayOneShot("event:/SFX/spiral");
     }
 
     static SunlitSpot NearestTo(Vector3 position)

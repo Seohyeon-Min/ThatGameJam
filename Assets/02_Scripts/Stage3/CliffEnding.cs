@@ -83,6 +83,9 @@ public class CliffEnding : PathBlocker
     public override void BeginWaiting()
     {
         baby = Baby.Instance;
+        // Out of the fog: the music turns to the cliff's (st_3 out, 0, 1_1, 2_1 and 4 in, on the beat).
+        if (MusicManager.Instance != null)
+            MusicManager.Instance.EnterCliff();
         // Again after a dev tool took her back a stage, maybe after the ending.
         if (walking != null)
             StopCoroutine(walking);
@@ -140,6 +143,8 @@ public class CliffEnding : PathBlocker
             guide.Gone();
         resting = true;
         ended = true;
+        if (MusicManager.Instance != null)
+            MusicManager.Instance.FadeOut();
         baby.PlayEnding();
         // The bird just past where it would set the ending off, at its height, with the camera cut to the sitting view.
         BirdController bird = BirdController.Instance;
@@ -210,6 +215,9 @@ public class CliffEnding : PathBlocker
         if (!resting)
             return;
         baby.SitFacing(view.position);
+        // Heading out over the drop: the music fades out before the ending starts.
+        if (MusicManager.Instance != null && BirdPastEdge(0f))
+            MusicManager.Instance.FadeOut();
         if (BirdOutPastCliff())
         {
             ended = true;
@@ -219,10 +227,13 @@ public class CliffEnding : PathBlocker
         }
     }
 
-    bool BirdOutPastCliff()
+    bool BirdOutPastCliff() => BirdPastEdge(pastEdge);
+
+    // The bird at least this far out past the edge (metres along its forward).
+    bool BirdPastEdge(float metres)
     {
         Vector3 bird = BirdController.Instance.transform.position;
-        return Vector3.Dot(bird - edge.position, edge.forward) >= pastEdge;
+        return Vector3.Dot(bird - edge.position, edge.forward) >= metres;
     }
 
     void OnDrawGizmos()

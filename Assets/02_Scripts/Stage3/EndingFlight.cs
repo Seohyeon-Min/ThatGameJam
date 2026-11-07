@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using FMODUnity;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Playables;
@@ -174,6 +175,12 @@ public class EndingFlight : MonoBehaviour
     [SerializeField, Min(0f)] float pullPan = 0.3f;
     [Tooltip("Frames after she lies down, at her animations' 30 fps (240 = 8 s), that the season turns to the last (the ending's), as the camera climbs: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
     [SerializeField, Min(0)] int seasonAfterLyingFrame = 240;
+
+    [Header("Ending audio")]
+    [Tooltip("The ending's music (event:/Music/cutsceneEnding), started as the bird flies out past the cliff, non-diegetic. Empty plays nothing.")]
+    [SerializeField] EventReference endingAudio;
+    [Tooltip("Seconds the ending's music takes to come up from silent, from where it starts (it starts at the same moment), over the stage music fading out.")]
+    [SerializeField, Min(0f)] float endingAudioFadeIn = 4f;
     [Tooltip("Once bloomed, soft patches of light drift very slowly over the flowers round her, neighbours brightening and dimming together (the flowers that bloom with the ring only). The light added at the brightest, HDR: above 1 the Bloom post effect spreads it into a glow. Black: none.")]
     [SerializeField, ColorUsage(false, true)] Color flowerSparkle = new(0.35f, 0.33f, 0.28f);
     [Tooltip("Metres a second the patches of light drift over the field. Small is slow.")]
@@ -185,6 +192,8 @@ public class EndingFlight : MonoBehaviour
     [Tooltip("The very end: white birds sweep over the screen until it is white, and the logo comes up on it. Starts this many seconds after the camera has come to rest.")]
     [SerializeField] EndingFlock flock;
     [SerializeField, Min(0f)] float flockAfterStop = 1.5f;
+    [Tooltip("From the season turning to the last (after she lies down), the camera stops looking at her: it keeps on drawing away, facing as it was then.")]
+    [SerializeField] bool letGoAtSeason = true;
 
     // The girl's animations are made at 30 fps (Blender), so frames here count as hers do.
     const float AnimationFrameRate = 30f;
@@ -218,6 +227,25 @@ public class EndingFlight : MonoBehaviour
         StartCoroutine(Run(outwardWay, fromFirstShot));
     }
 
+    // The ending's music, from its start at once but coming up from silent over the stage music as that fades out.
+    IEnumerator PlayEndingAudio()
+    {
+        FMOD.Studio.EventInstance music = RuntimeManager.CreateInstance(endingAudio);
+        music.setVolume(endingAudioFadeIn > 0f ? 0f : 1f);
+        music.start();
+        // Let go now: it plays on to its end and frees itself; the volume can still be set until then.
+        music.release();
+        for (float t = 0f; t < endingAudioFadeIn; t += Time.unscaledDeltaTime)
+        {
+            if (!music.isValid())
+                yield break;
+            music.setVolume(Mathf.SmoothStep(0f, 1f, t / endingAudioFadeIn));
+            yield return null;
+        }
+        if (music.isValid())
+            music.setVolume(1f);
+    }
+
     IEnumerator Run(Vector3 outward, bool fromFirstShot)
     {
         BirdController bird = BirdController.Instance;
@@ -225,6 +253,8 @@ public class EndingFlight : MonoBehaviour
         bird.BeginScripted();
         // The game's camera stays exactly where it is, so the bird flies out of the picture.
         GameFlow.Instance.BirdCamera.Freeze();
+        if (!endingAudio.IsNull)
+            StartCoroutine(PlayEndingAudio());
         nextBeatAt = Time.time;
 
         Vector3 way = (outward * Mathf.Cos(outClimb * Mathf.Deg2Rad) + Vector3.up * Mathf.Sin(outClimb * Mathf.Deg2Rad)).normalized;
@@ -720,6 +750,7 @@ public class EndingFlight : MonoBehaviour
         if (baby == null)
             yield break;
         lieDownAt = -1f;
+        lookLetGo = false;
         StartCoroutine(PullAway());
         Vector3 spot = sleepShaft.transform.position;
         baby.LookAtLight(spot + Vector3.up * 0.6f);
@@ -748,7 +779,12 @@ public class EndingFlight : MonoBehaviour
         Season season = FindAnyObjectByType<Season>();
         if (season != null)
             season.AdvanceSeason();
+        if (letGoAtSeason)
+            lookLetGo = true;
     }
+
+    // The sleep shot's camera no longer turns to keep her in the middle (from the last season on).
+    bool lookLetGo;
 
     // When she lay down in the sleep shot (below 0 until then).
     float lieDownAt = -1f;
@@ -794,7 +830,15 @@ public class EndingFlight : MonoBehaviour
                 }
             }
             pulled += speed * Time.deltaTime;
-            at += (back + Vector3.up * rise).normalized * speed * Time.deltaTime;
+            Vector3 step = (back + Vector3.up * rise).normalized * speed * Time.deltaTime;
+            at += step;
+            if (lookLetGo)
+            {
+                // Let go of her: on the same way, facing as it was.
+                shot.position += step;
+                yield return null;
+                continue;
+            }
             sleepAim = Vector3.Lerp(sleepAim, BodyMiddle(body, spot), 1f - Mathf.Exp(-2f * Time.deltaTime));
             Vector3 aim =Vector3.Lerp(firstAim, sleepAim, Mathf.SmoothStep(0f, 1f, (Time.time - startedAt) / 6f));
             // Turning round her rather than away from her, so she stays in the middle of the picture.
