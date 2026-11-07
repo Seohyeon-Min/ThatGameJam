@@ -8,7 +8,8 @@ using UnityEngine;
 //   holes, the terrain's material clipping them), and stays cut back all the way to both ends of the terrain.
 // - The edge rounded over all along: the terrain's last metres curving down (its heights lowered, never raised), and on from
 //   there a snow shoulder (the terrain's own material, smooth) bending on down to upright; under that a rough, faceted rock wall,
-//   jutting in and out and stepping back at ledges. One mesh, saved as an asset, on one object beside the terrain.
+//   jutting out unevenly and stepping out at ledges, never in under the shoulder.
+//   One mesh, saved as an asset, on one object beside the terrain.
 // Rerunning makes the mesh again; the terrain is only ever cut and lowered further, so the same outline leaves it as it is.
 // unity command script run --file AgentScripts/BuildCliffFace.cs --entry BuildCliffFace.Run
 public static class BuildCliffFace
@@ -173,7 +174,9 @@ public static class BuildCliffFace
                     + (Mathf.PerlinNoise(at.x * 0.23f, at.y * 0.21f + 21f) - 0.5f) * Jut * 0.7f;
                 float ledges = d / (LedgeEvery * (1f + 0.4f * Mathf.PerlinNoise(at.x * 0.04f, 5f)));
                 float stepped = Mathf.Floor(ledges) + Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((ledges - Mathf.Floor(ledges)) * 4f));
-                wall[i, j] = at + way * ((jut - stepped * 0.9f) * share);
+                // Out a little more at each ledge going down, as a cliff widens to its foot, and never in under the shoulder: a wall
+                // going in under it leaves the shoulder hanging there, seen from the side or below, as a sheet in the air.
+                wall[i, j] = at + way * (Mathf.Max(0f, jut * 0.6f + stepped * 0.5f) * share);
             }
         }
 

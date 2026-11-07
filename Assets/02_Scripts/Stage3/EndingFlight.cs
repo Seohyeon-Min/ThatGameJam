@@ -129,6 +129,10 @@ public class EndingFlight : MonoBehaviour
     [SerializeField] AnimationCurve openCurve = new(new Keyframe(0f, 0f, 0.8f, 0.8f), new Keyframe(0.5f, 0.45f, 1.1f, 1.1f), new Keyframe(1f, 1f, 0.5f, 0.5f));
     [Tooltip("Seconds over which, once its time is up, the gap goes on widening more and more slowly to the end of the shot, from as fast as the curve's end has it (so the clouds never stop).")]
     [SerializeField, Min(0.1f)] float openOnSeconds = 2.5f;
+    [Tooltip("The share of the cloud sea's half width, in from its outer edge, over which its puffs thin out (some smaller, some gone), so seen from below its edge is ragged and sparse rather than a wall. The gap is not touched.")]
+    [SerializeField, Range(0f, 1f)] float cloudRimWidth = 0.35f;
+    [Tooltip("How much they thin out there: 0 = not at all, 1 = towards the very edge most are gone.")]
+    [SerializeField, Range(0f, 1f)] float cloudRimThin = 0.8f;
     [Tooltip("Degrees the low shot's field of view widens over its seconds, slowly, as if the camera drew back a little.")]
     [SerializeField, Min(0f)] float lowZoomOut = 3f;
     [SerializeField, Min(0.1f)] float lowZoomSeconds = 10f;
@@ -145,6 +149,8 @@ public class EndingFlight : MonoBehaviour
     [SerializeField] CinemachineCamera sleepShot;
     [Tooltip("The light she walks into and sleeps in: where it meets the ground. One of the Light Shafts, so it has come with them.")]
     [SerializeField] LightBeam sleepShaft;
+    [Tooltip("From the sleep shot on, the light where she lies is this, the stages' own sunlit spot (its shafts on, level 1), and the gap's shafts go out. They still shine through the gap in the low shot. Empty: the gap's shafts stay.")]
+    [SerializeField] SunlitSpot sleepSpot;
     [Tooltip("Seconds she looks at the light before blinking, and after blinking before she walks to it.")]
     [SerializeField, Min(0f)] float lookBeforeBlink = 1f;
     [SerializeField, Min(0f)] float lookAfterBlink = 1.2f;
@@ -165,6 +171,14 @@ public class EndingFlight : MonoBehaviour
     [SerializeField, Min(0f)] float pullPan = 0.3f;
     [Tooltip("Frames after she lies down, at her animations' 30 fps (240 = 8 s), that the season turns to the last (the ending's), as the camera climbs: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
     [SerializeField, Min(0)] int seasonAfterLyingFrame = 240;
+    [Tooltip("Once bloomed, soft patches of light drift very slowly over the flowers round her, neighbours brightening and dimming together (the flowers that bloom with the ring only). The light added at the brightest, HDR: above 1 the Bloom post effect spreads it into a glow. Black: none.")]
+    [SerializeField, ColorUsage(false, true)] Color flowerSparkle = new(1.2f, 1.1f, 0.9f);
+    [Tooltip("Metres a second the patches of light drift over the field. Small is slow.")]
+    [SerializeField, Min(0f)] float flowerSparkleSpeed = 0.15f;
+    [Tooltip("Metres across a patch of light: larger is broader and softer.")]
+    [SerializeField, Min(0.1f)] float flowerSparkleSize = 4f;
+    [Tooltip("The share of the light that stays on all the while, under the drifting patches (0 = only the patches, 1 = a steady glow).")]
+    [SerializeField, Range(0f, 1f)] float flowerSparkleBase = 0.2f;
     [Tooltip("The very end: white birds sweep over the screen until it is white, and the logo comes up on it. Starts this many seconds after the camera has come to rest.")]
     [SerializeField] EndingFlock flock;
     [SerializeField, Min(0f)] float flockAfterStop = 1.5f;
@@ -464,6 +478,7 @@ public class EndingFlight : MonoBehaviour
         if (topClouds != null)
             DrawFrom(topClouds, lowShot.transform.position);
         List<(Transform puff, Vector3 rest)> puffs = Movable(topClouds);
+        ThinRim(puffs);
         // Each shaft brightens from nothing to its material's own brightness.
         var shafts = new List<(Renderer renderer, float shaft, float pool)>();
         var props = new MaterialPropertyBlock();
@@ -515,6 +530,13 @@ public class EndingFlight : MonoBehaviour
     IEnumerator SleepShot()
     {
         Show(sleepShot);
+        if (sleepSpot != null)
+        {
+            foreach (LightBeam beam in lightShafts)
+                if (beam != null)
+                    beam.gameObject.SetActive(false);
+            sleepSpot.SetLevel(1);
+        }
         Baby baby = Baby.Instance;
         if (baby == null)
             yield break;
@@ -665,6 +687,34 @@ public class EndingFlight : MonoBehaviour
         renderer.SetPropertyBlock(props);
     }
 
+    // The cloud sea's outer edge thinned (Cloud Rim Width, Cloud Rim Thin): over the oval round all its puffs, those out towards
+    // it shrink, each by its own draw, more the nearer the edge, some to nothing. Their size only; where they are stays.
+    void ThinRim(List<(Transform puff, Vector3 rest)> puffs)
+    {
+        if (puffs.Count == 0 || cloudRimThin <= 0f || cloudRimWidth <= 0f)
+            return;
+        Vector2 lo = new(float.MaxValue, float.MaxValue), hi = new(float.MinValue, float.MinValue);
+        foreach ((Transform _, Vector3 rest) in puffs)
+        {
+            lo = Vector2.Min(lo, new Vector2(rest.x, rest.z));
+            hi = Vector2.Max(hi, new Vector2(rest.x, rest.z));
+        }
+        Vector2 middle = (lo + hi) * 0.5f, half = Vector2.Max((hi - lo) * 0.5f, Vector2.one * 0.01f);
+        foreach ((Transform puff, Vector3 rest) in puffs)
+        {
+            if (!rimScales.TryGetValue(puff, out Vector3 own))
+                rimScales[puff] = own = puff.localScale;
+            float r = new Vector2((rest.x - middle.x) / half.x, (rest.z - middle.y) / half.y).magnitude;
+            float edge = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f - cloudRimWidth, 1f, r));
+            float draw = Mathf.Abs(Mathf.Sin((rest.x * 0.37f + rest.z * 1.13f) * 12.9898f) * 43758.5453f) % 1f;
+            float shrink = cloudRimThin * edge * Mathf.Lerp(0.4f, 1.6f, draw);
+            puff.localScale = own * Mathf.Clamp01(1f - shrink);
+        }
+    }
+
+    // Each puff's own size before the rim was thinned, so thinning again starts from it.
+    readonly Dictionary<Transform, Vector3> rimScales = new();
+
     // The clouds draw back from the gap like cloth parting: each puff moves straight out from its centre, the nearest by the
     // radius and less and less out to twice the radius, beyond which nothing moves. None ever overtakes another (the push never
     // falls off faster than the distance grows), so only the clouds around the hole shift. Across only (X and Z).
@@ -762,10 +812,31 @@ public class EndingFlight : MonoBehaviour
         return points;
     }
 
+    static readonly int FlowerSparkleId = Shader.PropertyToID("_WC_FlowerSparkle");
+    static readonly int FlowerSparkleGlowId = Shader.PropertyToID("_WC_FlowerSparkleGlow");
+
+    void OnEnable() => ApplyFlowerSparkle();
+
+    void OnValidate()
+    {
+        if (Application.isPlaying && isActiveAndEnabled)
+            ApplyFlowerSparkle();
+    }
+
+    // WatercolorFlat reads the sparkle from shader globals.
+    void ApplyFlowerSparkle()
+    {
+        bool on = flowerSparkle.maxColorComponent > 0f;
+        Shader.SetGlobalVector(FlowerSparkleId, new Vector4(flowerSparkleSpeed, flowerSparkleSize, flowerSparkleBase, on ? 1f : 0f));
+        Shader.SetGlobalVector(FlowerSparkleGlowId, flowerSparkle);
+    }
+
     void OnDisable()
     {
         if (brain != null && IsPlaying)
             brain.DefaultBlend = blendBefore;
+        Shader.SetGlobalVector(FlowerSparkleId, Vector4.zero);
+        Shader.SetGlobalVector(FlowerSparkleGlowId, Vector4.zero);
     }
 
     void OnDrawGizmos()

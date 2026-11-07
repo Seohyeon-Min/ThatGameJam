@@ -267,6 +267,9 @@ public class TreeGenerator : MonoBehaviour
                     continue;
                 if (zones.Exists(zone => zone.kind == TreeZone.Kind.Thin && thinRoll > zone.KeptShare(position)))
                     continue;
+                // None over a hole in the terrain (the cliff cut back past the ending's point) or off it: it would float.
+                if (terrain != null && !OnGround(terrain, position))
+                    continue;
                 if (terrain != null)
                     position.y = terrain.transform.position.y + terrain.SampleHeight(position);
                 Quaternion rotation = Quaternion.Euler(0f, randomRotation ? yaw : 0f, 0f);
@@ -496,6 +499,46 @@ public class TreeGenerator : MonoBehaviour
 
     static bool AllPrefabs(GameObject[] prefabs) =>
         System.Array.TrueForAll(prefabs, p => p != null && PrefabUtility.IsPartOfPrefabAsset(p));
+
+    // Whether this point (X and Z) is on the terrain, not over one of its holes nor past its sides.
+    static bool OnGround(Terrain terrain, Vector3 point)
+    {
+        TerrainData data = terrain.terrainData;
+        Vector3 local = point - terrain.transform.position;
+        float u = local.x / data.size.x, v = local.z / data.size.z;
+        if (u < 0f || u >= 1f || v < 0f || v >= 1f)
+            return false;
+        int res = data.holesResolution;
+        return !data.IsHole(Mathf.Min((int)(u * res), res - 1), Mathf.Min((int)(v * res), res - 1));
+    }
+
+    // Removes the trees already made that stand over a hole or off the terrain (their bare and leafy ones both), as Generate now
+    // leaves them out, without making the rest again. Returns how many trees.
+    public int RemoveOffGround()
+    {
+        Terrain terrain = ground != null ? ground : Terrain.activeTerrain;
+        if (terrain == null)
+            return 0;
+        Undo.RecordObject(this, "Remove Floating Trees");
+        var gone = new List<GameObject>();
+        int removed = planted.RemoveAll(tree =>
+        {
+            GameObject any = tree.bare != null ? tree.bare : tree.leafy;
+            if (any == null || OnGround(terrain, any.transform.position))
+                return false;
+            gone.Add(tree.bare);
+            gone.Add(tree.leafy);
+            return true;
+        });
+        trees.RemoveAll(t => t == null || gone.Contains(t));
+        foreach (GameObject tree in gone)
+            if (tree != null)
+            {
+                Debug.Log($"Trees: removed {tree.name} at {tree.transform.position}, over a hole or off the terrain.", this);
+                Undo.DestroyObjectImmediate(tree);
+            }
+        return removed;
+    }
 
     // Removes only the trees this generator made.
     public void Clear()

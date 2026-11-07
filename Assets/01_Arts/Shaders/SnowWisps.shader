@@ -1,5 +1,5 @@
-// The gust that clears the snow, made visible: swirling brush strokes spiralling out from the centre with the spring ring's
-// front (the _SpringRing global). Drawn on a flat quad that SeasonSnow lays above the ground.
+// The gust of each season's turn, made visible: swirling brush strokes spiralling out from the centre with the spring ring's
+// front (the _SpringRing global). Drawn on a flat quad that SeasonWisps lays above the ground, its look set per season step.
 // Each stroke is a crescent along a spiral: pointed at both ends, thickest early on, with torn edges and a dry-brush tail. Thick
 // strokes and hair-thin lines mix, at different distances behind the front. All turn as the ring grows and thin out toward
 // Fade Radius, so the swirl is gone while the ring calms on.
@@ -21,6 +21,7 @@ Shader "ThatGameJam/SnowWisps"
         _DryBrush ("Dry Brush Tail", Range(0, 1)) = 0.8
         _Edge ("Edge Softness (world units)", Float) = 0.03
         _FadeRadius ("Gone By Ring Radius", Float) = 34
+        _Appear ("Strength Now (SeasonWisps sets it over time)", Range(0, 1)) = 1
     }
     SubShader
     {
@@ -54,6 +55,7 @@ Shader "ThatGameJam/SnowWisps"
                 float _DryBrush;
                 float _Edge;
                 float _FadeRadius;
+                float _Appear;
             CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; };
@@ -105,6 +107,8 @@ Shader "ThatGameJam/SnowWisps"
             {
                 float radius = _SpringRing.w;
                 half overall = 1.0 - smoothstep(_FadeRadius * 0.65, _FadeRadius, radius);
+                // How far it has come up, and gone, over the seconds since the ring began (SeasonWisps).
+                overall *= _Appear;
                 if (radius <= 0.0 || overall <= 0.0)
                     return 0;
 

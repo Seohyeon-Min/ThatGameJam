@@ -229,6 +229,26 @@ Shader "ThatGameJam/WatercolorFlat"
             return (1.0 - smoothstep(0.25, 1.0, t)) * _WC_RingBloom.z;
         }
 
+        // 다 핀 꽃의 빛(EndingFlight 의 Flower Sparkle): 링과 함께 피는 꽃만. 꽃마다 따로 깜빡이지 않고, 부드러운 빛 덩어리가 꽃밭
+        // 위를 아주 천천히 흘러가며 이웃한 꽃들이 함께 밝아졌다 잦아든다(두 겹의 값 노이즈가 서로 다른 쪽으로 흐른다). 꽃마다 조금씩만
+        // 어긋난다. 늘 깔리는 은은한 빛(z) 위에 얹는다. 피어나는 동안은 없고, 다 피어 가면서 생긴다.
+        float4 _WC_FlowerSparkle;      // x 흐르는 빠르기(초당 미터), y 빛 덩어리의 크기(미터), z 늘 깔리는 빛의 몫(0~1), w 켜짐(1)
+        float4 _WC_FlowerSparkleGlow;  // 가장 밝을 때 더하는 HDR 빛(선형 색 × 세기). 블룸이 번지게 한다
+
+        half FlowerSparkle(float bloomT)
+        {
+            if (_WC_FlowerSparkle.w <= 0.0 || _RingBloomable < 0.5 || ((unity_RendererUserValue >> 24) & 1u) == 0u)
+                return 0.0;
+            float2 at = UNITY_MATRIX_M._m03_m13_m23.xz;
+            float2 p = at / max(_WC_FlowerSparkle.y, 0.1);
+            float drift = _Time.y * _WC_FlowerSparkle.x / max(_WC_FlowerSparkle.y, 0.1);
+            float light = SunPoolNoise(p + float2(drift, drift * 0.37)) * 0.6
+                        + SunPoolNoise(p * 1.9 + float2(-drift * 0.6, drift * 0.8) + 13.7) * 0.4;
+            light += (SunPoolHash(at * 2.3 + 7.7) - 0.5) * 0.12;
+            float glow = smoothstep(0.5, 0.85, light);
+            return smoothstep(0.6, 1.0, bloomT) * lerp(glow, 1.0, saturate(_WC_FlowerSparkle.z));
+        }
+
         float3 ApplyRingBloom(float3 positionWS, bool onScreen)
         {
             float t = RingBloomProgress(onScreen);
@@ -829,7 +849,8 @@ Shader "ThatGameJam/WatercolorFlat"
                     albedo = lerp(albedo, ground, melted);
                 }
                 albedo = lerp(albedo, 1.0, InstanceWhiten());
-                half ringBloom = RingBloomWhite(RingBloomProgress(true));
+                float ringBloomT = RingBloomProgress(true);
+                half ringBloom = RingBloomWhite(ringBloomT);
                 albedo = lerp(albedo, 1.0, ringBloom);
 
                 // 색 카오스: 같은 색 안에 떨어뜨린 다른 색 물방울. 굽기 때 정한 덩어리와 물방울 모양대로 색상을 돌린다.
@@ -1299,6 +1320,8 @@ Shader "ThatGameJam/WatercolorFlat"
                 color = SRGBToLinear(color);
                 // 링 가장자리에서 피어나는 꽃의 빛: 1 을 넘는 HDR 값을 더해 블룸이 번지게 한다(수채화 흰색이 아니라 실제로 빛난다).
                 color += _WC_RingBloomGlow.rgb * (ringBloom / max(_WC_RingBloom.z, 0.001));
+                // 다 핀 꽃의 반짝임(FlowerSparkle).
+                color += _WC_FlowerSparkleGlow.rgb * FlowerSparkle(ringBloomT);
 
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1);
