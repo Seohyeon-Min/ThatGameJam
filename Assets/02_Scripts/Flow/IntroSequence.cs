@@ -3,8 +3,10 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
-// The game's opening, above the clouds. The title shows until the first click; the bird flies in from below the screen to that click.
+// The game's opening, above the clouds. The title's logo video plays through; then "best with headphones" fades in under it, and
+// from then the first click starts the game: the bird flies in from below the screen to that click.
 // The sky camera then travels to its end point without turning while the player flies the bird by clicking, as in the game.
 // Near the end the bird curves in, slowing, and goes straight into circling over the hole in the clouds. A click on the baby sends it up a little and then diving,
 // and the game starts behind a white fade. Everything here is saved in the scene: this only turns it on and off.
@@ -25,6 +27,14 @@ public class IntroSequence : MonoBehaviour
     [Header("Screen")]
     [SerializeField] Graphic title;
     [SerializeField, Min(0.01f)] float titleFadeSeconds = 0.6f;
+    [Tooltip("The title's logo video: no click counts until it has played through (or failed, or Logo Max Seconds have gone by).")]
+    [SerializeField] VideoPlayer titleVideo;
+    [SerializeField, Min(0f)] float logoMaxSeconds = 15f;
+    [Tooltip("\"Best experienced with headphones\" under the title, clear until the logo has played; seconds it takes to fade in. It goes with the title.")]
+    [SerializeField] CanvasGroup headphones;
+    [SerializeField, Min(0.01f)] float headphonesFadeSeconds = 0.8f;
+    [Tooltip("Seconds after the title shows that the headphones line starts to fade in (clicks still wait for the logo's end).")]
+    [SerializeField, Min(0f)] float headphonesAfter = 4f;
     [Tooltip("White, over the whole screen.")]
     [SerializeField] Graphic whiteFade;
     [Tooltip("Seconds from the moment the bird starts dropping until the screen is fully white. The game starts then, so the dive is cut short if it would run longer.")]
@@ -106,6 +116,11 @@ public class IntroSequence : MonoBehaviour
             brain.UpdateMethod = updateMethod;
         }
         SetAlpha(whiteFade, 0f);
+        if (headphones != null)
+        {
+            headphones.alpha = 0f;
+            headphones.gameObject.SetActive(true);
+        }
         StartCoroutine(Run());
     }
 
@@ -128,6 +143,7 @@ public class IntroSequence : MonoBehaviour
         bird.Teleport(AtFlightHeight(Camera.main.ViewportToScreenPoint(new Vector3(0.5f, -0.3f))));
         bird.SetAltitude(orbitCentre.position.y, true);
 
+        yield return WaitForLogo();
         yield return new WaitUntil(ClickedThisFrame);
         Vector2 click = Mouse.current.position.ReadValue();
         StartCoroutine(FadeOutTitle());
@@ -158,15 +174,69 @@ public class IntroSequence : MonoBehaviour
         yield return StartGame();
     }
 
+    // Until the logo video has played to its end; or it couldn't play, or it is taking too long (a slow or failed load on the web).
+    IEnumerator WaitForLogo()
+    {
+        if (titleVideo == null)
+        {
+            StartHeadphones();
+            yield break;
+        }
+        bool done = false;
+        void Ended(VideoPlayer player) => done = true;
+        void Failed(VideoPlayer player, string message) => done = true;
+        titleVideo.loopPointReached += Ended;
+        titleVideo.errorReceived += Failed;
+        bool hint = false;
+        for (float t = 0f; !done && t < logoMaxSeconds; t += Time.unscaledDeltaTime)
+        {
+            // The headphones line comes in a set time after the title shows, whatever the video's own clock says.
+            if (!hint && t >= headphonesAfter)
+                hint = StartHeadphones();
+            yield return null;
+        }
+        titleVideo.loopPointReached -= Ended;
+        titleVideo.errorReceived -= Failed;
+        if (!hint)
+            StartHeadphones();
+    }
+
+    bool StartHeadphones()
+    {
+        if (headphones != null)
+            StartCoroutine(FadeInHeadphones());
+        return true;
+    }
+
+    IEnumerator FadeInHeadphones()
+    {
+        for (float t = 0f; t < headphonesFadeSeconds && !titleGoing; t += Time.deltaTime)
+        {
+            headphones.alpha = Mathf.SmoothStep(0f, 1f, t / headphonesFadeSeconds);
+            yield return null;
+        }
+        if (!titleGoing)
+            headphones.alpha = 1f;
+    }
+
+    // The title (and the headphones line) has started fading out.
+    bool titleGoing;
+
     IEnumerator FadeOutTitle()
     {
+        titleGoing = true;
         float from = title.color.a;
+        float hintFrom = headphones != null ? headphones.alpha : 0f;
         for (float t = 0f; t < titleFadeSeconds; t += Time.deltaTime)
         {
             SetAlpha(title, Mathf.Lerp(from, 0f, t / titleFadeSeconds));
+            if (headphones != null)
+                headphones.alpha = Mathf.Lerp(hintFrom, 0f, t / titleFadeSeconds);
             yield return null;
         }
         title.gameObject.SetActive(false);
+        if (headphones != null)
+            headphones.gameObject.SetActive(false);
     }
 
     // Measures each cloud once, so what it takes to clear the screen is known without looking at all its puffs every frame.
@@ -382,6 +452,8 @@ public class IntroSequence : MonoBehaviour
     {
         SetAlpha(whiteFade, 1f);
         title.gameObject.SetActive(false);
+        if (headphones != null)
+            headphones.gameObject.SetActive(false);
         skyCamera.gameObject.SetActive(false);
         diveCamera.gameObject.SetActive(false);
         // The clouds are only for up here, wherever in the scene they were placed.

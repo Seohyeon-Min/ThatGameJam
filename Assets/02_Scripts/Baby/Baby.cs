@@ -98,6 +98,18 @@ public class Baby : CryListener
     bool lookingUpAtBird;
     // The ending: she stays as she sits and follows the bird with her head, blinking now and then.
     bool watchingBird;
+    // Waiting at a StopPoint that has her watch its observe target with her head (the lost rabbit), tilted to one side; else null.
+    Transform watchedTarget;
+    float watchedTilt;
+    // Something calling nearby (the mother rabbit's first cry) that she will trot a little toward, mid-walk; else null.
+    Transform noticedCall;
+    // How far (m) above the watched target she looks: her head comes up first when she notices a call.
+    float watchedLift;
+    float watchedLiftNow;
+    // Once she has seen the mother rabbit call her young home, a cry while she walks has her trot a little toward the bird too,
+    // instead of only looking up at it.
+    bool comesToCries;
+    float headTiltNow;
     // The eyes' Blink blend shapes (the flower eyes and the closed-eye chips), and the next blink.
     readonly List<(SkinnedMeshRenderer renderer, int shape)> blinkShapes = new();
     float nextBlinkAt;
@@ -226,6 +238,12 @@ public class Baby : CryListener
             lookPoint = playLookAt.position;
             active = true;
         }
+        else if (watchedTarget != null)
+        {
+            watchedLiftNow = Mathf.MoveTowards(watchedLiftNow, watchedLift, 1.2f * Time.deltaTime);
+            lookPoint = watchedTarget.position + Vector3.up * (0.15f + watchedLiftNow);
+            active = true;
+        }
         // The bird keeping the snow off her holds her eyes, over any landmark. Blending out keeps the last point looked at.
         else if (BirdController.Instance.IsSheltering)
             lookPoint = BirdController.Instance.transform.position;
@@ -234,6 +252,9 @@ public class Baby : CryListener
         else
             active = false;
         GameTuning tuning = GameTuning.Current;
+        // The tilt eases in and out by itself, so looking up at the bird from it does not snap her head straight.
+        bool tilting = watchedTarget != null && !noticingBird && !lookingUpAtBird && !watchingBird && !watchingLight;
+        headTiltNow = Mathf.MoveTowards(headTiltNow, tilting ? watchedTilt * (1f + 0.15f * Mathf.Sin(Time.time * 0.9f)) : 0f, 30f * Time.deltaTime);
         gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, tuning.babyGazeBlendTime));
         if (gazeBlend <= 0.001f)
             return;
@@ -242,6 +263,8 @@ public class Baby : CryListener
         Vector3 toTarget = (lookPoint - headBone.position).normalized;
         Vector3 desiredDir = Vector3.RotateTowards(animatedForward, toTarget, Mathf.Deg2Rad * tuning.babyGazeMaxAngle, 0f);
         Quaternion desiredRot = Quaternion.LookRotation(desiredDir, headBone.up);
+        if (headTiltNow != 0f)
+            desiredRot = Quaternion.AngleAxis(headTiltNow, desiredDir) * desiredRot;
         headBone.rotation = Quaternion.Slerp(headBone.rotation, desiredRot, gazeBlend);
     }
 
@@ -284,6 +307,7 @@ public class Baby : CryListener
     public void RestAt(Transform spot)
     {
         StopAllCoroutines();
+        watchedTarget = null;
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
@@ -308,6 +332,7 @@ public class Baby : CryListener
     public void LieDownAt(Transform spot)
     {
         StopAllCoroutines();
+        watchedTarget = null;
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
@@ -344,6 +369,7 @@ public class Baby : CryListener
     public void WalkOnFrom(BabyRoute route, int index)
     {
         StopAllCoroutines();
+        watchedTarget = null;
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
@@ -373,6 +399,7 @@ public class Baby : CryListener
     public void Sleep(BabyRoute route)
     {
         StopAllCoroutines();
+        watchedTarget = null;
         gettingUp = false;
         watchingBird = false;
         skyReach = 0f;
@@ -523,6 +550,12 @@ public class Baby : CryListener
                 StandStill();
                 CurrentBlocker = blocker;
                 blocker.BeginWaiting();
+                if (stop.WatchWithHead)
+                {
+                    watchedTarget = stop.ObserveTarget;
+                    watchedTilt = stop.HeadTilt;
+                    watchedLift = 0f;
+                }
                 // Switches idle variant (Idle/Hum/Stretch) every so often so a long wait doesn't just breathe in
                 // place; skipped while observing something specific, which takes full attention instead.
                 float idleVariantCooldown = UnityEngine.Random.Range(tuning.babyIdleVariantIntervalMin, tuning.babyIdleVariantIntervalMax);
@@ -549,6 +582,7 @@ public class Baby : CryListener
                     yield return null;
                 }
             }
+            watchedTarget = null;
             if (blocker.OpenedByBird && blocker.LookUpWhenOpenedByBird)
             {
                 State = BabyState.Reacting;
@@ -666,10 +700,20 @@ public class Baby : CryListener
             // Full attention on the crossing while balancing: no glancing around or reacting to cries.
             if (!onBalanceBeam)
             {
-                if (cryPending && (cryReactionDelay -= Time.deltaTime) <= 0f)
+                if (noticedCall != null)
+                {
+                    Transform call = noticedCall;
+                    noticedCall = null;
+                    comesToCries = true;
+                    yield return TrotToward(call, 0.6f, target);
+                }
+                else if (cryPending && (cryReactionDelay -= Time.deltaTime) <= 0f)
                 {
                     cryPending = false;
-                    yield return ReactToCry();
+                    if (comesToCries)
+                        yield return TrotToward(BirdController.Instance.transform, 0f, target);
+                    else
+                        yield return ReactToCry();
                 }
                 // The intro only: the bird flying close overhead is itself worth a glance, cry or not.
                 else if (InIntro && (birdNoticeCooldown -= Time.deltaTime) <= 0f && BirdNearby())
@@ -692,6 +736,102 @@ public class Baby : CryListener
             }
             yield return null;
         }
+    }
+
+    // Heard something call (the mother rabbit gathering her young): she will, mid-walk, stop and look, trot a little that way and
+    // watch, then walk on. Only while walking: waiting or reacting, she lets it go.
+    public void NoticeCall(Transform caller)
+    {
+        if (State == BabyState.Walking && !onBalanceBeam)
+            noticedCall = caller;
+    }
+
+    // Like a person hearing something (the mother rabbit's call; later the bird's cry): her head comes up toward it first, eyes
+    // lookAbove (m) over it, as she slows; she stays like
+    // that a moment, body still the way she was going; then turns and trots over, quick to start and slowing as she gets there,
+    // the last steps a walk, her pace never quite even; then watches a while.
+    IEnumerator TrotToward(Transform call, float lookAbove, Vector3 routeTarget)
+    {
+        GameTuning tuning = GameTuning.Current;
+        // Where she left her way: she comes back onto it a little further on, not straight to the next route point.
+        Vector3 leftWay = transform.position;
+        State = BabyState.Reacting;
+        watchedTarget = call;
+        watchedTilt = 0f;
+        watchedLift = lookAbove;
+        yield return EaseToStop();
+        yield return new WaitForSeconds(tuning.babyCallNoticePause);
+        watchedLift = lookAbove / 3f;
+        for (float t = 0f; t < 0.45f; t += Time.deltaTime)
+        {
+            TurnToward(call.position - transform.position);
+            yield return null;
+        }
+
+        Vector3 toCall = call.position - transform.position;
+        toCall.y = 0f;
+        float distance = Mathf.Min(tuning.babyCallTrotDistance, toCall.magnitude - 1f);
+        if (distance > 0.1f)
+        {
+            Vector3 start = transform.position;
+            Vector3 goal = start + toCall.normalized * distance;
+            animator.SetBool(QuietWaitParam, false);
+            animator.SetBool(WalkingParam, true);
+            float peak = tuning.babyCallTrotSpeed;
+            while (transform.position != goal)
+            {
+                float done = Vector3.Distance(start, transform.position) / distance;
+                // Up to speed over the first fifth, full on to just past halfway, then easing down to a walk's pace at the end.
+                float speedUp = Mathf.SmoothStep(0.35f, 1f, done / 0.2f);
+                float slowDown = Mathf.Lerp(1f, 0.2f, Mathf.SmoothStep(0f, 1f, (done - 0.55f) / 0.45f));
+                float uneven = 1f + Noise(57f, 2.3f) * 0.25f;
+                float speed = Mathf.Max(0.25f, peak * speedUp * slowDown * uneven);
+                if (speed > tuning.babyWalkSpeed * 1.25f)
+                {
+                    PlayDirect(RunState, 0.15f);
+                    animator.speed = Mathf.Clamp(speed / Mathf.Max(peak, 0.01f), 0.75f, 1.15f);
+                }
+                else
+                {
+                    if (directState != 0)
+                    {
+                        directState = 0;
+                        animator.CrossFade(WalkState, 0.25f);
+                    }
+                    animator.speed = Mathf.Clamp(speed / Mathf.Max(tuning.babyWalkClipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
+                }
+                TurnToward(goal - transform.position);
+                transform.position = Vector3.MoveTowards(transform.position, goal, speed * Time.deltaTime);
+                yield return null;
+            }
+        }
+        StandStill();
+        watchedLift = 0f;
+        for (float t = 0f; t < tuning.babyCallWatchTime; t += Time.deltaTime)
+        {
+            TurnToward(call.position - transform.position);
+            yield return null;
+        }
+        // Back onto her way: a glance still on it as she turns, then walking (StepToward eases her up to speed and slows her
+        // turning) to a point a little ahead on the line she was walking, from where she goes on to the route point.
+        State = BabyState.Walking;
+        Vector3 along = routeTarget - leftWay;
+        along.y = 0f;
+        if (along.sqrMagnitude > 0.0001f)
+        {
+            Vector3 way = along.normalized;
+            float onWay = Mathf.Clamp(Vector3.Dot(transform.position - leftWay, way) + tuning.babyCallRejoinAhead, 0f, along.magnitude);
+            Vector3 rejoin = leftWay + way * onWay;
+            rejoin.y = routeTarget.y;
+            float glance = 0.6f;
+            while (!StepToward(rejoin))
+            {
+                if ((glance -= Time.deltaTime) <= 0f)
+                    watchedTarget = null;
+                yield return null;
+            }
+        }
+        watchedTarget = null;
     }
 
     // Pauses the walk to look at the bird when it cries nearby mid-route.
@@ -826,6 +966,7 @@ public class Baby : CryListener
     public void PlayEnding()
     {
         StopAllCoroutines();
+        watchedTarget = null;
         directState = 0;
         CurrentBlocker = null;
         State = BabyState.Ending;
