@@ -755,9 +755,8 @@ public class Baby : CryListener
             yield return null;
         }
         transform.position = target;
-        // Climbing up onto the beam (not down off the far end): a foot lands on wood, not snow.
-        if (onBalanceBeam)
-            RuntimeManager.PlayOneShot("event:/SFX/footstepTreeJump", transform.position);
+        // Climbing up onto the beam: a foot lands on wood. Down off the far end: back onto snow.
+        RuntimeManager.PlayOneShot(onBalanceBeam ? "event:/SFX/footstepTreeJump" : "event:/SFX/footstepSnow", transform.position);
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog maze).
