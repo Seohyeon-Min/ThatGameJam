@@ -43,6 +43,8 @@ public static class BuildEasterEggs
     const float PeckReach = 0.5f, PeckDrop = 0.12f;
     // How far below an icicle's top the beak taps it, in metres.
     const float IcicleTapBelowTop = 0.15f;
+    // The icy tree model's two branches the icicles hang from, and the name of each one's perch.
+    static readonly (string mesh, string perch)[] IcicleBranches = { ("Tube", "Branch_Right"), ("Tube 6", "Branch_Left") };
     const string RockMaterial = "Assets/01_Arts/Materials/Test/Rock.mat";
     const string TrunkMaterial = "Assets/01_Arts/Materials/Test/Trunk.mat";
 
@@ -179,8 +181,14 @@ public static class BuildEasterEggs
         Vector3[] foot = treePoints.Where(p => p.y < treeBottom + treeHeight * 0.1f).ToArray();
         var axis = new Vector3(foot.Average(p => p.x), 0f, foot.Average(p => p.z));
         float scale = root.transform.localScale.x;
+        // The icicles hang from the model's two branches. The bird has one spot per branch and pecks each of its icicles from there
+        // (it turns toward the one it pecks, IcicleXylophone).
+        Vector3[][] branchPoints = IcicleBranches.Select(branch => tree.GetComponentsInChildren<MeshFilter>().First(f => f.name == branch.mesh))
+            .Select(f => f.sharedMesh.vertices.Select(v => (root.transform.worldToLocalMatrix * f.transform.localToWorldMatrix).MultiplyPoint3x4(v)).ToArray())
+            .ToArray();
         var colliders = new List<Collider>();
-        var perches = new List<Perchable>();
+        var branchOf = new List<int>();
+        var spots = IcicleBranches.Select(_ => new List<(Vector3 position, Vector3 facing)>()).ToArray();
         foreach (MeshFilter icicle in icicles)
         {
             icicle.gameObject.layer = interactableLayer;
@@ -190,9 +198,9 @@ public static class BuildEasterEggs
             // Wider than the icicle, so it is easy to click.
             box.size = new Vector3(Mathf.Max(b.size.x, 0.3f), b.size.y, Mathf.Max(b.size.z, 0.3f));
             colliders.Add(box);
-            // Where the bird stands to tap it: on the branch it hangs from, facing along it toward the icicle, so at the bottom of a peck
-            // the beak is a little below the icicle's top. In toward the trunk, unless the icicle is so near the trunk that the bird
-            // would stand in it: then out along the branch, facing in.
+            // Where the bird would stand to tap just this icicle: on the branch it hangs from, facing along it toward the icicle, so at
+            // the bottom of a peck the beak is a little below the icicle's top. In toward the trunk, unless the icicle is so near the trunk
+            // that the bird would stand in it: then out along the branch, facing in. The branch's spot is one of these.
             Matrix4x4 toRoot = root.transform.worldToLocalMatrix * icicle.transform.localToWorldMatrix;
             Vector3[] corners = Corners(b).Select(c => toRoot.MultiplyPoint3x4(c)).ToArray();
             var top = new Vector3(corners.Average(c => c.x), corners.Max(c => c.y), corners.Average(c => c.z));
@@ -204,15 +212,32 @@ public static class BuildEasterEggs
                 along = -along;
             Vector3 facing = fromTrunk.magnitude * scale > PeckReach + 0.3f ? along : -along;
             Vector3 beak = top + Vector3.down * (IcicleTapBelowTop / scale);
-            Transform tapFrom = Child(root.transform, "TapFrom", beak - facing * (PeckReach / scale) + Vector3.up * (PeckDrop / scale));
-            tapFrom.localRotation = Quaternion.LookRotation(facing);
-            Perchable perch = AddPerchable(icicle.gameObject, tapFrom);
-            Set(perch, so =>
+            int branch = Enumerable.Range(0, branchPoints.Length).OrderBy(n => branchPoints[n].Min(p => (p - top).sqrMagnitude)).First();
+            branchOf.Add(branch);
+            spots[branch].Add((beak - facing * (PeckReach / scale) + Vector3.up * (PeckDrop / scale), facing));
+        }
+        // Each branch's spot: the one nearest the middle of its icicles' spots.
+        var perches = new Perchable[IcicleBranches.Length];
+        for (int n = 0; n < perches.Length; n++)
+        {
+            Vector3 middle = spots[n].Aggregate(Vector3.zero, (sum, s) => sum + s.position) / spots[n].Count;
+            var (position, facing) = spots[n].OrderBy(s => (s.position - middle).sqrMagnitude).First();
+            var branch = new GameObject(IcicleBranches[n].perch);
+            branch.transform.SetParent(icicles[0].transform.parent, false);
+            var point = new GameObject("PerchPoint").transform;
+            point.SetParent(branch.transform, false);
+            point.SetPositionAndRotation(root.transform.TransformPoint(position), root.transform.rotation * Quaternion.LookRotation(facing));
+            perches[n] = AddPerchable(branch, point);
+            Collider[] hanging = Enumerable.Range(0, colliders.Count).Where(k => branchOf[k] == n).Select(k => colliders[k]).ToArray();
+            Set(perches[n], so =>
             {
                 so.FindProperty("alignBird").boolValue = true;
                 so.FindProperty("faceForward").boolValue = true;
+                SerializedProperty through = so.FindProperty("clickedThrough");
+                through.arraySize = hanging.Length;
+                for (int k = 0; k < hanging.Length; k++)
+                    through.GetArrayElementAtIndex(k).objectReferenceValue = hanging[k];
             });
-            perches.Add(perch);
         }
         var discovery = AddDiscovery(root, "05_IcicleXylophone", tree.transform);
         IcicleXylophone egg = root.AddComponent<IcicleXylophone>();
@@ -224,7 +249,7 @@ public static class BuildEasterEggs
             for (int i = 0; i < colliders.Count; i++)
             {
                 list.GetArrayElementAtIndex(i).FindPropertyRelative("body").objectReferenceValue = colliders[i];
-                list.GetArrayElementAtIndex(i).FindPropertyRelative("perch").objectReferenceValue = perches[i];
+                list.GetArrayElementAtIndex(i).FindPropertyRelative("perch").objectReferenceValue = perches[branchOf[i]];
                 list.GetArrayElementAtIndex(i).FindPropertyRelative("semitone").intValue = semitones[i];
             }
         });

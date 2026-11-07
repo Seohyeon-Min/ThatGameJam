@@ -138,6 +138,8 @@ public class BirdController : MonoBehaviour
     float landTime;
     // The turn while landing, from the heading it arrived with.
     Quaternion landFrom, landTo;
+    // Perched, the heading it turns to on the spot (TurnToward). Set to the landing heading as it lands.
+    float perchedYaw;
     float nextCryTime;
     bool perchCursorShown;
     Vector3 baseScale;
@@ -533,7 +535,7 @@ public class BirdController : MonoBehaviour
             case State.Flying: Fly(); break;
             case State.ToPerch: FlyToPerch(); break;
             case State.Landing: Land(); Bank(0f); break;
-            case State.Perched: transform.position = perch.PerchPoint.position; Bank(0f); break;
+            case State.Perched: transform.position = perch.PerchPoint.position; TurnOnPerch(); Bank(0f); break;
             case State.Walking: Walk(); break;
         }
         bool moved = transform.position != before;
@@ -725,6 +727,10 @@ public class BirdController : MonoBehaviour
         if (hit.collider.gameObject.layer != interactableLayer)
             return null;
         Perchable perchable = hit.collider.GetComponentInParent<Perchable>();
+        if (perchable == null)
+            foreach (Perchable other in Perchable.All)
+                if (other.IsClickedThrough(hit.collider))
+                    perchable = other;
         return perchable != null && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) ? perchable : null;
     }
 
@@ -995,6 +1001,7 @@ public class BirdController : MonoBehaviour
         if (landTime < GameTuning.Current.birdPerchDuration)
             return;
         state = State.Perched;
+        facingYaw = perchedYaw = transform.eulerAngles.y;
         clicksLocked = false;
         perch.NotifyPerched();
         if (refusePending)
@@ -1002,6 +1009,23 @@ public class BirdController : MonoBehaviour
             refusePending = false;
             StartRefusing();
         }
+    }
+
+    // Perched, it turns on the spot to face the point, level (an icicle under its branch, before it pecks it).
+    // Returns the seconds the turn takes.
+    public float TurnToward(Vector3 point)
+    {
+        Vector3 direction = Vector3.ProjectOnPlane(point - transform.position, Vector3.up);
+        if (state != State.Perched || direction.sqrMagnitude < 0.0001f)
+            return 0f;
+        perchedYaw = Quaternion.LookRotation(direction).eulerAngles.y;
+        return Mathf.Abs(Mathf.DeltaAngle(facingYaw, perchedYaw)) / GameTuning.Current.birdTurnSpeed;
+    }
+
+    void TurnOnPerch()
+    {
+        facingYaw = Mathf.MoveTowardsAngle(facingYaw, perchedYaw, GameTuning.Current.birdTurnSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
     }
 
     // Facing along the perch point's forward axis, the way nearer the current heading (or its forward itself, FacesForward).
