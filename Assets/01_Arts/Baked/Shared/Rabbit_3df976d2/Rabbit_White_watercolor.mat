@@ -7,16 +7,17 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: MigratingBird_Body
+  m_Name: Rabbit_White_watercolor
   m_Shader: {fileID: 4800000, guid: 1e9b512877cd5804da930abaa62cc45b, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
+  - _HASPATTERN_ON
   - _LEAVEPAPER_ON
   - _RECEIVECASTSHADOWS_ON
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -30,11 +31,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ChaosTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 11700000, guid: 4d84c14644da3804db86f98522c421d2, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _PatternTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 11700000, guid: 239003bd9bbe733429baeab5bbe72f56, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _TerrainHolesTexture:
@@ -59,7 +60,7 @@ Material:
     - _Cull: 2
     - _Cutoff: 0.5
     - _Floor: 0
-    - _HasPattern: 0
+    - _HasPattern: 1
     - _LeafCard: 0
     - _LeavePaper: 1
     - _MeltScale: 7
@@ -82,7 +83,7 @@ Material:
     - _WindStrength: 0.05
     - _WindWaveLength: 4
     m_Colors:
-    - _BaseColor: {r: 0.55, g: 0.48, b: 0.4, a: 1}
+    - _BaseColor: {r: 0.93574095, g: 0.9260748, b: 0.9063317, a: 1}
     - _BirchColour: {r: 0.41999996, g: 0.26999995, b: 0.17999998, a: 1}
     - _BoilSpeed: {r: 0.08, g: 0.056, b: 0, a: 0}
     - _MeltColour: {r: 0.54999995, g: 0.72, b: 0.37999994, a: 1}

@@ -4,6 +4,7 @@
 // - 빛: 빛을 감싸 들어가게(wrap) 받아 명암이 부드럽게 넘어가고, 그늘은 옅은 하늘색이다.
 // - 깊이를 쓰지 않아 수채화 윤곽선이 그려지지 않고, 그림자도 드리우지 않는다(딱딱한 그림자 가장자리가 생기지 않게).
 //   다른 물체의 그림자는 Shadow Strength만큼 받는다(아이 몸의 눈은 절반, 땅에 쌓인 눈은 전부: 둘레 땅과 같은 그림자).
+// Paint 텍스처를 주면 눈 색에 곱한다(토끼굴의 어두운 입구). 기본은 흰색이라 바뀌지 않는다.
 // 수채화 베이크(WatercolorBaker)는 이 셰이더의 렌더러를 건너뛴다(WatercolorBake = Skip 태그).
 Shader "ThatGameJam/SoftSnow"
 {
@@ -20,6 +21,7 @@ Shader "ThatGameJam/SoftSnow"
         _Puff ("Puff Out Along Normal (object units)", Float) = 0
         _ShadowStrength ("Shadow Strength (how much of others' shadows it takes)", Range(0, 1)) = 0.5
         _CastShadeColor ("Cast Shadow Colour (where others' shadows fall)", Color) = (0.72, 0.8, 0.92, 1)
+        _MainTex ("Paint (multiplies the snow colour; white = none)", 2D) = "white" {}
     }
 
     SubShader
@@ -41,7 +43,11 @@ Shader "ThatGameJam/SoftSnow"
             float _Puff;
             half _ShadowStrength;
             half4 _CastShadeColor;
+            float4 _MainTex_ST;
         CBUFFER_END
+
+        TEXTURE2D(_MainTex);
+        SAMPLER(sampler_MainTex);
 
         float Hash(float3 p)
         {
@@ -148,6 +154,7 @@ Shader "ThatGameJam/SoftSnow"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -158,6 +165,7 @@ Shader "ThatGameJam/SoftSnow"
                 float3 normalWS : TEXCOORD1;
                 float3 positionOS : TEXCOORD2;
                 float fogFactor : TEXCOORD3;
+                float2 uv : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -173,6 +181,7 @@ Shader "ThatGameJam/SoftSnow"
                 // Turned and scaled with the body but not moved, so the fluff is a size in metres and sticks to her.
                 output.positionOS = mul((float3x3)GetObjectToWorldMatrix(), positionOS);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
+                output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 return output;
             }
 
@@ -189,6 +198,8 @@ Shader "ThatGameJam/SoftSnow"
                 half3 colour = lerp(_ShadeColor.rgb, _Color.rgb, wrapped);
                 colour = lerp(colour, _CastShadeColor.rgb, (1.0 - mainLight.shadowAttenuation) * _ShadowStrength);
                 colour *= lerp(1.0, mainLight.color, 0.5);
+                // Painted snow (the rabbit hole's dark mouth): the paint over the lit snow, its shading kept.
+                colour *= SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).rgb;
                 colour += SampleSH(normalWS) * 0.15;
                 return half4(MixFog(colour, input.fogFactor), alpha);
             }

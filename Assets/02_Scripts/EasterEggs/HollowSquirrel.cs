@@ -15,6 +15,8 @@ public class HollowSquirrel : MonoBehaviour
     [Tooltip("How long it stays out. It plays the look-around clip from the start and turns its body left and right.")]
     [SerializeField, Min(0f)] float lookSeconds = 5f;
     [SerializeField, Range(0f, 90f)] float turnAngle = 35f;
+    [Tooltip("Small rings bubbling up at the hollow while the squirrel is in it: a cry here is answered.")]
+    [SerializeField] CryHint cryHint;
 
     bool busy;
 
@@ -30,11 +32,15 @@ public class HollowSquirrel : MonoBehaviour
     IEnumerator PeekOut()
     {
         busy = true;
+        if (cryHint != null)
+            cryHint.Playing = false;
         yield return Move(inside, peek);
         discovery.Reveal();
         yield return LookAround();
         yield return Move(peek, inside);
         busy = false;
+        if (cryHint != null)
+            cryHint.Playing = true;
     }
 
     // Left, right, then back to the front, each turn held for a while.

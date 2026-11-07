@@ -2,58 +2,61 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-// The blocked rabbit burrow of stage 2 (design doc §8.2, ADR 0036). Rabbits on the road wait by the burrow, whose entrance snow keeps
-// them from the rabbits inside. The snow goes as it is dug: from inside once a cry has called the rabbits there (they answer with the
-// bird's own cry), and from outside while the bird stands at it pecking. Each alone takes GameTuning.burrowDigTime, both together half,
-// and what is dug stays dug. Left alone, the rabbits inside start digging by themselves so they break through as the natural time runs
-// out. Once through, they come out, take the road's rabbits in, and the road opens.
+// The rabbit burrow of stage 2 (design doc §8.2, ADR 0037). First, as the girl comes, the mother rabbit, out in front of the burrow,
+// calls her young home, crying over and over at no beat (a yellow ring spreads each time). At each cry the young, scattered about
+// her, prick their ears and hop a step after her: first to her side, then after her into the hole. The girl notices the first cry and
+// trots a little that way. One of them slept through it,
+// and wakes once the others are in: it sits on the way, afraid, wandering a little, not knowing where the hole is, and the girl stops
+// for it. A cry near the hole is answered from inside after a short beat (a yellow ring at the mouth, the mother peeking out), and
+// the little one pricks its ears, looks, runs home, and the way opens. Left alone, the mother calls it by herself as the natural time
+// runs out. The bird never touches the rabbits: it only gets the family's voices to each other.
 public class RabbitBurrow : PathBlocker
 {
+    enum Phase { Before, Calling, Lost, Home }
+
     [SerializeField] NaturalTimer timer;
-    [Tooltip("Where the bird stands to clear the snow. Its click collider is the snow.")]
-    [SerializeField] Perchable snowPerch;
-    [Tooltip("The entrance's snow: it shrinks as it is dug and is gone once through.")]
-    [SerializeField] Transform snow;
-    [Tooltip("The rabbits inside answer a cry with this: the BirdCryPulse at the entrance. Every particle system in it plays.")]
-    [SerializeField] GameObject answer;
-    [Tooltip("The hole, where the rabbits come out and go in.")]
+    [Tooltip("The hole's mouth: where the rabbits go in, and where the mother peeks out.")]
     [SerializeField] Transform hole;
-    [Tooltip("The rabbits on the road.")]
-    [SerializeField] BurrowRabbit[] roadRabbits;
-    [Tooltip("The rabbits inside, hidden until the burrow is through.")]
-    [SerializeField] BurrowRabbit[] burrowRabbits;
-    [Tooltip("Where each rabbit from inside sits while the road's rabbits go in, in the order of Burrow Rabbits.")]
-    [SerializeField] Transform[] waitPoints;
-    [Tooltip("Seconds between the road's rabbits setting off for the hole.")]
-    [SerializeField, Min(0f)] float stagger = 0.35f;
-    [Tooltip("Snow thrown up while it is dug: a burst on each peck, and a little all the time the rabbits dig.")]
-    [SerializeField] ParticleSystem digSnow;
-    [Tooltip("While the burrow is shut, now and then a road rabbit hops over here, sniffs at the snow and hops back.")]
-    [SerializeField] Transform pacePoint;
-    [SerializeField] Vector2 paceSeconds = new(3f, 6f);
+
+    [Header("First: the mother calls her young home")]
+    [Tooltip("The girl coming by this point (in this stage) sets the mother calling.")]
+    [SerializeField] Transform callTrigger;
+    [SerializeField, Min(0.1f)] float callTriggerRadius = 1.2f;
+    [SerializeField] BurrowRabbit mother;
+    [Tooltip("Her call: the BirdCryPulse on her. Every particle system in it plays.")]
+    [SerializeField] GameObject motherCall;
+    [Tooltip("The young she calls in (not the one left behind).")]
+    [SerializeField] BurrowRabbit[] young;
+    [Tooltip("How far (m) a young rabbit hops after her at each of her cries.")]
+    [SerializeField, Min(0.1f)] float youngStep = 1.6f;
+    [Tooltip("Seconds between one young rabbit and the next, going in.")]
+    [SerializeField, Min(0f)] float stagger = 0.3f;
+
+    [Header("Then: the one left behind")]
+    [Tooltip("Starts asleep on the way, wakes once the others are in.")]
+    [SerializeField] BurrowRabbit lost;
+    [Tooltip("How far (m) from its place it wanders, lost.")]
+    [SerializeField, Min(0f)] float wanderRadius = 0.6f;
+    [SerializeField] Vector2 wanderPause = new(1.2f, 2.8f);
+    [Tooltip("The answer from inside (and the mother's own call, left alone): the BirdCryPulse at the mouth.")]
+    [SerializeField] GameObject answer;
+    [Tooltip("Small rings bubbling up at the mouth while a cry would be answered (the little one lost).")]
+    [SerializeField] CryHint cryHint;
 
     public override NaturalTimer Timer => timer;
 
-    ParticleSystem[] answerSystems;
-    Vector3 snowScale;
-    Quaternion snowRotation;
-    float dug;
-    bool called;
-    bool birdHelped;
-    bool opening;
-    float nextPeck;
-    float nextDigSnow;
-    Coroutine pacing;
+    Phase phase;
+    bool girlWaiting;
+    Coroutine wandering;
+    bool[] youngStepping;
+    Stage stage;
 
     void Awake()
     {
-        answerSystems = answer.GetComponentsInChildren<ParticleSystem>(true);
-        snowScale = snow.localScale;
-        snowRotation = snow.localRotation;
+        stage = GetComponentInParent<Stage>();
+        cryHint.Playing = false;
         timer.Resolved += OnResolved;
     }
-
-    void Start() => pacing = StartCoroutine(Pace());
 
     void OnDestroy() => timer.Resolved -= OnResolved;
 
@@ -61,113 +64,193 @@ public class RabbitBurrow : PathBlocker
 
     void OnDisable() => CryListener.Cried -= OnCried;
 
-    public override void BeginWaiting() => timer.Begin();
-
-    void OnCried(Vector3 origin)
+    public override void BeginWaiting()
     {
-        if (opening)
-            return;
-        Vector3 offset = origin - hole.position;
-        offset.y = 0f;
-        float radius = GameTuning.Current.burrowCryRadius;
-        if (offset.sqrMagnitude > radius * radius)
-            return;
-        called = true;
-        birdHelped = true;
-        foreach (ParticleSystem system in answerSystems)
-            system.Play(false);
+        girlWaiting = true;
+        // Come here some other way than past the trigger (a dev skip): the call still comes first.
+        if (phase == Phase.Before)
+            StartCoroutine(CallYoung());
+        else if (phase == Phase.Lost)
+            timer.Begin();
     }
 
     void Update()
     {
-        if (opening)
+        if (phase != Phase.Before || GameFlow.Instance == null || GameFlow.Instance.CurrentStage != stage || Baby.Instance == null)
             return;
-        GameTuning tuning = GameTuning.Current;
-        BirdController bird = BirdController.Instance;
-        bool pecking = bird != null && bird.IsPerched && bird.Perch == snowPerch;
-        if (pecking && Time.time >= nextPeck)
-        {
-            nextPeck = Time.time + bird.Peck(1) + 0.15f;
-            digSnow.Emit(6);
-        }
-        bool digging = called || timer.IsRunning && timer.Elapsed >= timer.Duration - tuning.burrowDigTime;
-        if (digging && Time.time >= nextDigSnow)
-        {
-            nextDigSnow = Time.time + 0.25f;
-            digSnow.Emit(3);
-        }
-        birdHelped |= pecking;
+        Vector3 offset = Baby.Instance.transform.position - callTrigger.position;
+        offset.y = 0f;
+        if (offset.sqrMagnitude <= callTriggerRadius * callTriggerRadius)
+            StartCoroutine(CallYoung());
+    }
 
-        // Dug from inside, the snow trembles.
-        snow.localRotation = digging
-            ? snowRotation * Quaternion.Euler(Mathf.Sin(Time.time * 23f) * 2f, 0f, Mathf.Sin(Time.time * 19f) * 2f)
-            : snowRotation;
-        float rate = (digging ? 1f : 0f) + (pecking ? 1f : 0f);
-        if (rate == 0f)
+    // Only the little one, lost, can be helped: while the mother is still calling the others the cry goes unanswered.
+    void OnCried(Vector3 origin)
+    {
+        if (phase != Phase.Lost)
             return;
-        dug = Mathf.Min(1f, dug + rate * Time.deltaTime / tuning.burrowDigTime);
-        ShowSnow();
-        if (dug < 1f)
-            return;
-        if (birdHelped)
+        Vector3 offset = origin - hole.position;
+        offset.y = 0f;
+        float radius = GameTuning.Current.burrowCryRadius;
+        if (offset.sqrMagnitude <= radius * radius)
             timer.ResolveByBird();
-        else
-            timer.ResolveNaturally();
     }
 
-    void ShowSnow()
+    IEnumerator CallYoung()
     {
-        float shrink = 1f - 0.4f * dug;
-        snow.localScale = new Vector3(snowScale.x * shrink, snowScale.y * (1f - dug), snowScale.z * shrink);
-    }
-
-    // The natural time can run out with the bird's late help still digging: that help counts.
-    void OnResolved(bool byBird) => StartCoroutine(OpenWay(byBird || birdHelped));
-
-    IEnumerator OpenWay(bool byBird)
-    {
-        opening = true;
-        StopCoroutine(pacing);
-        snowPerch.CanPerch = false;
-        snowPerch.Release();
-        snow.localRotation = snowRotation;
-        // A dev shortcut resolves the timer directly: the rest of the snow still goes.
-        float from = dug;
-        const float rest = 0.5f;
-        for (float t = 0f; t < rest && from < 1f; t += Time.deltaTime)
-        {
-            dug = Mathf.Lerp(from, 1f, t / rest);
-            ShowSnow();
+        phase = Phase.Calling;
+        // She cries over and over, as a player clicking at will would, until she is in, and at each cry the young hop a step
+        // after her: first to her side, then after her into the hole.
+        youngStepping = new bool[young.Length];
+        StartCoroutine(MotherCries());
+        // The girl hears it too, and trots a little her way (and from now on comes to the bird's cries the same way).
+        if (Baby.Instance != null)
+            Baby.Instance.NoticeCall(mother.transform);
+        for (float t = 0f; t < 8f && !YoungGathered(); t += Time.deltaTime)
             yield return null;
-        }
-        snow.gameObject.SetActive(false);
-        digSnow.Emit(20);
+        yield return new WaitForSeconds(0.2f);
+        StartCoroutine(mother.GoIn(hole.position));
+        while (mother.gameObject.activeSelf)
+            yield return null;
+        // She is in: the rest of the way, straight after her.
+        yield return Together(young.Length, i => YoungGoIn(i));
 
-        yield return Together(burrowRabbits.Length, i => burrowRabbits[i].ComeOut(hole.position, waitPoints[i].position));
-        yield return new WaitForSeconds(0.4f);
-        yield return Together(roadRabbits.Length, i => Delayed(i * stagger, roadRabbits[i].GoIn(hole.position)));
-        Open(byBird);
-        yield return Together(burrowRabbits.Length, i => burrowRabbits[i].GoIn(hole.position));
+        yield return new WaitForSeconds(0.8f);
+        yield return lost.WakeUp();
+        lost.SetAfraid(true);
+        phase = Phase.Lost;
+        cryHint.Playing = true;
+        wandering = StartCoroutine(Wander());
+        if (girlWaiting)
+            timer.Begin();
     }
 
-    // The road's rabbits want to go in: one at a time hops to the snow and back to its place, leaving tracks (FootprintMaker).
-    // Only once its stage has come, so no tracks show up from nowhere while the burrow is still hidden.
-    IEnumerator Pace()
+    bool YoungGathered()
     {
-        Stage stage = GetComponentInParent<Stage>();
+        foreach (BurrowRabbit rabbit in young)
+        {
+            Vector3 offset = rabbit.transform.position - mother.transform.position;
+            offset.y = 0f;
+            if (offset.magnitude > 0.7f)
+                return false;
+        }
+        return true;
+    }
+
+    // Each young rabbit, hearing her, pricks its ears and hops a step (up to youngStep m) toward her side, unless still hopping.
+    void YoungHear()
+    {
+        for (int i = 0; i < young.Length; i++)
+            if (!youngStepping[i])
+                StartCoroutine(YoungStep(i));
+    }
+
+    IEnumerator YoungStep(int i)
+    {
+        youngStepping[i] = true;
+        BurrowRabbit rabbit = young[i];
+        yield return new WaitForSeconds(UnityEngine.Random.Range(0.12f, 0.3f));
+        rabbit.PrickEars();
+        Vector3 her = mother.transform.position;
+        Vector3 from = rabbit.transform.position - her;
+        from.y = 0f;
+        Vector3 beside = her + (from.sqrMagnitude > 0.0001f ? from.normalized : -mother.transform.forward) * 0.45f;
+        if (Vector3.Distance(rabbit.transform.position, beside) > 0.15f)
+        {
+            yield return rabbit.TurnToward(beside, 0.2f);
+            yield return rabbit.HopTo(Vector3.MoveTowards(rabbit.transform.position, beside, youngStep), true);
+        }
+        youngStepping[i] = false;
+    }
+
+    IEnumerator YoungGoIn(int i)
+    {
+        while (youngStepping[i])
+            yield return null;
+        yield return new WaitForSeconds(i * stagger);
+        yield return young[i].GoIn(hole.position);
+    }
+
+    // Now a few quick cries, now a pause, at no beat, while she is still calling.
+    IEnumerator MotherCries()
+    {
+        while (phase == Phase.Calling && mother.gameObject.activeSelf)
+        {
+            Cry(motherCall);
+            YoungHear();
+            yield return new WaitForSeconds(UnityEngine.Random.value < 0.2f
+                ? UnityEngine.Random.Range(0.25f, 0.4f)
+                : UnityEngine.Random.Range(0.9f, 1.6f));
+        }
+    }
+
+    // One more cry from the pulse, over any still spreading: each system emits what its first burst would.
+    static void Cry(GameObject pulse)
+    {
+        foreach (ParticleSystem system in pulse.GetComponentsInChildren<ParticleSystem>())
+        {
+            ParticleSystem.EmissionModule emission = system.emission;
+            int count = emission.burstCount > 0 ? Mathf.Max(1, Mathf.RoundToInt(emission.GetBurst(0).count.constant)) : 1;
+            system.Emit(count);
+        }
+    }
+
+    // A little hop this way or that about its place, and a look round, over and over.
+    IEnumerator Wander()
+    {
+        Vector3 seat = lost.transform.position;
         while (true)
         {
-            yield return new WaitForSeconds(UnityEngine.Random.Range(paceSeconds.x, paceSeconds.y));
-            if (GameFlow.Instance == null || GameFlow.Instance.CurrentStage != stage)
-                continue;
-            BurrowRabbit rabbit = roadRabbits[UnityEngine.Random.Range(0, roadRabbits.Length)];
-            Vector3 seat = rabbit.transform.position;
-            Quaternion facing = rabbit.transform.rotation;
-            yield return rabbit.HopTo(pacePoint.position + pacePoint.forward * UnityEngine.Random.Range(-0.3f, 0.3f));
-            yield return new WaitForSeconds(1.5f);
-            yield return rabbit.HopTo(seat);
-            yield return rabbit.TurnTo(facing);
+            yield return new WaitForSeconds(UnityEngine.Random.Range(wanderPause.x, wanderPause.y));
+            Vector2 step = UnityEngine.Random.insideUnitCircle * wanderRadius;
+            yield return lost.HopTo(seat + new Vector3(step.x, 0f, step.y));
         }
+    }
+
+    void OnResolved(bool byBird)
+    {
+        // Resolved before the call was over (a dev shortcut): the others are in already.
+        bool skipCall = phase != Phase.Lost;
+        phase = Phase.Home;
+        cryHint.Playing = false;
+        if (skipCall)
+        {
+            StopAllCoroutines();
+            mother.gameObject.SetActive(false);
+            foreach (BurrowRabbit rabbit in young)
+                rabbit.gameObject.SetActive(false);
+        }
+        StartCoroutine(GoHome(byBird, skipCall));
+    }
+
+    IEnumerator GoHome(bool byBird, bool skipCall)
+    {
+        if (skipCall)
+            yield return lost.WakeUp();
+        if (wandering != null)
+            StopCoroutine(wandering);
+        lost.Halt();
+
+        if (byBird)
+            yield return new WaitForSeconds(GameTuning.Current.burrowAnswerDelay);
+        Play(answer);
+        StartCoroutine(mother.PeekOut(hole.position, lost.transform.position));
+        yield return new WaitForSeconds(0.3f);
+        lost.SetAfraid(false);
+        lost.PrickEars();
+        yield return lost.TurnToward(hole.position, 0.5f);
+        yield return new WaitForSeconds(0.35f);
+        // The mother goes back in just before it gets there, and it follows her down.
+        float run = Vector3.Distance(lost.transform.position, hole.position) / lost.RunSpeed;
+        StartCoroutine(Delayed(Mathf.Max(0f, run - 0.4f), mother.Sink()));
+        yield return lost.GoIn(hole.position, true);
+        Open(byBird);
+    }
+
+    static void Play(GameObject pulse)
+    {
+        foreach (ParticleSystem system in pulse.GetComponentsInChildren<ParticleSystem>(true))
+            system.Play(false);
     }
 
     IEnumerator Together(int count, Func<int, IEnumerator> routine)

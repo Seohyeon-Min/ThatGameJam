@@ -110,11 +110,18 @@ public class GameTuning : ScriptableObject
     // Once the baby has got up in the next stage, the sunlit spot she slept in fades out over this many seconds.
     public float sunlitSpotFadeSeconds = 1.5f;
 
-    [Header("Rabbit burrow (ADR 0036)")]
-    // The rabbits inside (called by the cry, or by themselves near the end of the natural time) dig through the entrance's snow in
-    // this many seconds, and so does the bird pecking at it. Both together take half.
-    public float burrowDigTime = 8f;
-    // A cry this close to the entrance (XZ) calls the rabbits inside.
+    [Header("Rabbit burrow (ADR 0037)")]
+    // The mother's first cry, calling her young: the girl's head comes up and she holds still this long (s), then trots this far (m)
+    // toward her, at most this fast (m/s, slowing as she gets there), and watches this long (s).
+    public float babyCallNoticePause = 0.6f;
+    public float babyCallTrotDistance = 1.5f;
+    public float babyCallTrotSpeed = 2f;
+    public float babyCallWatchTime = 0.8f;
+    // Then she comes back onto her way this far (m) ahead of where she is along it, instead of cutting straight to the next point.
+    public float babyCallRejoinAhead = 1.5f;
+    // After a cry, this many seconds before the mother answers from the hole.
+    public float burrowAnswerDelay = 0.6f;
+    // A cry this close to the hole (XZ) is answered from inside.
     public float burrowCryRadius = 10f;
 
     [Header("Fog maze (ADR 0028)")]

@@ -48,8 +48,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BurrowRabbit
   animator: {fileID: 2896922171261504230}
   hopSpeed: 0.9
+  runSpeed: 1.6
   idleSeconds: {x: 3, y: 6}
   sinkDepth: 0.3
+  ears:
+  - {fileID: 1172730487666183410}
+  - {fileID: 7436512216146640657}
+  startAsleep: 0
+  wakeSeconds: 2.6
+  shiverAmplitude: 0.006
+  shiverFrequency: 38
 --- !u!114 &488764064811307955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1177,6 +1185,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f88151b2f07d4e145a16a555fb3d8f4d, type: 3}
+--- !u!4 &1172730487666183410 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -1648569397764981883, guid: f88151b2f07d4e145a16a555fb3d8f4d, type: 3}
+  m_PrefabInstance: {fileID: 8744155341052082039}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1553269706379512714 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1380590343201866499, guid: f88151b2f07d4e145a16a555fb3d8f4d, type: 3}
@@ -1195,6 +1208,11 @@ Animator:
 --- !u!4 &3847798063549838681 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5494221153527169582, guid: f88151b2f07d4e145a16a555fb3d8f4d, type: 3}
+  m_PrefabInstance: {fileID: 8744155341052082039}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7436512216146640657 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -7031607200477116314, guid: f88151b2f07d4e145a16a555fb3d8f4d, type: 3}
   m_PrefabInstance: {fileID: 8744155341052082039}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &7970683034238899664 stripped
