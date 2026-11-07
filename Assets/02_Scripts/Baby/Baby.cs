@@ -125,8 +125,6 @@ public class Baby : CryListener
     float gazeTimeRemaining;
     float gazeBlend;
     Vector3 lookPoint;
-    // Paused to look around (CuriousPause).
-    bool lookingAround;
 
     protected override float CryRadius => GameTuning.Current.babyWakeCryRadius;
 
@@ -202,7 +200,7 @@ public class Baby : CryListener
             return;
         if (gazeTimeRemaining > 0f)
             gazeTimeRemaining -= Time.deltaTime;
-        bool active = State == BabyState.Walking && !onBalanceBeam && !lookingAround;
+        bool active = State == BabyState.Walking && !onBalanceBeam;
         if (State == BabyState.Ending && !asleepInEnding)
             Blink();
         animator.transform.localPosition = modelBasePosition;
@@ -292,7 +290,6 @@ public class Baby : CryListener
         watchingLight = false;
         asleepInEnding = false;
         directState = 0;
-        lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         animator.speed = 1f;
         // Already lying: no lying-down animation after the move. Under the snow in the intro, until it is shaken off.
@@ -317,7 +314,6 @@ public class Baby : CryListener
         watchingLight = false;
         asleepInEnding = false;
         directState = 0;
-        lookingAround = false;
         transform.SetPositionAndRotation(spot.position, spot.rotation);
         CurrentBlocker = null;
         animator.SetBool(WalkingParam, false);
@@ -354,7 +350,6 @@ public class Baby : CryListener
         watchingLight = false;
         asleepInEnding = false;
         directState = 0;
-        lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
         transform.position = route[index].position;
@@ -387,7 +382,6 @@ public class Baby : CryListener
         if (directState != 0)
             animator.Play(SleepState, 0, 0f);
         directState = 0;
-        lookingAround = false;
         this.route = route;
         CurrentBlocker = null;
         State = BabyState.Sleeping;
@@ -686,17 +680,13 @@ public class Baby : CryListener
                 else if ((curiousPauseCooldown -= Time.deltaTime) <= 0f)
                 {
                     curiousPauseCooldown = UnityEngine.Random.Range(GameTuning.Current.babyCuriousPauseIntervalMin, GameTuning.Current.babyCuriousPauseIntervalMax);
-                    PointOfInterest poi = PickNearbyPointOfInterest();
                     // A specific thing nearby: glance at it without breaking stride (LateUpdate turns only the head).
-                    // Nothing nearby: fall back to the old full stop-and-look-around.
+                    // Nothing nearby: keeps walking, no reason to stop at nothing.
+                    PointOfInterest poi = PickNearbyPointOfInterest();
                     if (poi != null)
                     {
                         gazeTarget = poi;
                         gazeTimeRemaining = GameTuning.Current.babyGazeDuration;
-                    }
-                    else
-                    {
-                        yield return CuriousPause();
                     }
                 }
             }
@@ -723,19 +713,6 @@ public class Baby : CryListener
         noticingBird = true;
         yield return new WaitForSeconds(GameTuning.Current.babyBirdNoticeDuration);
         noticingBird = false;
-    }
-
-    // Pauses the walk to glance around, like a child noticing something nearby rather than marching straight through.
-    IEnumerator CuriousPause()
-    {
-        GameTuning tuning = GameTuning.Current;
-        yield return EaseToStop();
-        // Looks around even under the sheltering bird: LateUpdate leaves the head to the animation meanwhile.
-        lookingAround = true;
-        animator.SetBool(LookAroundParam, true);
-        yield return new WaitForSeconds(tuning.babyLookAroundDuration);
-        animator.SetBool(LookAroundParam, false);
-        lookingAround = false;
     }
 
     // The jump's position at progress t (0 to 1): eased horizontal lerp, plus a sine arc over the straight
@@ -850,7 +827,6 @@ public class Baby : CryListener
     {
         StopAllCoroutines();
         directState = 0;
-        lookingAround = false;
         CurrentBlocker = null;
         State = BabyState.Ending;
         StandStill();
