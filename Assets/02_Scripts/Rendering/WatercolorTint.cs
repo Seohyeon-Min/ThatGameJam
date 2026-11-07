@@ -16,6 +16,10 @@ public class WatercolorTint : MonoBehaviour
     [Range(0f, 1f)] public float whiten;
     [Tooltip("How far its hue turns, in turns of the colour wheel (0.1 = 36 degrees). 0 = its own hue")]
     [Range(-MostHueShift, MostHueShift)] public float hueShift;
+    [Tooltip("Paints its petals this hue (its material's Petal Hue says which colours are petals), such as the ending's yellow field. Hue Shift then varies it")]
+    public bool paintPetals;
+    [Tooltip("The petals' hue, in turns of the colour wheel (0.14 = yellow)")]
+    [Range(0f, 1f)] public float petalHue = 0.14f;
 
     void OnEnable() => WatercolorPaintedModel.ApplyUserValue(gameObject);
     void OnValidate() => WatercolorPaintedModel.ApplyUserValue(gameObject);

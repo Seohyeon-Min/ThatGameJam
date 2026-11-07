@@ -24,6 +24,8 @@ public class BirdController : MonoBehaviour
     static readonly int WalkRateParam = Animator.StringToHash("WalkRate");
     static readonly int HoppingParam = Animator.StringToHash("Hopping");
     static readonly int HoverRateParam = Animator.StringToHash("HoverRate");
+    // Flying slower than it glides: it keeps beating its wings (Flap) instead of gliding.
+    static readonly int SlowParam = Animator.StringToHash("Slow");
     static readonly int FlapState = Animator.StringToHash("Flap");
     static readonly int DiveLoopState = Animator.StringToHash("DiveLoop");
     // How fast Bird_Hop goes forward without its feet sliding, in the model's units per second (the bird's export notes).
@@ -151,6 +153,8 @@ public class BirdController : MonoBehaviour
     float climbHold;
     float smoothRise;
     float hoverRate = 1f;
+    // Fast enough to glide (GameTuning.birdGlideSpeed); slower, it only beats its wings.
+    bool gliding;
     // Where it would be over her, before the area and screen limits.
     Vector3 shelterSpot;
 
@@ -435,6 +439,9 @@ public class BirdController : MonoBehaviour
 
     void Update()
     {
+        // Only the player's own flight (below) is ever slow; scripted and sky flight glide as they always have.
+        if (control != Control.Game)
+            animator.SetBool(SlowParam, false);
         if (control == Control.Scripted)
         {
             // The intro's scripted moments (circling, the dive run-up) move the bird on their own, but crying
@@ -540,8 +547,12 @@ public class BirdController : MonoBehaviour
         smoothRise = Mathf.Lerp(smoothRise, climbing ? rise : 0f, 1f - Mathf.Exp(-3f * Time.deltaTime));
         float headGoal = climbing ? Mathf.Clamp(-smoothRise * tuning.birdClimbHeadPerSpeed, -tuning.birdClimbHeadMost, tuning.birdClimbHeadMost) : 0f;
         headPitch = Mathf.Lerp(headPitch, headGoal, 1f - Mathf.Exp(-tuning.birdClimbHeadEase * Time.deltaTime));
-        // Glides while it moves and hovers in place otherwise; rising or sinking, the wings beat faster, eased in and out.
+        // Moving, it glides once fast enough and otherwise keeps beating its wings (Flap); in place it hovers. Rising or sinking,
+        // the wings beat faster, eased in and out. A little under the glide speed before it stops gliding, so it doesn't flicker.
+        float flatSpeed = Time.deltaTime > 0f ? new Vector2(transform.position.x - before.x, transform.position.z - before.z).magnitude / Time.deltaTime : 0f;
+        gliding = moved && flatSpeed >= (gliding ? tuning.birdGlideSpeed - tuning.birdGlideMargin : tuning.birdGlideSpeed);
         animator.SetBool(MovingParam, moved && !climbing);
+        animator.SetBool(SlowParam, !gliding);
         hoverRate = Mathf.Lerp(hoverRate, climbing ? tuning.birdClimbHoverRate : 1f, 1f - Mathf.Exp(-6f * Time.deltaTime));
         animator.SetFloat(HoverRateParam, hoverRate);
         animator.SetBool(PerchedParam, state is State.Landing or State.Perched or State.Walking);
@@ -786,7 +797,11 @@ public class BirdController : MonoBehaviour
         Vector3 position = transform.position;
         var from = new Vector3(position.x, 0f, position.z);
         Vector3 to = Limit(new Vector3(target.x, 0f, target.z));
-        currentSpeed = Mathf.MoveTowards(currentSpeed, GameTuning.Current.birdSpeed, GameTuning.Current.birdAcceleration * Time.deltaTime);
+        // Slower the nearer where it is going is (the pointer), up to its full speed far off.
+        GameTuning speeds = GameTuning.Current;
+        float far = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(speeds.birdSlowDistance, speeds.birdFastDistance, Vector3.Distance(from, to)));
+        float wanted = Mathf.Lerp(Mathf.Min(speeds.birdMinSpeed, speeds.birdSpeed), speeds.birdSpeed, far);
+        currentSpeed = Mathf.MoveTowards(currentSpeed, wanted, speeds.birdAcceleration * Time.deltaTime);
         Vector3 flat = Vector3.MoveTowards(from, to, currentSpeed * Time.deltaTime);
         // Zoomed all the way in, it comes down where it can stand. Flying low, it keeps above logs, banks and the water.
         Vector3 heading = to - from;
@@ -892,9 +907,16 @@ public class BirdController : MonoBehaviour
     void ShakeHead()
     {
         if (state == State.Perched)
-            animator.SetTrigger(RefuseParam);
+            StartRefusing();
         else
             refusePending = true;
+    }
+
+    // Shakes its head (can't go that way), and the camera shakes with it (RefuseShake).
+    void StartRefusing()
+    {
+        animator.SetTrigger(RefuseParam);
+        RefuseShake.Shake();
     }
 
     void RefuseAtClosedWay(Vector3 flat)
@@ -978,7 +1000,7 @@ public class BirdController : MonoBehaviour
         if (refusePending)
         {
             refusePending = false;
-            animator.SetTrigger(RefuseParam);
+            StartRefusing();
         }
     }
 

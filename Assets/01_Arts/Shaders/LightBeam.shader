@@ -41,6 +41,7 @@ Shader "ThatGameJam/LightBeam"
         _StepSoftness ("Wash Step Softness", Range(0.05, 1)) = 0.35
         _GroundFade ("Ground Fade Height", Float) = 1.5
         _GroundAlpha ("Alpha At Ground", Range(0, 1)) = 0.5
+        _TopFade ("Top Fade Length (world units; 0 = a clean end)", Float) = 0
         [Header(Life)]
         _Pulse ("Pulse", Range(0, 0.5)) = 0.08
         _PulseSpeed ("Pulse Speed", Float) = 0.25
@@ -85,6 +86,7 @@ Shader "ThatGameJam/LightBeam"
                 half _Steps;
                 half _StepSoftness;
                 float _GroundFade;
+                float _TopFade;
                 half _GroundAlpha;
                 half _Pulse;
                 float _PulseSpeed;
@@ -174,7 +176,16 @@ Shader "ThatGameJam/LightBeam"
                 // Settles softly onto the ground instead of a hard cut.
                 half ground = lerp(_GroundAlpha, 1.0, saturate(h / max(_GroundFade, 1e-3)));
 
-                half coverage = saturate(body * ground * pulse * _Intensity * _Color.a);
+                // Fades out towards its top end, unevenly across it, so where it comes out of the clouds it has no edge.
+                half top = 1.0;
+                if (_TopFade > 0.0)
+                {
+                    float shaftLength = h / max(input.uv.y, 1e-4);
+                    float reach = _TopFade * (0.7 + 0.6 * SunPoolNoise(float2(x * 1.7 + 5.3, time * 0.03)));
+                    top = smoothstep(0.0, 1.0, saturate((shaftLength - h) / max(reach, 1e-3)));
+                }
+
+                half coverage = saturate(body * ground * top * pulse * _Intensity * _Color.a);
                 return half4(color * coverage, coverage);
             }
 

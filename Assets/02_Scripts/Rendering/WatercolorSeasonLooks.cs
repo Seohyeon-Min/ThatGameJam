@@ -23,6 +23,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
     Volume volume;
     Volume incoming;
     float volumeBlend = 1f;
+    float volumeFadeSeconds;
     Season season;
     int currentLevel;
     WatercolorManager.Settings from;
@@ -78,7 +79,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
         currentLevel = level;
         WatercolorLook look = LookFor(level);
         if (look != null)
-            CrossfadeVolume(look.volumeProfile);
+            CrossfadeVolume(look.volumeProfile, blendSeconds);
 
         // The photo is taken even when the level has no look of its own: what the season brings out (HiddenUntilSeason, the trees'
         // leaves) must still spread from the ring instead of appearing everywhere at once.
@@ -100,11 +101,25 @@ public class WatercolorSeasonLooks : MonoBehaviour
         blend = 0f;
     }
 
-    // A second global Volume on top fades in; when it's full, the scene's Volume takes its profile and it fades back out of use.
-    void CrossfadeVolume(VolumeProfile profile)
+    // A second global Volume on top fades in over these seconds; when it's full, the scene's Volume takes its profile and it fades
+    // back out of use. 0 seconds: the scene's Volume takes it at once. Also for the ending's shots (EndingFlight).
+    public void CrossfadeVolume(VolumeProfile profile, float seconds)
     {
-        if (volume == null || profile == null || profile == volume.sharedProfile)
+        if (volume == null)
+            volume = FindSceneVolume();
+        if (volume == null || profile == null)
             return;
+        if (seconds <= 0f)
+        {
+            volume.sharedProfile = profile;
+            if (incoming != null)
+                incoming.weight = 0f;
+            volumeBlend = 1f;
+            return;
+        }
+        if (profile == volume.sharedProfile && volumeBlend >= 1f)
+            return;
+        volumeFadeSeconds = seconds;
         if (incoming == null)
         {
             incoming = new GameObject("SeasonVolumeFade").AddComponent<Volume>();
@@ -124,7 +139,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
     {
         if (volumeBlend >= 1f || incoming == null)
             return;
-        volumeBlend = blendSeconds > 0f ? Mathf.Min(1f, volumeBlend + Time.deltaTime / blendSeconds) : 1f;
+        volumeBlend = volumeFadeSeconds > 0f ? Mathf.Min(1f, volumeBlend + Time.deltaTime / volumeFadeSeconds) : 1f;
         incoming.weight = Mathf.SmoothStep(0f, 1f, volumeBlend);
         if (volumeBlend >= 1f)
         {

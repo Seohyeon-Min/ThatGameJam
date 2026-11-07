@@ -26,6 +26,8 @@ public class Cutscene : MonoBehaviour
     [SerializeField, Min(0)] int startDelayFrames;
     [Tooltip("Applied at once when the cutscene starts, with its Volume Profile if it has one, and what was there before comes back at once when it ends. Empty keeps the current look.")]
     [SerializeField] WatercolorLook look;
+    [Tooltip("The look stays when it ends, rather than what was there before coming back: for the ending, which holds on its last shot.")]
+    [SerializeField] bool keepLook;
     [Tooltip("From Play (its start delay included) to its end: the player can't move the bird, zoom or cry, and the bird stops where it is.")]
     [SerializeField] bool lockPlayer = true;
     [Tooltip("Starts alongside the Timeline (after the start delay). Stops if the cutscene is cut short. Empty plays nothing.")]
@@ -164,7 +166,7 @@ public class Cutscene : MonoBehaviour
             audioInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
             audioInstance.release();
         }
-        if (lookHeld)
+        if (lookHeld && !keepLook)
         {
             lookHeld = false;
             manager.Apply(before, 1f);

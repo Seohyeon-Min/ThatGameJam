@@ -9,6 +9,7 @@ using UnityEngine;
 public class RingBloom : MonoBehaviour
 {
     static readonly int RingBloomId = Shader.PropertyToID("_WC_RingBloom");
+    static readonly int RingBloomGlowId = Shader.PropertyToID("_WC_RingBloomGlow");
 
     [Tooltip("Metres behind the ring's edge over which each one comes up and settles. Larger is slower and softer.")]
     [SerializeField, Min(0.1f)] float band = 3f;
@@ -18,6 +19,8 @@ public class RingBloom : MonoBehaviour
     [SerializeField, Range(0f, 1f)] float white = 0.9f;
     [Tooltip("Metres each one comes up after or before the edge, at random, so they don't come up in a clean line.")]
     [SerializeField, Min(0f)] float stagger = 1.5f;
+    [Tooltip("The light it gives off as it comes up, fading as it settles, added over its colour. HDR: above 1 the Bloom post effect spreads it into a glow. Black: no glow, only White")]
+    [SerializeField, ColorUsage(false, true)] Color glow = new(4f, 3.8f, 3.2f);
 
     void OnEnable() => Apply();
     void OnValidate()
@@ -25,7 +28,16 @@ public class RingBloom : MonoBehaviour
         if (isActiveAndEnabled)
             Apply();
     }
-    void OnDisable() => Shader.SetGlobalVector(RingBloomId, Vector4.zero);
+    void OnDisable()
+    {
+        Shader.SetGlobalVector(RingBloomId, Vector4.zero);
+        Shader.SetGlobalVector(RingBloomGlowId, Vector4.zero);
+    }
 
-    void Apply() => Shader.SetGlobalVector(RingBloomId, new Vector4(band, overshoot, white, stagger));
+    void Apply()
+    {
+        Shader.SetGlobalVector(RingBloomId, new Vector4(band, overshoot, white, stagger));
+        // As typed: the shader adds it to its linear colour.
+        Shader.SetGlobalVector(RingBloomGlowId, glow);
+    }
 }

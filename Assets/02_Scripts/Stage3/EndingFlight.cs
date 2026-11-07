@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
-using FMODUnity;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.Playables;
 using UnityEngine.Rendering;
 
-// The ending (3-3), started by CliffEnding once the bird has flown out past the cliff. Its shots cut on what the bird does, not on
-// a clock, so it is a script rather than a Timeline; the cameras and the paths are objects under it, to move about in the scene.
+// The ending (3-3), started by CliffEnding once the bird has flown out past the cliff. The first shot cuts on what the bird does (it
+// leaving the screen); from the rise shot on, the shots come in time on its Timeline (Ending.playable, an Ending Shot track: a clip's
+// length is how long its shot lasts), and what moves in each is worked out here as it plays. Without a Timeline, each shot cuts to
+// the next on what happens in it, as below. The cameras and the paths are objects under it, to move about in the scene.
 // 1. The player lets go: the bird flies on by itself, out over the drop and up, beating its wings, until it has left the screen;
 //    a moment after (Out Wait, very short), the next shot.
 // 2. Rise Shot: up in the air, looking back down at the cliff and the girl. The bird comes up along Rise Path, a rising curve, beating
@@ -22,7 +24,8 @@ using UnityEngine.Rendering;
 // 6. Sleep Shot: back by her, from in front. She turns her head to the light that has come down beside her (Sleep Shaft), blinks
 //    twice, walks into it and lies down there to sleep. All the while the camera draws away from her, back and a little up, still
 //    looking at her and turning a little from left to right: slowly at first, then, as she lies down, faster and climbing more,
-//    to look down over the ground round her (where the flowers come up), on until it eases to a stop high off. It ends there.
+//    to look down over the ground round her (where the flowers come up), on until it eases to a stop high off. It ends there:
+//    a moment later white birds sweep over the screen until it is white, and the logo comes up on it in black (EndingFlock).
 public class EndingFlight : MonoBehaviour
 {
     [Header("Flying out")]
@@ -33,8 +36,8 @@ public class EndingFlight : MonoBehaviour
     [Tooltip("Seconds after it has left the screen before the next shot.")]
     [SerializeField, Min(0f)] float outWait = 0.08f;
 
-    [Tooltip("The watercolor look from the first shot on (Look_0), with its Volume Profile. Empty: the stage's own stays.")]
-    [SerializeField] WatercolorLook look;
+    [Tooltip("The shots from the rise shot on, in time: its Ending Shot track's clips start the shots, each lasting until the next starts, and its Cinemachine track shows their cameras (so they preview in the Game view). A Cutscene beside it plays it, with the ending's look. Empty: each shot cuts to the next on what happens in it (the bird passing the camera, the wave dying down, the light coming), as the timings below say.")]
+    [SerializeField] PlayableDirector timeline;
 
     [Header("Rise Shot")]
     [SerializeField] CinemachineCamera riseShot;
@@ -129,6 +132,10 @@ public class EndingFlight : MonoBehaviour
     [SerializeField] AnimationCurve openCurve = new(new Keyframe(0f, 0f, 0.8f, 0.8f), new Keyframe(0.5f, 0.45f, 1.1f, 1.1f), new Keyframe(1f, 1f, 0.5f, 0.5f));
     [Tooltip("Seconds over which, once its time is up, the gap goes on widening more and more slowly to the end of the shot, from as fast as the curve's end has it (so the clouds never stop).")]
     [SerializeField, Min(0.1f)] float openOnSeconds = 2.5f;
+    [Tooltip("The share of the cloud sea's half width, in from its outer edge, over which its puffs thin out (some smaller, some gone), so seen from below its edge is ragged and sparse rather than a wall. The gap is not touched.")]
+    [SerializeField, Range(0f, 1f)] float cloudRimWidth = 0.35f;
+    [Tooltip("How much they thin out there: 0 = not at all, 1 = towards the very edge most are gone.")]
+    [SerializeField, Range(0f, 1f)] float cloudRimThin = 0.8f;
     [Tooltip("Degrees the low shot's field of view widens over its seconds, slowly, as if the camera drew back a little.")]
     [SerializeField, Min(0f)] float lowZoomOut = 3f;
     [SerializeField, Min(0.1f)] float lowZoomSeconds = 10f;
@@ -145,6 +152,8 @@ public class EndingFlight : MonoBehaviour
     [SerializeField] CinemachineCamera sleepShot;
     [Tooltip("The light she walks into and sleeps in: where it meets the ground. One of the Light Shafts, so it has come with them.")]
     [SerializeField] LightBeam sleepShaft;
+    [Tooltip("From the sleep shot on, the light where she lies is this, the stages' own sunlit spot (its shafts on, level 1), and the gap's shafts go out. They still shine through the gap in the low shot. Empty: the gap's shafts stay.")]
+    [SerializeField] SunlitSpot sleepSpot;
     [Tooltip("Seconds she looks at the light before blinking, and after blinking before she walks to it.")]
     [SerializeField, Min(0f)] float lookBeforeBlink = 1f;
     [SerializeField, Min(0f)] float lookAfterBlink = 1.2f;
@@ -163,16 +172,22 @@ public class EndingFlight : MonoBehaviour
     [SerializeField, Min(0f)] float pullRise = 0.2f;
     [SerializeField, Min(0f)] float pullRiseFast = 1.1f;
     [SerializeField, Min(0f)] float pullPan = 0.3f;
-    [Tooltip("Seconds after she lies down that the season turns to the last (the ending's), as the camera starts to climb: the flowers round her bloom with it (RingBloom). The ring itself is cued separately below, by the ending audio.")]
-    [SerializeField, Min(0f)] float seasonAfterLying = 0f;
+    [Tooltip("Frames after she lies down, at her animations' 30 fps (240 = 8 s), that the season turns to the last (the ending's), as the camera climbs: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
+    [SerializeField, Min(0)] int seasonAfterLyingFrame = 240;
+    [Tooltip("Once bloomed, soft patches of light drift very slowly over the flowers round her, neighbours brightening and dimming together (the flowers that bloom with the ring only). The light added at the brightest, HDR: above 1 the Bloom post effect spreads it into a glow. Black: none.")]
+    [SerializeField, ColorUsage(false, true)] Color flowerSparkle = new(0.35f, 0.33f, 0.28f);
+    [Tooltip("Metres a second the patches of light drift over the field. Small is slow.")]
+    [SerializeField, Min(0f)] float flowerSparkleSpeed = 0.15f;
+    [Tooltip("Metres across a patch of light: larger is broader and softer.")]
+    [SerializeField, Min(0.1f)] float flowerSparkleSize = 4f;
+    [Tooltip("The share of the light that stays on all the while, under the drifting patches (0 = only the patches, 1 = a steady glow).")]
+    [SerializeField, Range(0f, 1f)] float flowerSparkleBase = 1f;
+    [Tooltip("The very end: white birds sweep over the screen until it is white, and the logo comes up on it. Starts this many seconds after the camera has come to rest.")]
+    [SerializeField] EndingFlock flock;
+    [SerializeField, Min(0f)] float flockAfterStop = 1.5f;
 
-    [Header("Ending audio & ring")]
-    [Tooltip("Starts alongside the flight (Play's call), non-diegetic. Empty plays nothing.")]
-    [SerializeField] EventReference endingAudio;
-    [Tooltip("The sunlit spot where she lies down to sleep (BloomSpot: a SunlitSpot with no shafts). Its Reacts To Season should be off, since this plays its ring directly instead.")]
-    [SerializeField] SunlitSpot bloomSpot;
-    [Tooltip("Seconds into the ending audio that the sunlit spot's ring plays.")]
-    [SerializeField, Min(0f)] float ringAtSeconds = 26f;
+    // The girl's animations are made at 30 fps (Blender), so frames here count as hers do.
+    const float AnimationFrameRate = 30f;
 
     static readonly int ShaftIntensityId = Shader.PropertyToID("_Intensity");
     static readonly int PoolIntensityId = Shader.PropertyToID("_PoolIntensity");
@@ -188,6 +203,8 @@ public class EndingFlight : MonoBehaviour
     CinemachineBlendDefinition blendBefore;
 
     public bool IsPlaying { get; private set; }
+    // The first shot (the game's own camera) is over: the cut to the rise shot. The cliff's breeze goes off here.
+    public event System.Action FirstShotOver;
     // Out over the cliff, flat.
     Vector3 outwardWay = Vector3.forward;
 
@@ -208,11 +225,6 @@ public class EndingFlight : MonoBehaviour
         bird.BeginScripted();
         // The game's camera stays exactly where it is, so the bird flies out of the picture.
         GameFlow.Instance.BirdCamera.Freeze();
-
-        if (!endingAudio.IsNull)
-            RuntimeManager.PlayOneShot(endingAudio);
-        if (bloomSpot != null)
-            StartCoroutine(PlayRingAt(ringAtSeconds));
         nextBeatAt = Time.time;
 
         Vector3 way = (outward * Mathf.Cos(outClimb * Mathf.Deg2Rad) + Vector3.up * Mathf.Sin(outClimb * Mathf.Deg2Rad)).normalized;
@@ -235,8 +247,18 @@ public class EndingFlight : MonoBehaviour
             brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
         }
 
+        FirstShotOver?.Invoke();
+        if (timeline != null && timeline.playableAsset != null)
+        {
+            onTimeline = true;
+            // Its Cutscene puts on the ending's look (Look_0) and keeps it on to the end.
+            if (timeline.TryGetComponent(out Cutscene cutscene))
+                cutscene.Play();
+            else
+                timeline.Play();
+            yield break;
+        }
         Show(riseShot);
-        UseLook();
         List<Vector3> rise = Curve(risePath);
         float passedAt = -1f;
         yield return Along(rise, riseSpeed, () =>
@@ -269,21 +291,186 @@ public class EndingFlight : MonoBehaviour
         // Holds on the last shot.
     }
 
-    // As a cutscene's look does (Cutscene): the manager's settings at once, and the scene's Volume on the look's profile.
-    void UseLook()
+    public enum Shot { Rise, Far, Top, Low, Sleep }
+
+    // The Timeline is playing the shots (BeginShot), not Run.
+    bool onTimeline;
+    Shot? current;
+    Coroutine currentRun;
+    // Set while the far shot has the bird small, and while the top shot has the clouds moved, to put them back when it ends.
+    bool birdSmall;
+    List<(Transform puff, Vector3 rest)> topPuffs;
+
+    // From the Timeline (EndingShotTrack): this shot starts now, the one before it ending where it is, with its own look if it has one,
+    // blending in over these seconds (0: at once).
+    public void BeginShot(Shot shot, WatercolorLook look = null, float blendSeconds = 0f)
     {
-        if (look == null)
+        if (!onTimeline || current == shot)
             return;
+        if (look != null)
+            UseLook(look, blendSeconds);
+        EndShot();
+        current = shot;
+        currentRun = StartCoroutine(RunShot(shot));
+    }
+
+    void EndShot()
+    {
+        if (currentRun != null)
+            StopCoroutine(currentRun);
+        currentRun = null;
+        if (birdSmall)
+        {
+            BirdController.Instance.ScaleBy(1f / farBirdScale);
+            birdSmall = false;
+        }
+        if (topPuffs != null)
+        {
+            foreach ((Transform puff, Vector3 rest) in topPuffs)
+                puff.position = rest;
+            topPuffs = null;
+        }
+    }
+
+    // As a cutscene's look does (Cutscene): the manager's settings, and the scene's Volume on the look's profile, at once or blending
+    // over the seconds given. The ending's own Cutscene put its look on first, and keeps whichever is on at the end.
+    void UseLook(WatercolorLook look, float blendSeconds)
+    {
+        if (lookBlend != null)
+            StopCoroutine(lookBlend);
+        lookBlend = null;
         var manager = FindAnyObjectByType<WatercolorManager>();
         if (manager != null)
-            manager.Apply(look.settings, 1f);
+        {
+            if (blendSeconds > 0f)
+                lookBlend = StartCoroutine(BlendLook(manager, look.settings, blendSeconds));
+            else
+                manager.Apply(look.settings, 1f);
+        }
         if (look.volumeProfile == null)
             return;
         WatercolorSeasonLooks seasonLooks = FindAnyObjectByType<WatercolorSeasonLooks>();
-        Volume volume = seasonLooks != null && seasonLooks.SceneVolume != null ? seasonLooks.SceneVolume : FindAnyObjectByType<Volume>();
+        if (seasonLooks != null)
+        {
+            seasonLooks.CrossfadeVolume(look.volumeProfile, blendSeconds);
+            return;
+        }
+        // No season looks to fade with: at once.
+        Volume volume = FindAnyObjectByType<Volume>();
         if (volume != null)
             volume.sharedProfile = look.volumeProfile;
     }
+
+    Coroutine lookBlend;
+
+    static IEnumerator BlendLook(WatercolorManager manager, WatercolorManager.Settings to, float seconds)
+    {
+        WatercolorManager.Settings from = JsonUtility.FromJson<WatercolorManager.Settings>(JsonUtility.ToJson(manager.settings));
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            manager.Blend(from, to, Mathf.SmoothStep(0f, 1f, t / seconds));
+            yield return null;
+        }
+        manager.Apply(to, 1f);
+    }
+
+    // One shot, as long as the Timeline has it: the flights go on until the next shot starts.
+    IEnumerator RunShot(Shot shot)
+    {
+        BirdController bird = BirdController.Instance;
+        switch (shot)
+        {
+            case Shot.Rise:
+                Show(riseShot);
+                yield return Along(Curve(risePath), riseSpeed, () => false);
+                break;
+            case Shot.Far:
+                Show(farShot);
+                bird.ScaleBy(farBirdScale);
+                birdSmall = true;
+                if (farClouds != null)
+                {
+                    farClouds.SetActive(true);
+                    DrawFrom(farClouds, farShot.transform.position);
+                }
+                yield return Along(Curve(farPath), farSpeed, () => false);
+                break;
+            case Shot.Top:
+                if (topShot != null && cloudSurface != null)
+                    yield return TopShot(bird);
+                break;
+            case Shot.Low:
+                if (lowShot != null && gapCentre != null)
+                    yield return LowShot();
+                break;
+            case Shot.Sleep:
+                if (sleepShot != null && sleepShaft != null)
+                    yield return SleepShot();
+                break;
+        }
+    }
+
+#if UNITY_EDITOR
+    // How long each shot runs by itself, without a Timeline (the bird passing the camera, the wave dying down, the light coming;
+    // the sleep shot open-ended, so a long while): for laying out a new Timeline. Worked out from the settings, not played.
+    public float ShotSeconds(Shot shot)
+    {
+        switch (shot)
+        {
+            case Shot.Rise:
+            {
+                List<Vector3> points = Curve(risePath);
+                if (points.Count < 2 || riseShot == null)
+                    return 4f;
+                Transform cam = riseShot.transform;
+                float tanHalf = Mathf.Tan(riseShot.Lens.FieldOfView * 0.5f * Mathf.Deg2Rad);
+                float aspect = 16f / 9f, gone = 0f;
+                for (int i = 1; i < points.Count; i++)
+                {
+                    gone += Vector3.Distance(points[i - 1], points[i]);
+                    Vector3 local = cam.InverseTransformPoint(points[i]);
+                    if (local.z <= 0f || local.y / (local.z * tanHalf) > 1.1f || Mathf.Abs(local.x / (local.z * tanHalf * aspect)) > 1.1f)
+                        break;
+                }
+                return gone / riseSpeed + passWait;
+            }
+            case Shot.Far:
+                return farSeconds;
+            case Shot.Top:
+            {
+                float wave = topShot != null && cloudSurface != null
+                    ? Mathf.Max(rippleReach, FlatDistance(cloudSurface.position, topShot.transform.position)) / waveSpeed
+                    : rippleReach / waveSpeed;
+                return topLead + riseSeconds + apexPause + diveSeconds + wave + rippleSeconds + 2f * rippleFade - topEndSooner;
+            }
+            case Shot.Low:
+            {
+                float lightFrom = openSeconds;
+                for (float t = 0f; t < openSeconds * 4f; t += 0.02f)
+                {
+                    float open = openCurve.Evaluate(Mathf.Clamp01(t / openSeconds));
+                    if (t > openSeconds)
+                    {
+                        Keyframe last = openCurve[openCurve.length - 1];
+                        open += last.inTangent / openSeconds * openOnSeconds * (1f - Mathf.Exp(-(t - openSeconds) / openOnSeconds));
+                    }
+                    if (open >= firstShaftAt)
+                    {
+                        lightFrom = t;
+                        break;
+                    }
+                }
+                int count = 0;
+                foreach (LightBeam beam in lightShafts)
+                    if (beam != null)
+                        count++;
+                return lowLead + Mathf.Max(openSeconds, lightFrom + shaftStagger * Mathf.Max(0, count - 1) + shaftFade);
+            }
+            default:
+                return 40f;
+        }
+    }
+#endif
 
     void Show(CinemachineCamera shot)
     {
@@ -368,6 +555,7 @@ public class EndingFlight : MonoBehaviour
         float lift = 0f, liftVelocity = 0f;
         float dipFrom = -1f, impactAt = -1f;
         List<(Transform puff, Vector3 rest)> puffs = Movable(topClouds);
+        topPuffs = puffs;
 
         void Frame()
         {
@@ -459,6 +647,7 @@ public class EndingFlight : MonoBehaviour
         }
         foreach ((Transform puff, Vector3 rest) in puffs)
             puff.position = rest;
+        topPuffs = null;
     }
 
     IEnumerator LowShot()
@@ -468,6 +657,7 @@ public class EndingFlight : MonoBehaviour
         if (topClouds != null)
             DrawFrom(topClouds, lowShot.transform.position);
         List<(Transform puff, Vector3 rest)> puffs = Movable(topClouds);
+        ThinRim(puffs);
         // Each shaft brightens from nothing to its material's own brightness.
         var shafts = new List<(Renderer renderer, float shaft, float pool)>();
         var props = new MaterialPropertyBlock();
@@ -519,6 +709,13 @@ public class EndingFlight : MonoBehaviour
     IEnumerator SleepShot()
     {
         Show(sleepShot);
+        if (sleepSpot != null)
+        {
+            foreach (LightBeam beam in lightShafts)
+                if (beam != null)
+                    beam.gameObject.SetActive(false);
+            sleepSpot.SetLevel(1);
+        }
         Baby baby = Baby.Instance;
         if (baby == null)
             yield break;
@@ -544,21 +741,13 @@ public class EndingFlight : MonoBehaviour
         yield return new WaitForSeconds(lieSeconds);
     }
 
-    // The season turns to the last a moment after she lies down; the flowers follow the season on their own (the ring plays
-    // separately, cued by the ending audio - see PlayRingAt).
+    // The season turns to the last a moment after she lies down; the ring and the flowers follow the season on their own.
     IEnumerator LastSeason()
     {
-        yield return new WaitForSeconds(seasonAfterLying);
+        yield return new WaitForSeconds(seasonAfterLyingFrame / AnimationFrameRate);
         Season season = FindAnyObjectByType<Season>();
         if (season != null)
             season.AdvanceSeason();
-    }
-
-    // The sunlit spot's ring, timed to a beat in the ending audio rather than to anything she does.
-    IEnumerator PlayRingAt(float seconds)
-    {
-        yield return new WaitForSeconds(seconds);
-        bloomSpot.PlayRing();
     }
 
     // When she lay down in the sleep shot (below 0 until then).
@@ -596,7 +785,11 @@ public class EndingFlight : MonoBehaviour
                 if (stopping > 0f)
                 {
                     if (stopping >= pullStop)
+                    {
+                        if (flock != null)
+                            flock.Play(flockAfterStop);
                         yield break;
+                    }
                     speed *= 1f - Mathf.SmoothStep(0f, 1f, stopping / pullStop);
                 }
             }
@@ -672,6 +865,34 @@ public class EndingFlight : MonoBehaviour
         props.SetFloat(PoolIntensityId, pool);
         renderer.SetPropertyBlock(props);
     }
+
+    // The cloud sea's outer edge thinned (Cloud Rim Width, Cloud Rim Thin): over the oval round all its puffs, those out towards
+    // it shrink, each by its own draw, more the nearer the edge, some to nothing. Their size only; where they are stays.
+    void ThinRim(List<(Transform puff, Vector3 rest)> puffs)
+    {
+        if (puffs.Count == 0 || cloudRimThin <= 0f || cloudRimWidth <= 0f)
+            return;
+        Vector2 lo = new(float.MaxValue, float.MaxValue), hi = new(float.MinValue, float.MinValue);
+        foreach ((Transform _, Vector3 rest) in puffs)
+        {
+            lo = Vector2.Min(lo, new Vector2(rest.x, rest.z));
+            hi = Vector2.Max(hi, new Vector2(rest.x, rest.z));
+        }
+        Vector2 middle = (lo + hi) * 0.5f, half = Vector2.Max((hi - lo) * 0.5f, Vector2.one * 0.01f);
+        foreach ((Transform puff, Vector3 rest) in puffs)
+        {
+            if (!rimScales.TryGetValue(puff, out Vector3 own))
+                rimScales[puff] = own = puff.localScale;
+            float r = new Vector2((rest.x - middle.x) / half.x, (rest.z - middle.y) / half.y).magnitude;
+            float edge = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f - cloudRimWidth, 1f, r));
+            float draw = Mathf.Abs(Mathf.Sin((rest.x * 0.37f + rest.z * 1.13f) * 12.9898f) * 43758.5453f) % 1f;
+            float shrink = cloudRimThin * edge * Mathf.Lerp(0.4f, 1.6f, draw);
+            puff.localScale = own * Mathf.Clamp01(1f - shrink);
+        }
+    }
+
+    // Each puff's own size before the rim was thinned, so thinning again starts from it.
+    readonly Dictionary<Transform, Vector3> rimScales = new();
 
     // The clouds draw back from the gap like cloth parting: each puff moves straight out from its centre, the nearest by the
     // radius and less and less out to twice the radius, beyond which nothing moves. None ever overtakes another (the push never
@@ -770,10 +991,31 @@ public class EndingFlight : MonoBehaviour
         return points;
     }
 
+    static readonly int FlowerSparkleId = Shader.PropertyToID("_WC_FlowerSparkle");
+    static readonly int FlowerSparkleGlowId = Shader.PropertyToID("_WC_FlowerSparkleGlow");
+
+    void OnEnable() => ApplyFlowerSparkle();
+
+    void OnValidate()
+    {
+        if (Application.isPlaying && isActiveAndEnabled)
+            ApplyFlowerSparkle();
+    }
+
+    // WatercolorFlat reads the sparkle from shader globals.
+    void ApplyFlowerSparkle()
+    {
+        bool on = flowerSparkle.maxColorComponent > 0f;
+        Shader.SetGlobalVector(FlowerSparkleId, new Vector4(flowerSparkleSpeed, flowerSparkleSize, flowerSparkleBase, on ? 1f : 0f));
+        Shader.SetGlobalVector(FlowerSparkleGlowId, flowerSparkle);
+    }
+
     void OnDisable()
     {
         if (brain != null && IsPlaying)
             brain.DefaultBlend = blendBefore;
+        Shader.SetGlobalVector(FlowerSparkleId, Vector4.zero);
+        Shader.SetGlobalVector(FlowerSparkleGlowId, Vector4.zero);
     }
 
     void OnDrawGizmos()

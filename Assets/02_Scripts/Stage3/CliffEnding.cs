@@ -7,7 +7,8 @@ using UnityEngine;
 // part of the way left and walking the rest. When she comes close it flies away, and she sits by the stump in its place.
 // Until she sits, the way over the cliff is closed: the bird flies no further than the edge (GameFlow.FlyArea), refusing there
 // like at any closed way (it lands on a tree nearby and shakes its head), and the camera's aim comes no further than a little
-// before it. Once she sits, the way opens, the camera eases over to show more of the drop, and when the bird has flown a little
+// before it. Once she sits, the way opens, the camera eases over to show more of the drop, a light breeze blows past her out
+// over it, and when the bird has flown a little
 // way out past the edge the ending plays. It never opens as a blocker, so the girl never lies down here and the season stays.
 public class CliffEnding : PathBlocker
 {
@@ -37,6 +38,10 @@ public class CliffEnding : PathBlocker
     [Tooltip("While she sits, how much the camera still drifts after the bird, off the Sitting View (0 = held still, 1 = free).")]
     [SerializeField, Range(0f, 1f)] float sittingFollow = 0.3f;
 
+    [Header("Breeze")]
+    [Tooltip("A light breeze blowing past her out over the drop (CliffBreeze prefab), while she sits, until the ending's first cut. Empty: none.")]
+    [SerializeField] ParticleSystem breeze;
+
     [Header("Ending")]
     [Tooltip("The ending (the bird flies out and up, seen from the air, then from far off). Empty: only the girl's ending animation plays.")]
     [SerializeField] EndingFlight ending;
@@ -55,6 +60,25 @@ public class CliffEnding : PathBlocker
     public float BirdFarEnd => WayOpen ? float.PositiveInfinity : edge.position.z;
     // How far the camera's aim may come along +Z (GameFlow.CameraArea).
     public float CameraFarEnd => WayOpen ? float.PositiveInfinity : edge.position.z + cameraReach;
+
+    void OnEnable()
+    {
+        if (ending != null)
+            ending.FirstShotOver += StopBreeze;
+    }
+
+    void OnDisable()
+    {
+        if (ending != null)
+            ending.FirstShotOver -= StopBreeze;
+    }
+
+    // Only the ending's first shot (the game's camera) shows the breeze; from the cut on it is gone at once.
+    void StopBreeze()
+    {
+        if (breeze != null)
+            breeze.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
 
     public override void BeginWaiting()
     {
@@ -100,8 +124,9 @@ public class CliffEnding : PathBlocker
     }
 
 #if UNITY_EDITOR
-    // Dev tool (the toolbar's Ending start): she is already sitting by the stump with the guide gone, and the ending plays from
-    // its first shot, without the bird's flight out over the cliff.
+    // Dev tool (the toolbar's Ending start): she is already sitting by the stump with the guide gone, the camera on the sitting
+    // view, and the bird already out over the drop, halfway through its flight out of the picture, so the ending plays from there
+    // (the first frames of Play Mode, which stutter, fall on that flight, not on the first shot).
     public void PlayEndingNow()
     {
         baby = Baby.Instance;
@@ -116,8 +141,15 @@ public class CliffEnding : PathBlocker
         resting = true;
         ended = true;
         baby.PlayEnding();
+        // The bird just past where it would set the ending off, at its height, with the camera cut to the sitting view.
+        BirdController bird = BirdController.Instance;
+        Vector3 outThere = edge.position + edge.forward * (pastEdge + 0.5f);
+        bird.Teleport(new Vector3(outThere.x, bird.transform.position.y, outThere.z));
+        HoldSittingView(true);
+        if (GameFlow.Instance != null && GameFlow.Instance.BirdCamera != null)
+            GameFlow.Instance.BirdCamera.Cut();
         if (ending != null)
-            ending.Play(edge.forward, true);
+            ending.Play(edge.forward);
     }
 #endif
 
@@ -145,8 +177,16 @@ public class CliffEnding : PathBlocker
             guide.FlyAway();
     }
 
+    // The camera eases over the drop and the breeze rises once she sits; both go when she no longer does.
     void HoldSittingView(bool hold)
     {
+        if (breeze != null)
+        {
+            if (hold && !breeze.isEmitting)
+                breeze.Play(true);
+            else if (!hold)
+                breeze.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        }
         BirdCamera birdCamera = GameFlow.Instance != null ? GameFlow.Instance.BirdCamera : null;
         if (birdCamera != null)
             birdCamera.HoldView(hold && sittingView != null ? sittingView.position : null, sittingFollow);

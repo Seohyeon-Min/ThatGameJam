@@ -13,8 +13,16 @@ using UnityEngine.UI;
 // If Main is the open scene, puts only the prefab under 01_SYSTEM and saves it.
 // Run after BuildSamModelTest, which rebuilds that scene without them:
 // unity command script run --file AgentScripts/BuildEncyclopedia.cs --entry BuildEncyclopedia.Run
+// Only the look (the art in Assets/01_Arts/Textures/UI/Encyclopedia), on the prefab as it is, nothing else rebuilt or saved:
+// unity command script run --file AgentScripts/BuildEncyclopedia.cs --entry BuildEncyclopedia.Restyle
 public static class BuildEncyclopedia
 {
+    const string ArtFolder = "Assets/01_Arts/Textures/UI/Encyclopedia";
+    // The page's columns, a card's width, the gaps between cards, and the name tag's text colour.
+    const int Columns = 4;
+    const float StyledCardWidth = 360f;
+    static readonly Vector2 StyledSpacing = new(48f, 40f);
+    static readonly Color NameColour = new(0.27f, 0.35f, 0.45f, 1f);
     const string EntryFolder = "Assets/04_Data/Encyclopedia";
     const string BlurProfilePath = "Assets/04_Data/EncyclopediaBlur.asset";
     const string PrefabPath = "Assets/03_Prefabs/UI/Encyclopedia.prefab";
@@ -53,6 +61,7 @@ public static class BuildEncyclopedia
         EncyclopediaEntry[] entries = Entries.Select(e => Entry(e.file, e.title)).ToArray();
         VolumeProfile blurProfile = BlurProfile();
         GameObject prefab = BuildPrefab(entries, blurProfile);
+        Restyle();
         AssetDatabase.SaveAssets();
 
         Scene scene = SceneManager.GetActiveScene();
@@ -63,6 +72,119 @@ public static class BuildEncyclopedia
         else
             return "built " + PrefabPath + "; open " + ModelTestScene + " or " + MainScene + " and run again to place it there";
         return EditorSceneManager.SaveScene(scene) ? "built " + PrefabPath + " and saved " + scene.path : "FAILED to save " + scene.path;
+    }
+
+    // The page on Ui_base (EncyclopediaBase), and each card a photo box (EncyclopediaBox) with its name on a tag (EncyclopediaName)
+    // laid over the box's top edge, reaching out a little past it on the left and right. On the prefab's own objects, so what
+    // refers to them still does.
+    public static string Restyle()
+    {
+        Sprite pageArt = ArtSprite("EncyclopediaBase");
+        Sprite boxArt = ArtSprite("EncyclopediaBox");
+        Sprite nameArt = ArtSprite("EncyclopediaName");
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            var page = (RectTransform)root.transform.Find("Canvas/Page");
+            var pageImage = page.GetComponent<Image>();
+            pageImage.sprite = pageArt;
+            pageImage.color = Color.white;
+            pageImage.type = Image.Type.Simple;
+
+            var grid = page.Find("Grid").GetComponent<GridLayoutGroup>();
+            float boxHeight = StyledCardWidth * boxArt.rect.height / boxArt.rect.width;
+            float tagWidth = StyledCardWidth * 1.16f;
+            float tagHeight = tagWidth * nameArt.rect.height / nameArt.rect.width;
+            // The tag stands this much above the box's top edge.
+            float tagAbove = tagHeight * 0.6f;
+            grid.cellSize = new Vector2(StyledCardWidth, tagAbove + boxHeight);
+            grid.spacing = StyledSpacing;
+            grid.constraintCount = Columns;
+
+            int cards = 0;
+            foreach (EncyclopediaCard card in grid.GetComponentsInChildren<EncyclopediaCard>(true))
+            {
+                var rect = (RectTransform)card.transform;
+                rect.GetComponent<Image>().color = Color.clear;
+
+                var frame = (RectTransform)rect.Find("PhotoFrame");
+                Place(frame, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(0f, -tagAbove));
+                var frameImage = frame.GetComponent<Image>();
+                frameImage.sprite = boxArt;
+                frameImage.color = Color.white;
+                frameImage.type = Image.Type.Simple;
+                // The photo inside the box's soft edge, 16:9 (as Encyclopedia takes it), as big as fits.
+                var photo = (RectTransform)frame.Find("Photo");
+                Place(photo, Vector2.zero, Vector2.one, new Vector2(12f, 12f), new Vector2(-12f, -12f));
+                var fitter = photo.GetComponent<AspectRatioFitter>();
+                if (fitter == null)
+                    fitter = photo.gameObject.AddComponent<AspectRatioFitter>();
+                fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+                fitter.aspectRatio = 16f / 9f;
+
+                var tag = (RectTransform)rect.Find("NameTag");
+                if (tag == null)
+                {
+                    tag = new GameObject("NameTag", typeof(RectTransform)).GetComponent<RectTransform>();
+                    tag.SetParent(rect, false);
+                    tag.gameObject.AddComponent<Image>().raycastTarget = false;
+                }
+                // From a little left of the box, over its top edge, out past its right.
+                float left = -StyledCardWidth * 0.09f;
+                Place(tag, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(left, -tagHeight), new Vector2(left + tagWidth, 0f));
+                var tagImage = tag.GetComponent<Image>();
+                tagImage.sprite = nameArt;
+                tagImage.color = Color.white;
+
+                var label = rect.Find("Label").GetComponent<Text>();
+                var labelRect = (RectTransform)label.transform;
+                Place(labelRect, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(left + tagWidth * 0.08f, -tagHeight * 0.92f), new Vector2(left + tagWidth * 0.62f, -tagHeight * 0.08f));
+                label.color = NameColour;
+                label.fontStyle = FontStyle.BoldAndItalic;
+                label.resizeTextMaxSize = 24;
+                label.resizeTextMinSize = 14;
+                label.fontSize = 24;
+
+                // The box first, the tag over it, the name on the tag.
+                frame.SetSiblingIndex(0);
+                tag.SetSiblingIndex(1);
+                labelRect.SetSiblingIndex(2);
+                cards++;
+            }
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            return $"restyled {cards} cards in {PrefabPath}: cell {grid.cellSize}, {Columns} columns";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    // The art as a UI sprite (its import set so the first time).
+    static Sprite ArtSprite(string name)
+    {
+        string path = ArtFolder + "/" + name + ".png";
+        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (importer.textureType != TextureImporterType.Sprite || importer.mipmapEnabled)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    static void Place(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = offsetMin;
+        rect.offsetMax = offsetMax;
     }
 
     // Entry assets in the folder that are no longer in the list above.
