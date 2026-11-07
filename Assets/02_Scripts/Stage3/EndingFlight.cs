@@ -179,6 +179,8 @@ public class EndingFlight : MonoBehaviour
     [Header("Ending audio")]
     [Tooltip("The ending's music (event:/Music/cutsceneEnding), started as the bird flies out past the cliff, non-diegetic. Empty plays nothing.")]
     [SerializeField] EventReference endingAudio;
+    [Tooltip("Seconds the ending's music takes to come up from silent, from where it starts (it starts at the same moment), over the stage music fading out.")]
+    [SerializeField, Min(0f)] float endingAudioFadeIn = 4f;
     [Tooltip("Once bloomed, soft patches of light drift very slowly over the flowers round her, neighbours brightening and dimming together (the flowers that bloom with the ring only). The light added at the brightest, HDR: above 1 the Bloom post effect spreads it into a glow. Black: none.")]
     [SerializeField, ColorUsage(false, true)] Color flowerSparkle = new(0.35f, 0.33f, 0.28f);
     [Tooltip("Metres a second the patches of light drift over the field. Small is slow.")]
@@ -225,6 +227,25 @@ public class EndingFlight : MonoBehaviour
         StartCoroutine(Run(outwardWay, fromFirstShot));
     }
 
+    // The ending's music, from its start at once but coming up from silent over the stage music as that fades out.
+    IEnumerator PlayEndingAudio()
+    {
+        FMOD.Studio.EventInstance music = RuntimeManager.CreateInstance(endingAudio);
+        music.setVolume(endingAudioFadeIn > 0f ? 0f : 1f);
+        music.start();
+        // Let go now: it plays on to its end and frees itself; the volume can still be set until then.
+        music.release();
+        for (float t = 0f; t < endingAudioFadeIn; t += Time.unscaledDeltaTime)
+        {
+            if (!music.isValid())
+                yield break;
+            music.setVolume(Mathf.SmoothStep(0f, 1f, t / endingAudioFadeIn));
+            yield return null;
+        }
+        if (music.isValid())
+            music.setVolume(1f);
+    }
+
     IEnumerator Run(Vector3 outward, bool fromFirstShot)
     {
         BirdController bird = BirdController.Instance;
@@ -233,7 +254,7 @@ public class EndingFlight : MonoBehaviour
         // The game's camera stays exactly where it is, so the bird flies out of the picture.
         GameFlow.Instance.BirdCamera.Freeze();
         if (!endingAudio.IsNull)
-            RuntimeManager.PlayOneShot(endingAudio);
+            StartCoroutine(PlayEndingAudio());
         nextBeatAt = Time.time;
 
         Vector3 way = (outward * Mathf.Cos(outClimb * Mathf.Deg2Rad) + Vector3.up * Mathf.Sin(outClimb * Mathf.Deg2Rad)).normalized;

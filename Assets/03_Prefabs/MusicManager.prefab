@@ -51,16 +51,36 @@ MonoBehaviour:
       Data3: 2101061286
       Data4: -337490302
     Path: event:/Music/backgroundmusic
-  finalMusicEvent:
-    Guid:
-      Data1: -1717728353
-      Data2: 1108975478
-      Data3: 685938306
-      Data4: -1055092404
-    Path: event:/Music/backgroundMusicFinal
+  layers:
+  - parameter: bgm_st_0
+    fromLevel: 0
+    untilLevel: 3
+    atCliff: 1
+  - parameter: bgm_st_1_1
+    fromLevel: 1
+    untilLevel: 3
+    atCliff: 1
+  - parameter: bgm_st_1_2
+    fromLevel: 1
+    untilLevel: -1
+    atCliff: 1
+  - parameter: bgm_st_2_1
+    fromLevel: 2
+    untilLevel: 3
+    atCliff: 1
+  - parameter: bgm_st_2_2
+    fromLevel: 2
+    untilLevel: -1
+    atCliff: 1
+  - parameter: bgm_st_3
+    fromLevel: 3
+    untilLevel: -1
+    atCliff: 2
+  - parameter: bgm_st_4
+    fromLevel: 99
+    untilLevel: -1
+    atCliff: 1
   fadeSeconds: 3
-  layerParameters:
-  - Layer1
-  - Layer2
+  endFadeSeconds: 5
   startCutscene: {fileID: 0}
   season: {fileID: 0}
