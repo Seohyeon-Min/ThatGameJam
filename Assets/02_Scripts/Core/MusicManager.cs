@@ -30,14 +30,22 @@ public class MusicManager : MonoBehaviour
     // The Season level at which the layered event is retired in favour of Final Music Event.
     const int FinalLevel = 3;
 
+    public static MusicManager Instance { get; private set; }
+
     EventInstance music;
     EventInstance finalMusic;
     Coroutine[] fades;
     Coroutine finalFade;
     bool released;
+    // Debug only (DevTools): paused instead of stopped, so the Season-driven fades and parameters hold their place and it picks up
+    // right where it left off once unmuted.
+    bool muted;
+
+    public bool Muted => muted;
 
     void Awake()
     {
+        Instance = this;
         if (season == null)
             season = FindAnyObjectByType<Season>();
         fades = new Coroutine[layerParameters.Length];
@@ -164,6 +172,18 @@ public class MusicManager : MonoBehaviour
             yield return null;
         }
         music.setParameterByName(parameter, target, true);
+    }
+
+    // Debug only (DevTools): pauses both instances in place so testing can go on without the music, then picks up again on unmute.
+    public void ToggleMute() => SetMuted(!muted);
+
+    public void SetMuted(bool value)
+    {
+        muted = value;
+        if (music.isValid())
+            music.setPaused(muted);
+        if (finalMusic.isValid())
+            finalMusic.setPaused(muted);
     }
 
     // Debug only: as if Season had advanced one more step, to watch a layer fade in (or the Stage 3 release happen) without
