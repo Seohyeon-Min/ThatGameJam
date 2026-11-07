@@ -153,6 +153,110 @@ MonoBehaviour:
   gain:
     m_OverrideState: 1
     m_Value: {x: 0.9769884, y: 1, z: 0.9699486, w: 0}
+--- !u!114 &-2763698283165020802
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dee8ee8608bbc4eb2745ce7179a4ed, type: 3}
+  m_Name: WatercolorKuwahara
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorKuwahara
+  active: 1
+  enableFilter:
+    m_OverrideState: 1
+    m_Value: 1
+  filterMode:
+    m_OverrideState: 1
+    m_Value: 2
+  charactersOnly:
+    m_OverrideState: 1
+    m_Value: 1
+  filterRadius:
+    m_OverrideState: 1
+    m_Value: 20
+  anisotropyStrength:
+    m_OverrideState: 1
+    m_Value: 1.5
+  sectorSharpness:
+    m_OverrideState: 1
+    m_Value: 10
+  filterIntensity:
+    m_OverrideState: 1
+    m_Value: 1
+  edgePreservation:
+    m_OverrideState: 1
+    m_Value: 0
+  colorSimplification:
+    m_OverrideState: 1
+    m_Value: 0
+  pigmentVariation:
+    m_OverrideState: 1
+    m_Value: 0
+  pigmentBleeding:
+    m_OverrideState: 1
+    m_Value: 0
+  edgeDarkening:
+    m_OverrideState: 1
+    m_Value: 0.1
+  paperTexture:
+    m_OverrideState: 0
+    m_Value: {fileID: 0}
+    dimension: 1
+  paperTextureStrength:
+    m_OverrideState: 1
+    m_Value: 0
+  paperTextureScale:
+    m_OverrideState: 0
+    m_Value: 1
+  brushTextureStrength:
+    m_OverrideState: 1
+    m_Value: 0
+  strokeSize:
+    m_OverrideState: 1
+    m_Value: 0.8
+  strokeLength:
+    m_OverrideState: 1
+    m_Value: 2.8
+  strokeWidth:
+    m_OverrideState: 1
+    m_Value: 0.8
+  strokeRoughness:
+    m_OverrideState: 1
+    m_Value: 0.35
+  strokeSpill:
+    m_OverrideState: 1
+    m_Value: 1.2
+  strokeSmoothFlat:
+    m_OverrideState: 1
+    m_Value: 0.7
+  strokeCoverage:
+    m_OverrideState: 1
+    m_Value: 1
+  strokeFollowForm:
+    m_OverrideState: 1
+    m_Value: 0.7
+  strokeValueJitter:
+    m_OverrideState: 1
+    m_Value: 0.05
+  strokeHueJitter:
+    m_OverrideState: 1
+    m_Value: 6
+  strokeSaturationJitter:
+    m_OverrideState: 1
+    m_Value: 0.1
+  strongStrokeShare:
+    m_OverrideState: 1
+    m_Value: 0.15
+  strongStrokeBoost:
+    m_OverrideState: 1
+    m_Value: 2.5
+  strokeKeepDetail:
+    m_OverrideState: 1
+    m_Value: 0.5
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -171,6 +275,7 @@ MonoBehaviour:
   - {fileID: -8103647160071489913}
   - {fileID: -5279855093066020575}
   - {fileID: 636747504884647137}
+  - {fileID: -2763698283165020802}
 --- !u!114 &636747504884647137
 MonoBehaviour:
   m_ObjectHideFlags: 3
