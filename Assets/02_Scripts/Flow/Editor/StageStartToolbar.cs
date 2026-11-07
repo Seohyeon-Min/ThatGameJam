@@ -67,7 +67,7 @@ static class StageStartToolbar
                 menu.AddItem(new GUIContent(StageName(index) + " End"), Pick == index && PickEnd, () => PickAndPlay(index, true));
             }
             menu.AddSeparator("");
-            menu.AddItem(new GUIContent("Ending (from its first shot)"), false, PlayEnding);
+            menu.AddItem(new GUIContent("Ending (from the bird flying out)"), false, PlayEnding);
         menu.DropDown(at);
     }
 
@@ -87,8 +87,8 @@ static class StageStartToolbar
     [MenuItem("Tools/Play From Stage/Stage 2 End")] static void PlayStage2End() => PlayFrom(2, true);
     [MenuItem("Tools/Play From Stage/Stage 3 End (out of the fog)")] static void PlayStage3End() => PlayFrom(3, true);
 
-    // The ending at once, from its first shot: the last stage, the girl already sitting by the stump.
-    [MenuItem("Tools/Play From Stage/Ending (from its first shot)")]
+    // The ending at once: the last stage, the girl already sitting by the stump, the bird already halfway out over the drop.
+    [MenuItem("Tools/Play From Stage/Ending (from the bird flying out)")]
     static void PlayEnding()
     {
         GameFlow flow = Object.FindAnyObjectByType<GameFlow>();

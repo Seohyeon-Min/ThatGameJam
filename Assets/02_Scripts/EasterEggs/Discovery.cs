@@ -9,11 +9,14 @@ public class Discovery : MonoBehaviour
     [Tooltip("Optional. An off camera placed where the photo should be taken from. Empty: framed from the game camera's angle.")]
     [SerializeField] Camera photoView;
 
-    public void Reveal()
+    public void Reveal() => Reveal(null);
+
+    // The photo framing this instead of the Subject, such as the bird that set it off. Null: the Subject.
+    public void Reveal(Transform framing)
     {
         // A test scene without the encyclopedia.
         if (Encyclopedia.Instance == null)
             return;
-        Encyclopedia.Instance.Discover(entry, subject != null ? subject : transform, photoView);
+        Encyclopedia.Instance.Discover(entry, framing != null ? framing : subject != null ? subject : transform, photoView);
     }
 }

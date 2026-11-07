@@ -42,4 +42,11 @@ half InstanceHueShift()
     return shift / 127.0 * 0.25;
 }
 
+// 인스턴스가 꽃잎을 칠할 색상(0~1), 없으면 -1. 맨 위 7비트: 0 = 없음, 1~127 = 색상 (v-1)/126 (WatercolorTint.paintPetals).
+half InstancePetalHue()
+{
+    uint v = (unity_RendererUserValue >> 25) & 127u;
+    return v == 0u ? -1.0 : (v - 1u) / 126.0;
+}
+
 #endif

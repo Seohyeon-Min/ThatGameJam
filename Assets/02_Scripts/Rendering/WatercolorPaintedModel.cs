@@ -52,8 +52,9 @@ public class WatercolorPaintedModel : MonoBehaviour
     public void ApplyVariation() => ApplyUserValue(gameObject);
 
     // The shader user value: the low 8 bits are the Variation, the next 8 a WatercolorTint's whitening (0-255), the next 8 its hue shift
-    // (a signed byte, -127 to 127 for -MostHueShift to +MostHueShift), and bit 24 says it blooms with the ring (its ScatterGenerator area's
-    // Bloom With Ring). It is not saved with the scene, so it is set again whenever either is enabled.
+    // (a signed byte, -127 to 127 for -MostHueShift to +MostHueShift), bit 24 says it blooms with the ring (its ScatterGenerator area's
+    // Bloom With Ring), and the top 7 bits are the hue its petals are painted (WatercolorTint's Paint
+    // Petals). It is not saved with the scene, so it is set again whenever either is enabled.
     public static void ApplyUserValue(GameObject root)
     {
         uint value = 0u;
@@ -64,6 +65,9 @@ public class WatercolorPaintedModel : MonoBehaviour
             value |= (uint)Mathf.RoundToInt(Mathf.Clamp01(tint.whiten) * 255f) << 8;
             int hue = Mathf.RoundToInt(Mathf.Clamp(tint.hueShift / WatercolorTint.MostHueShift, -1f, 1f) * 127f);
             value |= (uint)(hue & 255) << 16;
+            // The top 7 bits: the hue its petals are painted (1-127), or 0 for its own.
+            if (tint.paintPetals)
+                value |= (uint)(1 + Mathf.RoundToInt(Mathf.Repeat(tint.petalHue, 1f) * 126f)) << 25;
         }
         // Bit 24: it springs up at the spring ring's edge as the ring brings it out (RingBloom).
         ScatterGenerator scatter = root.GetComponentInParent<ScatterGenerator>(true);

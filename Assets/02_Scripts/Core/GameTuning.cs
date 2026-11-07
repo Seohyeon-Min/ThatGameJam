@@ -128,7 +128,15 @@ public class GameTuning : ScriptableObject
     public float fogRunIdleTime = 3f;
 
     [Header("Bird")]
+    // Its flying speed goes with how far off where it is going is (the pointer, held; or where it was clicked): birdMinSpeed
+    // when that is birdSlowDistance away or nearer, birdSpeed (its most) from birdFastDistance on, eased between.
     public float birdSpeed = 6f;
+    public float birdMinSpeed = 2f;
+    public float birdSlowDistance = 1f;
+    public float birdFastDistance = 6f;
+    // From this speed on it glides; slower it only beats its wings. Below the speed less the margin it stops gliding.
+    public float birdGlideSpeed = 3.5f;
+    public float birdGlideMargin = 0.5f;
     public float birdAltitudeSpeed = 3f;
     // Arriving at a perch until perched: the Bird_Landing clip's GripComplete event, when the toes have gripped.
     public float birdPerchDuration = 1.2f;

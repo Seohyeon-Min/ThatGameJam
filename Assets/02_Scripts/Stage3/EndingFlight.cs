@@ -21,7 +21,8 @@ using UnityEngine.Rendering;
 // 6. Sleep Shot: back by her, from in front. She turns her head to the light that has come down beside her (Sleep Shaft), blinks
 //    twice, walks into it and lies down there to sleep. All the while the camera draws away from her, back and a little up, still
 //    looking at her and turning a little from left to right: slowly at first, then, as she lies down, faster and climbing more,
-//    to look down over the ground round her (where the flowers come up), on until it eases to a stop high off. It ends there.
+//    to look down over the ground round her (where the flowers come up), on until it eases to a stop high off. It ends there:
+//    a moment later white birds sweep over the screen until it is white, and the logo comes up on it in black (EndingFlock).
 public class EndingFlight : MonoBehaviour
 {
     [Header("Flying out")]
@@ -162,8 +163,14 @@ public class EndingFlight : MonoBehaviour
     [SerializeField, Min(0f)] float pullRise = 0.2f;
     [SerializeField, Min(0f)] float pullRiseFast = 1.1f;
     [SerializeField, Min(0f)] float pullPan = 0.3f;
-    [Tooltip("Seconds after she lies down that the season turns to the last (the ending's), as the camera starts to climb: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
-    [SerializeField, Min(0f)] float seasonAfterLying = 0f;
+    [Tooltip("Frames after she lies down, at her animations' 30 fps (240 = 8 s), that the season turns to the last (the ending's), as the camera climbs: the spring ring spreads from the sunlit spot where she sleeps (a SunlitSpot there, with no shafts) and the flowers round her bloom with it (RingBloom).")]
+    [SerializeField, Min(0)] int seasonAfterLyingFrame = 240;
+    [Tooltip("The very end: white birds sweep over the screen until it is white, and the logo comes up on it. Starts this many seconds after the camera has come to rest.")]
+    [SerializeField] EndingFlock flock;
+    [SerializeField, Min(0f)] float flockAfterStop = 1.5f;
+
+    // The girl's animations are made at 30 fps (Blender), so frames here count as hers do.
+    const float AnimationFrameRate = 30f;
 
     static readonly int ShaftIntensityId = Shader.PropertyToID("_Intensity");
     static readonly int PoolIntensityId = Shader.PropertyToID("_PoolIntensity");
@@ -179,6 +186,8 @@ public class EndingFlight : MonoBehaviour
     CinemachineBlendDefinition blendBefore;
 
     public bool IsPlaying { get; private set; }
+    // The first shot (the game's own camera) is over: the cut to the rise shot. The cliff's breeze goes off here.
+    public event System.Action FirstShotOver;
     // Out over the cliff, flat.
     Vector3 outwardWay = Vector3.forward;
 
@@ -221,6 +230,7 @@ public class EndingFlight : MonoBehaviour
             brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.Cut, 0f);
         }
 
+        FirstShotOver?.Invoke();
         Show(riseShot);
         UseLook();
         List<Vector3> rise = Curve(risePath);
@@ -533,7 +543,7 @@ public class EndingFlight : MonoBehaviour
     // The season turns to the last a moment after she lies down; the ring and the flowers follow the season on their own.
     IEnumerator LastSeason()
     {
-        yield return new WaitForSeconds(seasonAfterLying);
+        yield return new WaitForSeconds(seasonAfterLyingFrame / AnimationFrameRate);
         Season season = FindAnyObjectByType<Season>();
         if (season != null)
             season.AdvanceSeason();
@@ -574,7 +584,11 @@ public class EndingFlight : MonoBehaviour
                 if (stopping > 0f)
                 {
                     if (stopping >= pullStop)
+                    {
+                        if (flock != null)
+                            flock.Play(flockAfterStop);
                         yield break;
+                    }
                     speed *= 1f - Mathf.SmoothStep(0f, 1f, stopping / pullStop);
                 }
             }

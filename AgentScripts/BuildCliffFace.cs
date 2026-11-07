@@ -5,7 +5,7 @@ using UnityEngine;
 
 // The cliff under the end of the terrain, where it drops away over the clouds (the terrain alone just stops there, a thin sheet).
 // - The point the ending plays out on (round Point X) stands out: on either side of it the edge is cut back in a curve (terrain
-//   holes, the terrain's material clipping them), coming back out further along, so nothing else on the terrain moves.
+//   holes, the terrain's material clipping them), and stays cut back all the way to both ends of the terrain.
 // - The edge rounded over all along: the terrain's last metres curving down (its heights lowered, never raised), and on from
 //   there a snow shoulder (the terrain's own material, smooth) bending on down to upright; under that a rough, faceted rock wall,
 //   jutting in and out and stepping back at ledges. One mesh, saved as an asset, on one object beside the terrain.
@@ -16,12 +16,13 @@ public static class BuildCliffFace
     const string MeshPath = "Assets/01_Arts/Models/Cliff/CliffFace.asset";
     const string RockPath = "Assets/01_Arts/Materials/Watercolor/WC_Rock.mat";
     // The point: its middle (world X), the half width it keeps the edge where it is, from there the metres over which the edge
-    // curves back, how far back, and from where (half width) it comes out again, over so many metres, to the edge as it was.
+    // curves back, how far back, and from where (half width) it comes out again, over so many metres, to the edge as it was
+    // (past the terrain's ends: never, so only the point stands out).
     const float PointX = 0f;
     const float PointHalfWidth = 7f;
     const float CurveIn = 12f;
     const float CutBack = 6f;
-    const float ComeBackFrom = 30f;
+    const float ComeBackFrom = 1000f;
     const float ComeBack = 12f;
     // The rounding: its radius, and how far down the terrain itself curves by its edge (no more than the terrain goes below the
     // ground there).

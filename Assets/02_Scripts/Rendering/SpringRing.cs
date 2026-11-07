@@ -27,6 +27,8 @@ public class SpringRing : MonoBehaviour
     [SerializeField, Range(2, 8)] int rowsAcross = 4;
     [Tooltip("Progress over the play time (both 0 to 1). The default bursts out, then settles into a slow, calm spread.")]
     [SerializeField] AnimationCurve playCurve = new(new Keyframe(0f, 0f, 0f, 7f), new Keyframe(0.18f, 0.68f, 1.1f, 1.1f), new Keyframe(1f, 1f, 0.1f, 0f));
+    [Tooltip("This ring plays over the material's Duration times this: above 1 it opens more slowly than the other rings sharing the material (the ending's, for its weight).")]
+    [SerializeField, Min(0.1f)] float durationScale = 1f;
 
     // While a ring plays, its centre (xyz) and radius (w), for what follows it, like the snow clearing. All zero otherwise.
     static readonly int SpringRingId = Shader.PropertyToID("_SpringRing");
@@ -94,7 +96,7 @@ public class SpringRing : MonoBehaviour
             if (playing)
             {
                 elapsed += Time.deltaTime;
-                float played = Mathf.Min(elapsed / Mathf.Max(material.GetFloat(DurationId), 0.01f), 1f);
+                float played = Mathf.Min(elapsed / Mathf.Max(material.GetFloat(DurationId) * durationScale, 0.01f), 1f);
                 progress = playCurve.Evaluate(played);
                 block ??= new MaterialPropertyBlock();
                 block.SetFloat(ProgressId, progress);

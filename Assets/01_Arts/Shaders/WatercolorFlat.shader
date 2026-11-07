@@ -31,6 +31,10 @@ Shader "ThatGameJam/WatercolorFlat"
         [Toggle] _Floor ("Floor (wide flat surface: no paper, outline or boundary band)", Float) = 0
         [Toggle] _TerrainHoles ("Terrain Holes (a terrain's material: cut where its holes are)", Float) = 0
         [HideInInspector] _TerrainHolesTexture ("Terrain Holes Map", 2D) = "white" {}
+        [Header(Snow Melt (Floor only))]
+        _MeltColour ("Melted Ground Colour", Color) = (0.55, 0.72, 0.38, 1)
+        _MeltWetColour ("Wet Snow Colour (a: strength)", Color) = (0.76, 0.81, 0.86, 0.6)
+        _MeltScale ("Melt Patch Size (metres)", Float) = 7
 
         [Header(Baked by WatercolorBaker)]
         [Toggle] _HasPattern ("Has Pattern", Float) = 0
@@ -77,6 +81,10 @@ Shader "ThatGameJam/WatercolorFlat"
         _WindWaveLength ("Gust Length (m)", Float) = 4
         _WindFlutter ("Flutter (share of the sway)", Range(0, 1)) = 0.25
         _WindDirection ("Direction (world X, Z)", Vector) = (1, 0, 0.3, 0)
+        [ToggleUI] _RingBloomable ("Blooms With The Ring (flowers only; and their area's Bloom With Ring)", Float) = 0
+        _PetalHue ("Petal Hue (the petals' own hue, for a WatercolorTint's Paint Petals)", Range(0, 1)) = 0
+        _PetalHueWidth ("Petal Hue Width (either way; 0 = no petals to paint)", Range(0, 0.5)) = 0
+        _PetalMinSaturation ("Petal Least Saturation (greyer than this is not petal)", Range(0, 1)) = 0.2
 
         [Header(Leaf Card)]
         [Toggle] _LeafCard ("Leaf Card (each card turns to the camera, its texture boils)", Float) = 0
@@ -114,6 +122,9 @@ Shader "ThatGameJam/WatercolorFlat"
             half4 _BaseColor;
             half _Floor;
             half _TerrainHoles;
+            half4 _MeltColour;
+            half4 _MeltWetColour;
+            float _MeltScale;
             half _HasPattern;
             half _Cutoff;
             half _SelfShadowSkip;
@@ -142,6 +153,10 @@ Shader "ThatGameJam/WatercolorFlat"
             half _WindWaveLength;
             half _WindFlutter;
             float4 _WindDirection;
+            half _RingBloomable;
+            half _PetalHue;
+            half _PetalHueWidth;
+            half _PetalMinSaturation;
             half _LeafCard;
             float4 _BoilSpeed;
             float _BoilScale;
@@ -175,11 +190,12 @@ Shader "ThatGameJam/WatercolorFlat"
         float4 _SpringRing;          // 링이 퍼지는 동안 중심(xyz)과 반지름(w), 아니면 0
         float4 _WC_SeasonWipeEdge;   // SeasonWipeFeature: x 가장자리 부드러움, y 울퉁불퉁한 높이, z 그 크기(미터)
         float4 _WC_RingBloom;        // RingBloom: x 피어나는 폭(미터), y 가장 커질 때 더 커지는 비율, z 처음 흰 정도, w 앞뒤로 흩어지는 거리(미터)
+        float4 _WC_RingBloomGlow;    // RingBloom: 피어날 때 더하는 HDR 빛(선형 색 × 세기). 블룸이 이걸 번지게 한다
 
         // 0 = 아직(가장자리 밖, 그리지 않는다), 1 = 다 피었다. onScreen 이 아니면(그림자 패스, 행렬이 빛 기준) 땅 위 거리로 잰다.
         float RingBloomProgress(bool onScreen)
         {
-            if (((unity_RendererUserValue >> 24) & 1u) == 0u || _SpringRing.w <= 0.0 || _WC_RingBloom.x <= 0.0)
+            if (_RingBloomable < 0.5 || ((unity_RendererUserValue >> 24) & 1u) == 0u || _SpringRing.w <= 0.0 || _WC_RingBloom.x <= 0.0)
                 return 1.0;
             float3 pivot = UNITY_MATRIX_M._m03_m13_m23;
             float inside;
@@ -413,6 +429,7 @@ Shader "ThatGameJam/WatercolorFlat"
         half4 _WC_Haze;           // x 세기, y 시작 거리, z 다 바래는 데까지 거리
         half4 _WC_HazeLow;        // 지평선 쪽 공기 색
         half4 _WC_HazeHigh;       // 위쪽 공기 색
+        half _WC_SnowMelt;        // SnowMelt: 바닥 눈이 녹은 정도 0~1 (계절 단계마다)
 
         float SceneHash(float2 p)
         {
@@ -779,6 +796,18 @@ Shader "ThatGameJam/WatercolorFlat"
                     instanceHsv.y = saturate(instanceHsv.y * (1.0 + instance.z * _WC_InstanceColour.z));
                     albedo = HsvToRgb(instanceHsv);
                 }
+                // 꽃잎 칠하기(WatercolorTint 의 Paint Petals): 재질의 꽃잎 색 범위(Petal Hue)에 드는 칸만 그 인스턴스의 색으로 바꾼다.
+                // 꽃잎과 줄기가 한 텍스처에 있어서, 색상과 채도로 꽃잎을 가려낸다. 아래의 색 돌리기가 그 위에 바리에이션을 더한다.
+                half petalTarget = InstancePetalHue();
+                if (petalTarget >= 0 && _PetalHueWidth > 0)
+                {
+                    half3 petalHsv = RgbToHsv(albedo);
+                    half away = abs(frac(petalHsv.x - _PetalHue + 0.5) - 0.5);
+                    half petal = (1.0 - smoothstep(_PetalHueWidth * 0.7, _PetalHueWidth, away))
+                        * smoothstep(_PetalMinSaturation * 0.7, _PetalMinSaturation, petalHsv.y);
+                    half3 painted = HsvToRgb(half3(petalTarget, max(petalHsv.y, 0.6), petalHsv.z));
+                    albedo = lerp(albedo, painted, petal);
+                }
                 // 인스턴스마다 색 돌리기와 하얗게 바램(WatercolorTint): 풀 한 포기마다 색상이 조금 다르고, 눈 덮인 풀처럼 흰색 쪽으로 옅어진다.
                 half hueShift = InstanceHueShift();
                 if (hueShift != 0)
@@ -787,8 +816,21 @@ Shader "ThatGameJam/WatercolorFlat"
                     tintHsv.x = frac(tintHsv.x + hueShift);
                     albedo = HsvToRgb(tintHsv);
                 }
+                // 눈 녹음(바닥만): 군데군데 큰 덩어리부터 녹아 땅(초록)이 드러나고, 녹는 가장자리는 젖은 눈 색. 1 이면 다 녹는다.
+                if (_Floor > 0.5 && _WC_SnowMelt > 0.001)
+                {
+                    float2 meltAt = input.positionWS.xz / max(_MeltScale, 0.1);
+                    float patch = SceneNoise(meltAt) * 0.6 + SceneNoise(meltAt * 3.1 + 17.0) * 0.3 + SceneNoise(meltAt * 8.7 + 41.0) * 0.1;
+                    float reach = _WC_SnowMelt * 1.2 - 0.1;
+                    half melted = smoothstep(patch - 0.03, patch + 0.03, reach);
+                    half wet = smoothstep(patch - 0.14, patch - 0.03, reach) * (1.0 - melted);
+                    half3 ground = LinearToSRGB(_MeltColour.rgb) * (0.9 + 0.2 * SceneNoise(meltAt * 2.3 + 5.0));
+                    albedo = lerp(albedo, LinearToSRGB(_MeltWetColour.rgb), wet * _MeltWetColour.a);
+                    albedo = lerp(albedo, ground, melted);
+                }
                 albedo = lerp(albedo, 1.0, InstanceWhiten());
-                albedo = lerp(albedo, 1.0, RingBloomWhite(RingBloomProgress(true)));
+                half ringBloom = RingBloomWhite(RingBloomProgress(true));
+                albedo = lerp(albedo, 1.0, ringBloom);
 
                 // 색 카오스: 같은 색 안에 떨어뜨린 다른 색 물방울. 굽기 때 정한 덩어리와 물방울 모양대로 색상을 돌린다.
                 // 채도가 거의 없는 색(회색, 흰색)은 색상이 의미가 없어서 거의 바뀌지 않는다(빛 쪽 파스텔 조각은 따로 보인다).
@@ -1255,6 +1297,8 @@ Shader "ThatGameJam/WatercolorFlat"
                 }
 
                 color = SRGBToLinear(color);
+                // 링 가장자리에서 피어나는 꽃의 빛: 1 을 넘는 HDR 값을 더해 블룸이 번지게 한다(수채화 흰색이 아니라 실제로 빛난다).
+                color += _WC_RingBloomGlow.rgb * (ringBloom / max(_WC_RingBloom.z, 0.001));
 
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1);
