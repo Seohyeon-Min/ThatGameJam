@@ -25,10 +25,11 @@ public static class BuildEncyclopedia
     static readonly Vector3 RabbitPosition = new Vector3(2.5f, 0f, -2.5f);
     const float RabbitYaw = 135f;
 
-    // The director's list (docs/kor/easter_eggs.md 4절), by stage: the intro, stages 1, 2 and 3, then the migrating birds of any stage.
+    // The director's list (docs/kor/easter_eggs.md 4절), by stage: stages 1, 2 and 3, then the migrating birds of any stage.
+    // Snow on the Bird (the intro's) was removed (2026-11-06): the numbering below keeps its original digits so file names
+    // don't keep churning, rather than renumbering 02-10 down to 01-09.
     static readonly (string file, string title)[] Entries =
     {
-        ("01_SnowOnBird", "Snow on the Bird"),
         ("02_StumpLadybug", "Ladybug in the Stump"),
         ("03_SnowWhirl", "Snow Whirl"),
         ("04_SnowFlower", "Flower in the Snow"),

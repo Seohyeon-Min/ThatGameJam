@@ -36,7 +36,6 @@ public static class BuildEasterEggs
     const string BirdPrefab = "Assets/03_Prefabs/Bird-Animated.prefab";
     const string BirdController = "Assets/01_Arts/Models/Bird/Bird.controller";
     const string ParticleMaterial = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat";
-    const string SnowMaterial = "Assets/01_Arts/Materials/Test/Snow.mat";
     // The SoftSnow shader's material, the snow on the girl. The snow piles of the whirl and the flower use it.
     const string SoftSnowMaterial = "Assets/01_Arts/Materials/SoftSnow.mat";
     const float CherryScale = 2.5f;
@@ -75,7 +74,6 @@ public static class BuildEasterEggs
             AssetDatabase.CreateFolder("Assets/03_Prefabs", "EasterEggs");
         var prefabs = new Dictionary<string, GameObject>
         {
-            ["SnowOnBird"] = SnowOnBird(),
             ["StumpLadybug"] = StumpLadybug(),
             ["SnowWhirl"] = SnowWhirl(),
             ["SnowFlower"] = SnowFlower(),
@@ -90,20 +88,6 @@ public static class BuildEasterEggs
     }
 
     // ---- Prefabs ----
-
-    static GameObject SnowOnBird()
-    {
-        var root = new GameObject("SnowOnBird");
-        var discovery = AddDiscovery(root, "01_SnowOnBird");
-        // On the bird's back. Its root is at the feet.
-        GameObject snow = Primitive(PrimitiveType.Sphere, "Snow", root.transform, new Vector3(0f, 0.36f, -0.1f), new Vector3(0.35f, 0.12f, 0.45f), SnowMaterial);
-        Set(root.AddComponent<SnowOnBird>(), so =>
-        {
-            so.FindProperty("discovery").objectReferenceValue = discovery;
-            so.FindProperty("snow").objectReferenceValue = snow.transform;
-        });
-        return Save(root);
-    }
 
     static GameObject StumpLadybug()
     {
@@ -414,13 +398,6 @@ public static class BuildEasterEggs
         GameObject birds = Place(prefabs["MigratingBirds"], eggs, terrain, 11f, -27.5f, 0f);
         // For trying it out here: it may fly in the intro too.
         Set(birds.GetComponent<MigratingBirds>(), so => so.FindProperty("fromStage").intValue = 0);
-
-        GameObject bird = GameObject.Find("02_WORLD/Bird");
-        Transform oldSnow = bird.transform.Find("SnowOnBird");
-        if (oldSnow != null)
-            Object.DestroyImmediate(oldSnow.gameObject);
-        var snow = (GameObject)PrefabUtility.InstantiatePrefab(prefabs["SnowOnBird"], bird.transform);
-        Set(snow.GetComponent<Discovery>(), so => so.FindProperty("subject").objectReferenceValue = bird.transform);
 
         RegrowForest(terrain);
     }
