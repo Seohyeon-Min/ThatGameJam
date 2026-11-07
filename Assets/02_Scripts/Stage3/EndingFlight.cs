@@ -558,6 +558,9 @@ public class EndingFlight : MonoBehaviour
         }
     }
 
+    // The top shot's whoosh (2D), as the bird bursts up out of the clouds and again as it drops back into them.
+    const string CloudSound = "event:/SFX/cutscene_dive";
+
     IEnumerator TopShot(BirdController bird)
     {
         if (farClouds != null)
@@ -627,11 +630,17 @@ public class EndingFlight : MonoBehaviour
             yield return null;
         }
 
-        // Up through the clouds.
+        // Up through the clouds; the whoosh as it bursts out of their top.
         float pitch = 70f;
+        bool burstOut = false;
         for (float t = 0f; t < riseSeconds; t += Time.deltaTime)
         {
             Vector3 at = Vector3.LerpUnclamped(bottom, top, riseCurve.Evaluate(t / riseSeconds));
+            if (!burstOut && at.y > surface.y)
+            {
+                burstOut = true;
+                RuntimeManager.PlayOneShot(CloudSound);
+            }
             bird.FlyScripted(at, side * 0.1f + Vector3.up, pitch, Beat(), strokeDown);
             Frame();
             yield return null;
@@ -660,13 +669,20 @@ public class EndingFlight : MonoBehaviour
             float down = diveCurve.Evaluate(t / diveSeconds);
             Vector3 at = Vector3.LerpUnclamped(hoverAt, under, down);
             bird.FlyScripted(at, noseDown, pitch, false, 0f);
+            // The same whoosh as it drops back in.
             if (impactAt < 0f && at.y <= surface.y)
+            {
                 impactAt = Time.time;
+                RuntimeManager.PlayOneShot(CloudSound);
+            }
             Frame();
             yield return null;
         }
         if (impactAt < 0f)
+        {
             impactAt = Time.time;
+            RuntimeManager.PlayOneShot(CloudSound);
+        }
         // The wave goes on spreading and the camera rides it as it reaches it; then it holds.
         float until = Time.time + Mathf.Max(rippleReach / waveSpeed, FlatDistance(surface, basePosition) / waveSpeed) + rippleSeconds + 2f * rippleFade
             - topEndSooner;
