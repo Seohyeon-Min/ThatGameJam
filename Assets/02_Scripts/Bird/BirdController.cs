@@ -665,8 +665,12 @@ public class BirdController : MonoBehaviour
 
     // The fog maze's trees: the bird has no horizontal avoidance for them (only vertical clearance over logs/banks underfoot),
     // so while it's the current stage the target is kept within FogMaze's corridor around the baby's path instead.
-    static Vector3 ClampToFogCorridor(Vector3 point) =>
-        FogMaze.Instance != null && GameFlow.Instance.CurrentStage == FogMaze.Instance.Stage ? FogMaze.Instance.ClampToCorridor(point) : point;
+    // Out of the maze (the bird and where it goes both past its exit, toward the cliff) it flies free; going back in, or coming
+    // out, it keeps to the corridor until it is through the exit.
+    Vector3 ClampToFogCorridor(Vector3 point) =>
+        FogMaze.Instance != null && GameFlow.Instance.CurrentStage == FogMaze.Instance.Stage
+            && !(FogMaze.Instance.IsPastExit(transform.position) && FogMaze.Instance.IsPastExit(point))
+            ? FogMaze.Instance.ClampToCorridor(point) : point;
 
     // A click on the baby toggles sheltering on; a second click there (or anywhere else, via Click) turns it off again.
     void ToggleShelter()

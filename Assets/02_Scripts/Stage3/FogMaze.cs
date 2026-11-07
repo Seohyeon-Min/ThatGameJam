@@ -21,7 +21,8 @@ public class FogMaze : PathBlocker
     [SerializeField, Min(0.1f)] float wayFogRadius = 2.8f;
     [SerializeField, Range(0f, 1f)] float wayFogShare = 0.25f;
     // The bird has no horizontal avoidance for the trees lining the maze (only vertical clearance over logs/banks underfoot),
-    // so BirdController keeps it within this far either side of the ways instead, flat, while this is the current stage.
+    // so BirdController keeps it within this far either side of the ways instead, flat, while this is the current stage and it is
+    // not yet past the maze's exit.
     [Tooltip("How far either side of the path (ways) the bird may fly, flat, so it can't cross the trees beyond it.")]
     [SerializeField, Min(0.1f)] float birdCorridorWidth = 2.5f;
 
@@ -312,6 +313,9 @@ public class FogMaze : PathBlocker
         }
         return best;
     }
+
+    // Past the end of the last right way (the maze's way out), along +Z like the whole road: the open ground before the cliff.
+    public bool IsPastExit(Vector3 point) => point.z >= ways[RightWay(ForkCount - 1)][^1].z;
 
     // The point, flat, moved in to stay within birdCorridorWidth of the nearest way if it was further out (not snapped onto
     // the way itself, only pulled back to the corridor's edge) - see birdCorridorWidth above.
