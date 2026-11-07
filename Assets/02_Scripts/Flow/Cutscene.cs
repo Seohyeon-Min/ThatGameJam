@@ -192,8 +192,8 @@ public class Cutscene : MonoBehaviour
 
     void Update()
     {
-        // Debug only: Debug.isDebugBuild is also true in the Editor.
-        if (IsPlaying && Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        // Debug only: Debug.isDebugBuild is also true in the Editor. Not Esc: that's the encyclopedia's key.
+        if (IsPlaying && Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.digit0Key.wasPressedThisFrame)
             Stop();
     }
 }
