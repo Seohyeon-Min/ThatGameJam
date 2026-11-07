@@ -60,6 +60,8 @@
 
 공터: `Main` 의 `Stages/Intro/EasterEggs`, x −14 ~ 14, z −36.5 ~ −24.5. 인트로의 새 범위를 z −35 까지 늘렸다. 월드 숲은 공터에 Clear 구역을 두고 뒤쪽 패딩을 1.5 m 로 줄였다(공터 뒤 한 줄만 남는다). 카메라가 새로 보게 된 터레인 끝 쪽은 `01_SYSTEM/TreeGenerator_ClearingBack` 이 채운다.
 
+2026-11-07: 이스터에그가 스테이지 안으로 옮겨져 공터를 되돌렸다. 월드 숲의 `EasterEgg Clearing` 구역을 지우고 뒤쪽 패딩을 원래 값(13.88 m)으로 돌려 다시 생성했다(2514 → 2552 그루, 공터 전과 같다). `TreeGenerator_ClearingBack` 은 지웠고, 인트로의 새 범위는 z −26 까지로 돌렸다. `Stages/Intro/EasterEggs` 에는 철새(`MigratingBirds`, z −27.5)만 남아 있다. 아래 그림은 공터가 있던 때의 기록이다. 빌더는 `AgentScripts/ReplantClearing.cs` 다. `BuildEasterEggs.Run` 을 다시 돌리면 공터가 다시 생긴다.
+
 ### 공터 배치 (위에서 본 그림)
 
 좌표는 월드 좌표(m)다. `Stages/Intro` 와 `EasterEggs` 는 월드 원점에 있어서 프리팹의 위치가 곧 월드 위치다. 그림은 위가 +Z, 오른쪽이 +X 다. 카메라는 +X, −Z 쪽에서 보므로 게임 화면에서는 그림의 왼쪽 위(−X, +Z)가 화면 위쪽이 된다. 그래서 키 큰 것(고드름 나무, 구멍 나무)을 왼쪽(−X)에 두었다.

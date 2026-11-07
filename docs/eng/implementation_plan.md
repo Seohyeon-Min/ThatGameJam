@@ -489,6 +489,7 @@ Changes outside the plan:
 - The snow keeps only the wind value; its box, amount and lifetime went back. The forest widened to x ±33 (ADR 0022, 2026-10-29 work record 04)
 - The forest fills as far as the camera can see, and the snow box moved upwind (ADR 0024, 2026-10-29 work record 08)
 - The easter eggs (all but the puddle) are prefabs, placed in a clearing behind the intro's start. The intro's bird area reaches z -35. Details in [`easter_eggs.md`](easter_eggs.md) section 4 (ADR 0034, 2026-11-06 work record 03)
+- The eggs moved into the stages, so the clearing is undone: the forest is filled again and the intro's bird area ends at z -26 again (2026-11-07 work record 04)
 
 Remaining work and open issues:
 

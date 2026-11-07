@@ -60,6 +60,8 @@ Placeholders and stand-ins (no new art or sound on the `sam` branch):
 
 The clearing: `Stages/Intro/EasterEggs` in `Main`, x -14 to 14, z -36.5 to -24.5. The intro's bird area now reaches z -35. The world forest has a Clear zone over the clearing and its bottom padding is down to 1.5 m (one row stays behind the clearing). `01_SYSTEM/TreeGenerator_ClearingBack` fills the ground toward the terrain's edge that the camera now sees.
 
+2026-11-07: the eggs moved into the stages, so the clearing is undone. The world forest's `EasterEgg Clearing` zone is gone and its bottom padding is back to the old value (13.88 m), regenerated (2514 → 2552 trees, the same as before the clearing). `TreeGenerator_ClearingBack` is deleted and the intro's bird area ends at z -26 again. Only the migrating birds (`MigratingBirds`, z -27.5) remain under `Stages/Intro/EasterEggs`. The figures below record the clearing as it was. The builder is `AgentScripts/ReplantClearing.cs`. Running `BuildEasterEggs.Run` again would bring the clearing back.
+
 ### Clearing layout (top view)
 
 Coordinates are world coordinates (m). `Stages/Intro` and `EasterEggs` sit at the world origin, so the prefab positions are world positions. In the figures, up is +Z and right is +X. The camera looks from +X, -Z, so the top-left of the figure (-X, +Z) is the top of the game screen. That is why the tall things (the icy tree, the hollow tree) are on the left (-X).

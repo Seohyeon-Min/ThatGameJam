@@ -39,6 +39,10 @@ Material:
         m_Texture: {fileID: 11700000, guid: 949471693f9fc0a4d9759fd5e75ce1b8, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _TerrainHolesTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _AlphaClip: 0
@@ -60,13 +64,19 @@ Material:
     - _HasPattern: 1
     - _LeafCard: 0
     - _LeavePaper: 1
+    - _MeltScale: 7
     - _NoShade: 0
+    - _PetalHue: 0
+    - _PetalHueWidth: 0
+    - _PetalMinSaturation: 0.2
     - _ReceiveCastShadows: 0
+    - _RingBloomable: 0
     - _Roll: 1
     - _SelfShadowSkip: 0
     - _Skin: 0
     - _SkinShadeDepth: 0.5
     - _SkinShadeTurn: 0.7
+    - _TerrainHoles: 0
     - _Wind: 0
     - _WindFlutter: 0.25
     - _WindHeight: 0.5
@@ -80,6 +90,8 @@ Material:
     - _DabColourA: {r: 0.95, g: 0.62, b: 0.62, a: 1}
     - _DabColourB: {r: 0.54999995, g: 0.7, b: 0.75, a: 1}
     - _DabColourC: {r: 1, g: 0.9, b: 0.75, a: 1}
+    - _MeltColour: {r: 0.54999995, g: 0.72, b: 0.37999994, a: 1}
+    - _MeltWetColour: {r: 0.76, g: 0.81, b: 0.86, a: 0.6}
     - _SkinShadeColour: {r: 1, g: 0.5, b: 0.24999997, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0.3, a: 0}
   m_BuildTextureStacks: []
