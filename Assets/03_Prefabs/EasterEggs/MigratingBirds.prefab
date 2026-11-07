@@ -49,6 +49,7 @@ MonoBehaviour:
   entry: {fileID: 11400000, guid: 8de3a73beec603e40a0cc293651727a1, type: 2}
   subject: {fileID: 7201783472135667056}
   photoView: {fileID: 0}
+  showBird: 1
 --- !u!114 &3374605854292612450
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -69,6 +70,9 @@ MonoBehaviour:
   halfCrossing: 25
   speed: 6
   flapEvery: 2
+  flapVariation: 0.4
+  wander: 0.3
+  wanderFrequency: 0.4
 --- !u!1 &8926049910272503104
 GameObject:
   m_ObjectHideFlags: 0
