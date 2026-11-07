@@ -20,11 +20,19 @@ public class FogMaze : PathBlocker
     // (a quarter of 0.9 is about the light fog of ADR 0027).
     [SerializeField, Min(0.1f)] float wayFogRadius = 2.8f;
     [SerializeField, Range(0f, 1f)] float wayFogShare = 0.25f;
+    // The bird has no horizontal avoidance for the trees lining the maze (only vertical clearance over logs/banks underfoot),
+    // so BirdController keeps it within this far either side of the ways instead, flat, while this is the current stage.
+    [Tooltip("How far either side of the path (ways) the bird may fly, flat, so it can't cross the trees beyond it.")]
+    [SerializeField, Min(0.1f)] float birdCorridorWidth = 2.5f;
 
     // No natural resolution: without help she still gets through, by chance.
     public override NaturalTimer Timer => null;
     // The help is the run to the bird, not something to look up at.
     public override bool LookUpWhenOpenedByBird => false;
+
+    // Only one in the game: BirdController checks this to tell whether the maze's corridor applies.
+    public static FogMaze Instance { get; private set; }
+    public Stage Stage => stage;
 
     // The ways, as points along the ground, each from the fork it leaves (the straight way from its start). Way 0 is the straight
     // way, way i (1 to n) the right way of fork i - 1, and way n + 1 + i the dead end of fork i. The straight way and each right way end at the next
@@ -50,6 +58,7 @@ public class FogMaze : PathBlocker
 
     void Awake()
     {
+        Instance = this;
         stage = GetComponentInParent<Stage>();
         ways = new Vector3[2 * ForkCount + 1][];
         ways[0] = Points(approach, null);
@@ -302,6 +311,20 @@ public class FogMaze : PathBlocker
             }
         }
         return best;
+    }
+
+    // The point, flat, moved in to stay within birdCorridorWidth of the nearest way if it was further out (not snapped onto
+    // the way itself, only pulled back to the corridor's edge) - see birdCorridorWidth above.
+    public Vector3 ClampToCorridor(Vector3 point)
+    {
+        int nearestWay = Nearest(point, Enumerable.Range(0, ways.Length), out float along);
+        Vector3 nearest = PointAt(nearestWay, along);
+        Vector2 flat = new(point.x, point.z), nearestFlat = new(nearest.x, nearest.z);
+        float distance = Vector2.Distance(flat, nearestFlat);
+        if (distance <= birdCorridorWidth)
+            return point;
+        Vector2 clamped = Vector2.Lerp(nearestFlat, flat, birdCorridorWidth / distance);
+        return new Vector3(clamped.x, point.y, clamped.y);
     }
 
     // The flat distance from the point to the way, and how far along the way the nearest point is.

@@ -6,6 +6,8 @@ using UnityEngine;
 public class BabyAnimationEvents : MonoBehaviour
 {
     // The ground is snow for the whole game so far; swap this event once a melted-ground variant exists
-    // (design doc §8.4/§10, the snow melting away stage by stage).
-    public void Footstep() => RuntimeManager.PlayOneShot("event:/SFX/footstepSnow", transform.position);
+    // (design doc §8.4/§10, the snow melting away stage by stage). Crossing a balance beam, her feet are on
+    // wood instead.
+    public void Footstep() => RuntimeManager.PlayOneShot(
+        Baby.Instance.OnBalanceBeam ? "event:/SFX/footstepTreeWalk" : "event:/SFX/footstepSnow", transform.position);
 }
