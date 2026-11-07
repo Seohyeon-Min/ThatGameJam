@@ -3,7 +3,7 @@
 //   경계는 몸에 붙은 3D 노이즈로 흔들어 솜처럼 뭉실뭉실한 테두리가 된다(몸을 따라 움직이고 미끄러지지 않는다).
 // - 빛: 빛을 감싸 들어가게(wrap) 받아 명암이 부드럽게 넘어가고, 그늘은 옅은 하늘색이다.
 // - 깊이를 쓰지 않아 수채화 윤곽선이 그려지지 않고, 그림자도 드리우지 않는다(딱딱한 그림자 가장자리가 생기지 않게).
-//   다른 물체의 그림자는 절반 세기로 받는다.
+//   다른 물체의 그림자는 Shadow Strength만큼 받는다(아이 몸의 눈은 절반, 땅에 쌓인 눈은 전부: 둘레 땅과 같은 그림자).
 // 수채화 베이크(WatercolorBaker)는 이 셰이더의 렌더러를 건너뛴다(WatercolorBake = Skip 태그).
 Shader "ThatGameJam/SoftSnow"
 {
@@ -18,6 +18,8 @@ Shader "ThatGameJam/SoftSnow"
         _FluffScale ("Fluff Cells Per Metre", Float) = 40
         _Fluff ("Fluff Amount", Range(0, 1)) = 0.5
         _Puff ("Puff Out Along Normal (object units)", Float) = 0
+        _ShadowStrength ("Shadow Strength (how much of others' shadows it takes)", Range(0, 1)) = 0.5
+        _CastShadeColor ("Cast Shadow Colour (where others' shadows fall)", Color) = (0.72, 0.8, 0.92, 1)
     }
 
     SubShader
@@ -37,6 +39,8 @@ Shader "ThatGameJam/SoftSnow"
             float _FluffScale;
             half _Fluff;
             float _Puff;
+            half _ShadowStrength;
+            half4 _CastShadeColor;
         CBUFFER_END
 
         float Hash(float3 p)
@@ -135,6 +139,8 @@ Shader "ThatGameJam/SoftSnow"
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
+            // Drawn among the transparents, after the opaques' screen-space shadows: it reads the shadow map at its own spot instead.
+            #define _SURFACE_TYPE_TRANSPARENT 1
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
 
@@ -178,9 +184,11 @@ Shader "ThatGameJam/SoftSnow"
 
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
                 half wrapped = saturate((dot(normalWS, mainLight.direction) + _Wrap) / (1.0 + _Wrap));
-                // Shadows soften too: half of the shade they would give.
-                half lit = wrapped * lerp(1.0, mainLight.shadowAttenuation, 0.5);
-                half3 colour = lerp(_ShadeColor.rgb, _Color.rgb, lit) * lerp(1.0, mainLight.color, 0.5);
+                // Shadows as strong as the material says (on her, half: they soften too), in their own colour (on the ground, the
+                // ground's shadows' colour). With it the shade colour, as it was: the same as darkening the light by that much.
+                half3 colour = lerp(_ShadeColor.rgb, _Color.rgb, wrapped);
+                colour = lerp(colour, _CastShadeColor.rgb, (1.0 - mainLight.shadowAttenuation) * _ShadowStrength);
+                colour *= lerp(1.0, mainLight.color, 0.5);
                 colour += SampleSH(normalWS) * 0.15;
                 return half4(MixFog(colour, input.fogFactor), alpha);
             }
