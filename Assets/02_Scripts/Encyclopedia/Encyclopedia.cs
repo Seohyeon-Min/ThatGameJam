@@ -50,7 +50,7 @@ public class Encyclopedia : MonoBehaviour
         int index = Array.IndexOf(entries, entry);
         photos[index] = TakePhoto(subject, photoView, showBird);
         cards[index].Show(index + 1, entry, photos[index]);
-        popup.Show(index + 1, entry);
+        popup.Show();
     }
 
     void Awake()
