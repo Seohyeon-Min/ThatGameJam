@@ -1,0 +1,6 @@
+<!-- Managed Stripping Level is High for the Web build. Keep the game scripts and the FMOD integration whole:
+     animation events, UnityEvents and WatercolorManager.Blend reach members by name or reflection. -->
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all"/>
+  <assembly fullname="FMODUnity" preserve="all"/>
+</linker>
