@@ -44,6 +44,8 @@
 |---|---|---|---|
 | `SnowOnBird` (`Bird` 아래) | 흰 구 (자리 표시) | 계절 0 에서 새가 땅이나 가지에 1.5 초 가만히 있으면 8 초에 걸쳐 쌓이고, 움직이면 털린다 | 다 쌓였을 때 |
 | `StumpLadybug` | 원기둥 그루터기 (자리 표시), 무당벌레 `Ladybug.prefab` | 클릭하면 새가 앉아 2 번 쪼고, 무당벌레가 기어 나온다. 한 번만 | 다 기어 나왔을 때 |
+
+2026-11-07: 씬에서는 JU 의 `LeaningLogStump` 프리팹(`Stages/Stage1/LeaningLog/broken tree`)이 이 알을 맡는다. 무당벌레 두 마리(`Ladybug`, `Ladybug2`)가 각각 1 초 기어 나온 뒤 찍히고, 사진에 새는 들어가지 않는다. `StumpLadybug` 프리팹은 씬에 두지 않는다.
 | `SnowWhirl` | `Snowbank` 눈더미 (SoftSnow 머티리얼) | 클릭하면 새가 앉았다가 4 초 동안 위를 돈다. 한 번 클릭하면 가는 도중 다른 곳을 클릭해도 멈추지 않는다(`Perchable` 의 `Locks Clicks`). 눈 파티클 회오리, 소리는 `event:/SFX/spiral`. 끝나면 다시 할 수 있다 | 도는 중간 |
 | `SnowFlower` | `Snowbank` 작은 눈더미 (SoftSnow 머티리얼) + `InteractiveSparkle`, 꽃 `Flower01` | 클릭하면 새가 앉아 3 번 쪼고, 눈이 줄며 꽃이 자란다. 한 번만 | 꽃이 다 자랐을 때 |
 | `IcicleXylophone` | 토미의 `icy tree.fbx` (고드름 8 개), 프리팹 1.6 배 | 고드름은 가지 두 개(`Tube`, `Tube 6`)에 4 개씩 달려 있고, 가지마다 `Perchable` 이 하나 있다(`Cylinder 8/Branch_Right`, `Branch_Left`, 2026-11-07). 가지의 `Perchable` 은 `Clicked Through` 에 그 아래 고드름 콜라이더를 가진다. 고드름을 클릭하면 새가 그 고드름이 달린 가지의 `PerchPoint` 에 앉아 그 고드름을 한 번 쫀다. 부리가 바닥에 닿는 순간 한 음을 내고, 고드름이 매달린 꼭대기를 축으로 화면 좌우로 흔들리다 1.5 초에 걸쳐 멈춘다(10°, 초당 5 번). 가지에 앉은 채 그 가지 아래 고드름을 누르면 자리를 옮기지 않고 그 고드름 쪽으로 돌아서 쫀다. 다른 가지의 고드름을 누르면 그 가지로 간다. 긴 것부터 도레미파솔라시도. 소리는 `event:/SFX/highpitch_0` 의 pitch 를 바꾼 것이다 | 처음 울릴 때 |
