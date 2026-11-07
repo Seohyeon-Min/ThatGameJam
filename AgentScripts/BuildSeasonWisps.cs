@@ -56,9 +56,9 @@ public static class BuildSeasonWisps
         SetStep(steps, 1, new Color(1f, 1f, 1f, 0.65f),         9, 0.8f, 0.3f, 0.03f, 0.85f,  3f,  9f);
         SetStep(steps, 2, new Color(1f, 1f, 1f, 0.85f),        12, 1.0f, 0.35f, 0.045f, 0.8f, 2f,  9f);
         SetStep(steps, 3, new Color(1f, 1f, 1f, 0.95f),        16, 1.15f, 0.4f, 0.06f, 0.8f,  1.2f, 9f);
-        // The ending's: many strokes, broad and wide, glowing warm (HDR, so Bloom spreads it), striking at once and gone fast,
-        // like the first swirl was.
-        SetStep(steps, 4, new Color(2.2f, 2.0f, 1.6f, 1f),     24, 1.4f, 0.5f, 0.035f, 0.9f,  0.15f, 3f);
+        // The ending's: many strokes, broad and wide, plain white with no glow, striking at once and gone fast, like the first
+        // swirl was.
+        SetStep(steps, 4, new Color(1f, 1f, 1f, 1f),     24, 1.4f, 0.5f, 0.035f, 0.9f,  0.15f, 3f);
         so.ApplyModifiedProperties();
 
         EditorSceneManager.MarkSceneDirty(season.gameObject.scene);
