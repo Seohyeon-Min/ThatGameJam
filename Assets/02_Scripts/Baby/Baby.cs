@@ -257,7 +257,8 @@ public class Baby : CryListener
         GameTuning tuning = GameTuning.Current;
         // The tilt eases in and out by itself, so looking up at the bird from it does not snap her head straight.
         bool tilting = watchedTarget != null && !noticingBird && !lookingUpAtBird && !watchingBird && !watchingLight;
-        headTiltNow = Mathf.MoveTowards(headTiltNow, tilting ? watchedTilt * (1f + 0.15f * Mathf.Sin(Time.time * 0.9f)) : 0f, 30f * Time.deltaTime);
+        // Peering at it: the tilt sways slowly from one side to the other.
+        headTiltNow = Mathf.MoveTowards(headTiltNow, tilting ? watchedTilt * Mathf.Clamp(Mathf.Sin(Time.time * 0.9f) * 1.6f, -1f, 1f) : 0f, 30f * Time.deltaTime);
         gazeBlend = Mathf.MoveTowards(gazeBlend, active ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, tuning.babyGazeBlendTime));
         if (gazeBlend <= 0.001f)
             return;
@@ -558,6 +559,20 @@ public class Baby : CryListener
                     watchedTarget = stop.ObserveTarget;
                     watchedTilt = stop.HeadTilt;
                     watchedLift = 0f;
+                    // Far from it: she trots up close and peers at it from there.
+                    Vector3 toIt = stop.ObserveTarget.position - transform.position;
+                    toIt.y = 0f;
+                    float closer = toIt.magnitude - tuning.babyPeerDistance;
+                    if (closer > 0.3f)
+                    {
+                        for (float t = 0f; t < 0.4f; t += Time.deltaTime)
+                        {
+                            TurnToward(toIt);
+                            yield return null;
+                        }
+                        yield return TrotTo(transform.position + toIt.normalized * closer, tuning.babyCallTrotSpeed * 0.8f);
+                        State = BabyState.Waiting;
+                    }
                 }
                 // Switches idle variant (Idle/Hum/Stretch) every so often so a long wait doesn't just breathe in
                 // place; skipped while observing something specific, which takes full attention instead.
@@ -708,13 +723,13 @@ public class Baby : CryListener
                     Transform call = noticedCall;
                     noticedCall = null;
                     comesToCries = true;
-                    yield return TrotToward(call, 0.6f, target);
+                    yield return TrotToward(call, 0.6f, target, GameTuning.Current.babyCallTrotDistance);
                 }
                 else if (cryPending && (cryReactionDelay -= Time.deltaTime) <= 0f)
                 {
                     cryPending = false;
                     if (comesToCries)
-                        yield return TrotToward(BirdController.Instance.transform, 0f, target);
+                        yield return TrotToward(BirdController.Instance.transform, 0f, target, GameTuning.Current.babyCryTrotDistance);
                     else
                         yield return ReactToCry();
                 }
@@ -753,7 +768,45 @@ public class Baby : CryListener
     // lookAbove (m) over it, as she slows; she stays like
     // that a moment, body still the way she was going; then turns and trots over, quick to start and slowing as she gets there,
     // the last steps a walk, her pace never quite even; then watches a while.
-    IEnumerator TrotToward(Transform call, float lookAbove, Vector3 routeTarget)
+    // A little run to the goal like a person's: quick to start, slowing as she gets there, the last steps a walk, the pace never
+    // quite even. Ends standing still.
+    IEnumerator TrotTo(Vector3 goal, float peak)
+    {
+        GameTuning tuning = GameTuning.Current;
+        Vector3 start = transform.position;
+        float distance = Vector3.Distance(start, goal);
+        animator.SetBool(QuietWaitParam, false);
+        animator.SetBool(WalkingParam, true);
+        while (distance > 0.001f && transform.position != goal)
+        {
+            float done = Vector3.Distance(start, transform.position) / distance;
+            // Up to speed over the first fifth, full on to just past halfway, then easing down to a walk's pace at the end.
+            float speedUp = Mathf.SmoothStep(0.35f, 1f, done / 0.2f);
+            float slowDown = Mathf.Lerp(1f, 0.2f, Mathf.SmoothStep(0f, 1f, (done - 0.55f) / 0.45f));
+            float uneven = 1f + Noise(57f, 2.3f) * 0.25f;
+            float speed = Mathf.Max(0.25f, peak * speedUp * slowDown * uneven);
+            if (speed > tuning.babyWalkSpeed * 1.25f)
+            {
+                PlayDirect(RunState, 0.15f);
+                animator.speed = Mathf.Clamp(speed / Mathf.Max(peak, 0.01f), 0.75f, 1.15f);
+            }
+            else
+            {
+                if (directState != 0)
+                {
+                    directState = 0;
+                    animator.CrossFade(WalkState, 0.25f);
+                }
+                animator.speed = Mathf.Clamp(speed / Mathf.Max(tuning.babyWalkClipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
+            }
+            TurnToward(goal - transform.position);
+            transform.position = Vector3.MoveTowards(transform.position, goal, speed * Time.deltaTime);
+            yield return null;
+        }
+        StandStill();
+    }
+
+    IEnumerator TrotToward(Transform call, float lookAbove, Vector3 routeTarget, float trotDistance)
     {
         GameTuning tuning = GameTuning.Current;
         // Where she left her way: she comes back onto it a little further on, not straight to the next route point.
@@ -773,41 +826,9 @@ public class Baby : CryListener
 
         Vector3 toCall = call.position - transform.position;
         toCall.y = 0f;
-        float distance = Mathf.Min(tuning.babyCallTrotDistance, toCall.magnitude - 1f);
+        float distance = Mathf.Min(trotDistance, toCall.magnitude - 1f);
         if (distance > 0.1f)
-        {
-            Vector3 start = transform.position;
-            Vector3 goal = start + toCall.normalized * distance;
-            animator.SetBool(QuietWaitParam, false);
-            animator.SetBool(WalkingParam, true);
-            float peak = tuning.babyCallTrotSpeed;
-            while (transform.position != goal)
-            {
-                float done = Vector3.Distance(start, transform.position) / distance;
-                // Up to speed over the first fifth, full on to just past halfway, then easing down to a walk's pace at the end.
-                float speedUp = Mathf.SmoothStep(0.35f, 1f, done / 0.2f);
-                float slowDown = Mathf.Lerp(1f, 0.2f, Mathf.SmoothStep(0f, 1f, (done - 0.55f) / 0.45f));
-                float uneven = 1f + Noise(57f, 2.3f) * 0.25f;
-                float speed = Mathf.Max(0.25f, peak * speedUp * slowDown * uneven);
-                if (speed > tuning.babyWalkSpeed * 1.25f)
-                {
-                    PlayDirect(RunState, 0.15f);
-                    animator.speed = Mathf.Clamp(speed / Mathf.Max(peak, 0.01f), 0.75f, 1.15f);
-                }
-                else
-                {
-                    if (directState != 0)
-                    {
-                        directState = 0;
-                        animator.CrossFade(WalkState, 0.25f);
-                    }
-                    animator.speed = Mathf.Clamp(speed / Mathf.Max(tuning.babyWalkClipSpeed, 0.01f), tuning.babyClipRateMin, tuning.babyClipRateMax);
-                }
-                TurnToward(goal - transform.position);
-                transform.position = Vector3.MoveTowards(transform.position, goal, speed * Time.deltaTime);
-                yield return null;
-            }
-        }
+            yield return TrotTo(transform.position + toCall.normalized * distance, tuning.babyCallTrotSpeed);
         StandStill();
         watchedLift = 0f;
         for (float t = 0f; t < tuning.babyCallWatchTime; t += Time.deltaTime)
