@@ -1124,7 +1124,7 @@ public class BirdController : MonoBehaviour
         if (show == perchCursorShown || perchCursor == null)
             return;
         perchCursorShown = show;
-        Cursor.SetCursor(show ? perchCursor : null, show ? perchCursorHotspot : Vector2.zero, CursorMode.Auto);
+        GameCursor.Override(show ? perchCursor : null, perchCursorHotspot);
     }
 
     // On screen, inside the margin, and not past the area's Z ends: no branch takes the bird beyond the current stage's area.
