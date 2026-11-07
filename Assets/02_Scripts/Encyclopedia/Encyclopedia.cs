@@ -7,7 +7,7 @@ using UnityEngine.Rendering.Universal;
 
 // The list of interactions the player has found in this play session, each with a close-up photo of what was found,
 // taken by the game at the moment the interaction shows itself.
-// The ` key slides the page up from the bottom and pauses the game; the scene behind it blurs through a depth of field Volume.
+// The Esc key slides the page up from the bottom and pauses the game; the scene behind it blurs through a depth of field Volume.
 // The same key closes it. Gameplay input checks IsOpen so clicks on the page do not reach the world.
 public class Encyclopedia : MonoBehaviour
 {
@@ -119,7 +119,7 @@ public class Encyclopedia : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
         // It does not open during the intro or a cutscene.
-        if (keyboard != null && keyboard.backquoteKey.wasPressedThisFrame && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
+        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
             SetOpen(!IsOpen);
 
         float target = IsOpen ? 1f : 0f;
