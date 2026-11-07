@@ -18,7 +18,6 @@ public class FogBirdAmbience : MonoBehaviour
     {
         field = GetComponent<FogField>();
         instance = RuntimeManager.CreateInstance(eventPath);
-        instance.set3DAttributes(RuntimeUtils.To3DAttributes(transform.position));
         instance.setVolume(0f);
         instance.start();
     }
@@ -27,6 +26,9 @@ public class FogBirdAmbience : MonoBehaviour
     {
         if (Baby.Instance == null)
             return;
+        // The fog area spans the whole maze, far bigger than the event's attenuation range, so the sound has to follow her
+        // through it rather than sit fixed at the field's own pivot.
+        instance.set3DAttributes(RuntimeUtils.To3DAttributes(Baby.Instance.transform.position));
         bool inside = field.Contains(Baby.Instance.transform.position);
         volume = Mathf.MoveTowards(volume, inside ? 1f : 0f, Time.deltaTime / fadeSeconds);
         instance.setVolume(volume);
