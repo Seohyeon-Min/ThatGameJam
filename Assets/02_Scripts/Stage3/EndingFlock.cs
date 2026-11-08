@@ -8,7 +8,7 @@ using UnityEngine.Video;
 // birds; the rows behind come closer and closer, packed up to it, and behind them a white sheet (Tail) carries the white on over
 // the rest of the screen. All the same white, so where they overlap no edge shows. Once it has covered the screen, it is white
 // (End Card's White), and the logo video plays on it in black, in the middle. Once it has played, the logo moves up a little and
-// the credits (End Card's Credits) fade in below it.
+// the credits (End Card's Credits) fade in below it; then the replay button (End Card's Replay, bottom left).
 // The birds are WhiteFlockBird prefabs under Birds and the sheet is Tail, off until it starts; the white and the logo are on the
 // End Card canvas.
 public class EndingFlock : MonoBehaviour
@@ -23,6 +23,8 @@ public class EndingFlock : MonoBehaviour
     [SerializeField] GameObject logo;
     [Tooltip("The credits under the logo (names large, roles small), clear until the logo has played and moved up.")]
     [SerializeField] CanvasGroup credits;
+    [Tooltip("The replay button (bottom left, ReplayButton), clear until the credits are up; a click on it plays the game again from the start.")]
+    [SerializeField] CanvasGroup replay;
 
     [Header("Birds")]
     [Tooltip("Rows of the flock, one behind another, from its front back (the birds are shared out over them, side by side in each). Then the gap behind the front row, as a share of the screen's height; each gap after is this much of the one before (closer and closer), down to the least.")]
@@ -59,6 +61,9 @@ public class EndingFlock : MonoBehaviour
     [Tooltip("Seconds after the logo starts moving up that the credits start to fade in, and the seconds they take.")]
     [SerializeField, Min(0f)] float creditsAfter = 0.6f;
     [SerializeField, Min(0.01f)] float creditsFadeSeconds = 1.5f;
+    [Tooltip("Seconds after the credits are fully in that the replay button starts to fade in, and the seconds it takes.")]
+    [SerializeField, Min(0f)] float replayAfter = 1.5f;
+    [SerializeField, Min(0.01f)] float replayFadeSeconds = 1f;
 
     public bool IsPlaying { get; private set; }
 
@@ -203,14 +208,23 @@ public class EndingFlock : MonoBehaviour
 
     IEnumerator FadeInCredits()
     {
-        credits.alpha = 0f;
-        credits.gameObject.SetActive(true);
-        for (float t = 0f; t < creditsFadeSeconds; t += Time.deltaTime)
+        yield return FadeIn(credits, creditsFadeSeconds);
+        if (replay == null)
+            yield break;
+        yield return new WaitForSeconds(replayAfter);
+        yield return FadeIn(replay, replayFadeSeconds);
+    }
+
+    static IEnumerator FadeIn(CanvasGroup group, float seconds)
+    {
+        group.alpha = 0f;
+        group.gameObject.SetActive(true);
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
         {
-            credits.alpha = Mathf.SmoothStep(0f, 1f, t / creditsFadeSeconds);
+            group.alpha = Mathf.SmoothStep(0f, 1f, t / seconds);
             yield return null;
         }
-        credits.alpha = 1f;
+        group.alpha = 1f;
     }
 
     // One bird at its place in the flock, its front this far along, turned the way it has moved; where it is now.
