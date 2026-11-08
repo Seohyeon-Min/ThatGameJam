@@ -211,6 +211,10 @@ public class EndingFlight : MonoBehaviour
     CinemachineBrain brain;
     CinemachineBlendDefinition blendBefore;
 
+    [Header("Hidden In The Ending")]
+    [Tooltip("Turned off as the ending starts, and left off: the fog maze's animals, which would otherwise show in its shots.")]
+    [SerializeField] GameObject[] hiddenInEnding = { };
+
     public bool IsPlaying { get; private set; }
     // The first shot (the game's own camera) is over: the cut to the rise shot. The cliff's breeze goes off here.
     public event System.Action FirstShotOver;
@@ -223,6 +227,9 @@ public class EndingFlight : MonoBehaviour
         if (IsPlaying)
             return;
         IsPlaying = true;
+        foreach (GameObject hidden in hiddenInEnding)
+            if (hidden != null)
+                hidden.SetActive(false);
         outwardWay = Vector3.ProjectOnPlane(outward, Vector3.up).normalized;
         StartCoroutine(Run(outwardWay, fromFirstShot));
     }
