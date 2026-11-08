@@ -1,0 +1,1378 @@
+{
+    "m_Name": "",
+    "serializedVersion": "2",
+    "m_Version": 0,
+    "m_DeviceRenderer": 11,
+    "m_RuntimePlatform": 17,
+    "m_QualityLevelName": "PC",
+    "m_VariantInfoMap": [
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "0790da87c546b785e2b137fc21f92dd0"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SoftSnow",
+                "shaderAssetGUID": "ba72f18f70c357544b82a1ea6cc2f200",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "7720de7bef1a2f7379b712a2825d6a06"
+            },
+            "second": {
+                "shaderName": "Hidden/Internal-GUITexture",
+                "shaderAssetGUID": "0860a397848c35f488bf42d3c36a3330",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "7ba0f57eeb054ae297885d55153062f6"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Unlit",
+                "shaderAssetGUID": "650dd9526735d5b46b79224bc6e94025",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "ab80687ec22c2fdda5bb3b628d2e723c"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal Render Pipeline/Bloom",
+                "shaderAssetGUID": "5f1864addb451f54bae8c86d230f736e",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_BLOOM_HQ",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "ade096ca5e62d86405ecb86af2b6b0e0"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/SG_LeafWind",
+                "shaderAssetGUID": "f641be4d421eeca4fa54639e3d21c5f3",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "d1907567596df1696899516ca62edfd0"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Particles/Unlit",
+                "shaderAssetGUID": "0406db5a14f94604a8c57ccfbc9f3b46",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _SURFACE_TYPE_TRANSPARENT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "0c518f054f57896db2ad2e422baff005"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorKuwahara",
+                "shaderAssetGUID": "5f4f671a3b6ed0140945615d50c61155",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 7,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "2b21626d926420ba3cde75ecaf16fe38"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorSky",
+                "shaderAssetGUID": "d61eb1c6153b61847a89abcde4a0887b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "3011ff5c81224e9e42a0ee8c836f97b8"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ALPHATEST_ON",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "87d1af0f80d09796ca0c48c84a348959"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/LeafBillboard",
+                "shaderAssetGUID": "da56c08f271f08a43bae00b0a708d58f",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "a8b1c0d4ea0d405fc021e30ee95efe7f"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/LeafBillboard",
+                "shaderAssetGUID": "da56c08f271f08a43bae00b0a708d58f",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "b0d146db8a7324f748e664f4c52d9bb8"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Lit",
+                "shaderAssetGUID": "933532a4fcc9baf4fa0491de14d08ed7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "04128f59f780358db02688c6a345d48b"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/FeatherBirdFluff",
+                "shaderAssetGUID": "7243528d749ab7e42aca4cd8040aaa40",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "1c12221718294621d05a507e0918cee4"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/SG_LeafWind",
+                "shaderAssetGUID": "f641be4d421eeca4fa54639e3d21c5f3",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _LIGHT_LAYERS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "0412fb9b43fd6934e5bc316a457d98ff"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "9a224e896baa9c72b33c99b27e3e6261"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal/CoreBlit",
+                "shaderAssetGUID": "93446b5c5339d4f00b85c159e1159b7c",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c5b2e7a6af7efa4744fdee421a52b071"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/SG_LeafWind",
+                "shaderAssetGUID": "f641be4d421eeca4fa54639e3d21c5f3",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 3,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "ee92bc4a087dcb612e568a7f0ee10f76"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 INSTANCING_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "44b39b3446725501b9debc4187a341b8"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorKuwahara",
+                "shaderAssetGUID": "5f4f671a3b6ed0140945615d50c61155",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 10,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "4ca352c323d4c3f608b74fb771020259"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Lit",
+                "shaderAssetGUID": "933532a4fcc9baf4fa0491de14d08ed7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "933396fa4a9aaa5e71615dfe9c75387c"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorWater",
+                "shaderAssetGUID": "02af24a49b23ee245a9c27421c7856f7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c2b3f3220900e936605169c82ebd1d24"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ALPHATEST_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "64f4e56db0aa296871b6a61bdbfcc270"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Lit",
+                "shaderAssetGUID": "933532a4fcc9baf4fa0491de14d08ed7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _ALPHAPREMULTIPLY_ON _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT _SURFACE_TYPE_TRANSPARENT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "6234f9d6f06433a4a91284a11ec0de11"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorWater",
+                "shaderAssetGUID": "02af24a49b23ee245a9c27421c7856f7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "f1d4ad93e2a625cda780dba28bbfbaf1"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal Render Pipeline/LutBuilderLdr",
+                "shaderAssetGUID": "65df88701913c224d95fc554db28381a",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "6195b8aad2ada7b710a7d01ce74d49d1"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ALPHATEST_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "9c25d33227b81f407264557affcf54bb"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "a8a52c5bfff631c925d4b5b4242c1ed2"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/SG_LeafWind",
+                "shaderAssetGUID": "f641be4d421eeca4fa54639e3d21c5f3",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "b27583b30d17bdc544812d9fdf6cda87"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/GlowRing",
+                "shaderAssetGUID": "c22ee5d76a332a14b9754ce9a8c44409",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c4551759ebd937d388ec6f8bf1a97364"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/OcclusionFade",
+                "shaderAssetGUID": "2695ffe4b13c62a4aaf167c1d81cdfca",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "e91561ce158a9588e4493878cb09e7e1"
+            },
+            "second": {
+                "shaderName": "Hidden/BlitCopy",
+                "shaderAssetGUID": "7f98de55a7e99dc4ab9469edbd3040bc",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "01b662ea36816805fc30ba94515c84e9"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BirdPrism",
+                "shaderAssetGUID": "71ef0873636558048be264274fa8c8ab",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "0eb6b34865767bce186c8e7d9ce97958"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SpringRing",
+                "shaderAssetGUID": "9a969e2700e7c1a4baeaef7076829231",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "26a6f987cd15d6c9f05d07263a34ebee"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/EyeSparkle",
+                "shaderAssetGUID": "881dcaf979ed4b843904ab3a471550f4",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "3f1681cd94bea417da21252289de3614"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SoftSnow",
+                "shaderAssetGUID": "ba72f18f70c357544b82a1ea6cc2f200",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "1786512f165d2462201abe71ffaf7319"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/LeafBillboard",
+                "shaderAssetGUID": "da56c08f271f08a43bae00b0a708d58f",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "0606cfa121b9af162341b4a275bebfe7"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/ArnoldStandardSurface",
+                "shaderAssetGUID": "3739e562a03fc0b4982d8aa66cc50865",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 3,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "9a463a1491114049a5c29b2bb2af3196"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorKuwahara",
+                "shaderAssetGUID": "5f4f671a3b6ed0140945615d50c61155",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 11,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "acf6c2dadba1ce2e550d0c156ca0232c"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/FeatherBird",
+                "shaderAssetGUID": "3208b09ebd0d50e46ad10d3860b8d884",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c526bbf78b9c490babd451bae1dde4f7"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal/CoreBlit",
+                "shaderAssetGUID": "93446b5c5339d4f00b85c159e1159b7c",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 23,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "4cb715935ed0f789f1cddd1a4051d97a"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorBlur",
+                "shaderAssetGUID": "15cd0a6f32c11434c87f18b0a52840e6",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "f997c439b707081d4413067a5ae525fa"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/LightBeam",
+                "shaderAssetGUID": "ceda41c970d54d1a8ee6e1d39d4366f8",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "1bb8fcb7113916ff6556ad5c0bac6d58"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/ArnoldStandardSurface",
+                "shaderAssetGUID": "3739e562a03fc0b4982d8aa66cc50865",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _LIGHT_LAYERS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "23b8fd890ff7240ecdc00f99d446246d"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal Render Pipeline/UberPost",
+                "shaderAssetGUID": "e7857e9d0c934dc4f83f270f8447b006",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_BLOOM_HQ",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "1f3834667528db1a37dabdcf7a29fdde"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/Footprint",
+                "shaderAssetGUID": "db49d7f5e222cb34390cca39d9f1f478",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "99f801c9ca02e3c3b13d89e439ea3a3e"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal Render Pipeline/Bloom",
+                "shaderAssetGUID": "5f1864addb451f54bae8c86d230f736e",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_BLOOM_HQ",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c0b884c41bfe812faeb394f62bba7a41"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BirdPrismPiece",
+                "shaderAssetGUID": "33077a257d47fce4aa08e9b19455b264",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "dc78323e18973e4367ec972722c0814f"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/OcclusionFade",
+                "shaderAssetGUID": "2695ffe4b13c62a4aaf167c1d81cdfca",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "d128f9dee7a819f607d787aa968d26af"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ALPHATEST_ON _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "cff84efb983ffceff3e7542426a52f3f"
+            },
+            "second": {
+                "shaderName": "Hidden/Internal-GUITextureClip",
+                "shaderAssetGUID": "ad00782baad4dfc4fbf1e757e42f175b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "43b95ecf3d37e8e98573149793700e85"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Lit",
+                "shaderAssetGUID": "933532a4fcc9baf4fa0491de14d08ed7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "54c9142f0435fdab419ab28a2180c84c"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Lit",
+                "shaderAssetGUID": "933532a4fcc9baf4fa0491de14d08ed7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "4c79474245beba640997177c87a5fe1b"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SoftSnow",
+                "shaderAssetGUID": "ba72f18f70c357544b82a1ea6cc2f200",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "96d9e40366cfffb63b45cc1bea2025b6"
+            },
+            "second": {
+                "shaderName": "Hidden/TextCore/Distance Field SSD",
+                "shaderAssetGUID": "ca9956d58bc62d9479adf7d083c66d77",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "af592e1bfc7928f87836516f88e03872"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/FeatherBird",
+                "shaderAssetGUID": "3208b09ebd0d50e46ad10d3860b8d884",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "bc793540906916c61b710ee6d2a14647"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SnowWisps",
+                "shaderAssetGUID": "e9850cacdcd74a50994d62f352385474",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "d1996a28d374da3035f64e9778db7077"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BirdPrismGlow",
+                "shaderAssetGUID": "9ec3741894e359b4fbc0922f85c88e21",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "43ca2cdddc7a36e4b3b06e9c63937ae6"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal Render Pipeline/Bloom",
+                "shaderAssetGUID": "5f1864addb451f54bae8c86d230f736e",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_BLOOM_HQ",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "631adde4630ddbcd4b6fe389e5cd83f8"
+            },
+            "second": {
+                "shaderName": "Hidden/Universal Render Pipeline/Bloom",
+                "shaderAssetGUID": "5f1864addb451f54bae8c86d230f736e",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "_BLOOM_HQ",
+                "subShaderIndex": 0,
+                "passIndex": 3,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "a3dad4f93571e66d644218848a377e01"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/SeasonWipe",
+                "shaderAssetGUID": "5d9d7f1225e573c4495932e6e97217d1",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "b4ea57a5cbb7ce0a2b2fb743a8171d96"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/OcclusionFade",
+                "shaderAssetGUID": "2695ffe4b13c62a4aaf167c1d81cdfca",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "bcba61acdd0ee232adcc5fc37515f56b"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorBlur",
+                "shaderAssetGUID": "15cd0a6f32c11434c87f18b0a52840e6",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "d0ea666251d4949450517197a1fbc5a1"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/PrismOverlay",
+                "shaderAssetGUID": "7f1640c0e7f24d646a243888c60cd867",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "27cb10bea708fe54ee41241256421ff9"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ALPHATEST_ON _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "573bf4cd485b46742d7dee70f85f22c5"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/CloudPuff",
+                "shaderAssetGUID": "e5e66c924d2b4abc8b9772d01bc978f9",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "776b62490c3463d1433fa0a38b188c0c"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/ArnoldStandardSurface",
+                "shaderAssetGUID": "3739e562a03fc0b4982d8aa66cc50865",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 3,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "920b9237e51a3c50f1e7e8d3b148b202"
+            },
+            "second": {
+                "shaderName": "UI/Default",
+                "shaderAssetGUID": "203dea5f7870f4649b7b371a655d12b9",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "a6fbc04db4677330f6b773a04db691db"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorKuwahara",
+                "shaderAssetGUID": "5f4f671a3b6ed0140945615d50c61155",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c67b3bc19e6ec6214da885f7cee1ccda"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BirdPrismGlow",
+                "shaderAssetGUID": "9ec3741894e359b4fbc0922f85c88e21",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "c56b8b247efa9c80588caf4240951322"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorKuwahara",
+                "shaderAssetGUID": "5f4f671a3b6ed0140945615d50c61155",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "155c7c1537f45afb6160cb4e67d7fc97"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 INSTANCING_ON",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "69bce02d63a51addb04f49767ccd311c"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "884cabe266db048172fc7a06ab56dad6"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/ArnoldStandardSurface",
+                "shaderAssetGUID": "3739e562a03fc0b4982d8aa66cc50865",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "a31cfb02ed29c4b3d877636b5863f857"
+            },
+            "second": {
+                "shaderName": "Hidden/VideoComposite",
+                "shaderAssetGUID": "a11388340aacb480590dabca18c18fb6",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "cf0c892a0268b0bab6bee1952f921a6f"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 INSTANCING_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "130d45d91993087ef7589931bcc1b624"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BirdPrism",
+                "shaderAssetGUID": "71ef0873636558048be264274fa8c8ab",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "38edd31fefe7d03feafbd9e3cd862df6"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BlizzardHaze",
+                "shaderAssetGUID": "70c1fb524a962ac40b6b978ddee46b5f",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "5a2dafc81d1dafd7294fb8dc5baac732"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/Fog",
+                "shaderAssetGUID": "5758af78fcd8b564a8b655841ddea838",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "aabd80b8494aac7150a456ca945ad0cc"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "b02d461462d83a9ed8a9458f40ddd438"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/BirdPrism",
+                "shaderAssetGUID": "71ef0873636558048be264274fa8c8ab",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "b6adff5d6c9c7d7733a1d7d0d51ab131"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/WatercolorKuwahara",
+                "shaderAssetGUID": "5f4f671a3b6ed0140945615d50c61155",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 3,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "e23d80d87d34552f0dd41abd66db7cb9"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SnowParticle",
+                "shaderAssetGUID": "9af7765a224e0fa498d43673d5ba2cc1",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "180e96b9a810c620ca329613ddd73eec"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Unlit",
+                "shaderAssetGUID": "650dd9526735d5b46b79224bc6e94025",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _SURFACE_TYPE_TRANSPARENT",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "277e6c34b563cb6aa88dee797b9bd7ff"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/SoftSnow",
+                "shaderAssetGUID": "ba72f18f70c357544b82a1ea6cc2f200",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _MAIN_LIGHT_SHADOWS",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "31febbf763b3a160985be30c04117b5c"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/WatercolorFlat",
+                "shaderAssetGUID": "1e9b512877cd5804da930abaa62cc45b",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "46ee0d34cb54187c7ba4cd4e23c71ded"
+            },
+            "second": {
+                "shaderName": "ThatGameJam/FeatherBird",
+                "shaderAssetGUID": "3208b09ebd0d50e46ad10d3860b8d884",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 2,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "5c1e412be4c62ca50bdf559113c5bbcf"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/ArnoldStandardSurface",
+                "shaderAssetGUID": "3739e562a03fc0b4982d8aa66cc50865",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "1f0ff2398206f6711c6c3dd0a9c8f360"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Unlit",
+                "shaderAssetGUID": "650dd9526735d5b46b79224bc6e94025",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "28cf4340d35fd945ccab878d175c4063"
+            },
+            "second": {
+                "shaderName": "Hidden/ThatGameJam/DreamFog",
+                "shaderAssetGUID": "db1836a5b6ea4b54a981c45114af8654",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "",
+                "subShaderIndex": 0,
+                "passIndex": 0,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "21bf2c9fa87257092005ba7e71e7fa4a"
+            },
+            "second": {
+                "shaderName": "Shader Graphs/SG_LeafWind",
+                "shaderAssetGUID": "f641be4d421eeca4fa54639e3d21c5f3",
+                "shaderAssetLocalIdentifierInFile": 0,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 3,
+                "graphicsStateInfoSet": []
+            }
+        },
+        {
+            "first": {
+                "serializedVersion": "2",
+                "Hash": "611fbac12db689e8e7e1baea5d06fd4f"
+            },
+            "second": {
+                "shaderName": "Universal Render Pipeline/Lit",
+                "shaderAssetGUID": "933532a4fcc9baf4fa0491de14d08ed7",
+                "shaderAssetLocalIdentifierInFile": 4800000,
+                "keywordNames": "FOG_EXP2 _ADDITIONAL_LIGHTS _LIGHT_LAYERS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION",
+                "subShaderIndex": 0,
+                "passIndex": 1,
+                "graphicsStateInfoSet": []
+            }
+        }
+    ],
+    "m_VertexLayoutInfoMap": [],
+    "m_RenderPassInfoMap": [],
+    "m_RenderStateMap": []
+}
