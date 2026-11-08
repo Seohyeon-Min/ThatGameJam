@@ -14,16 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTuning
   wakeTime: 10
   leaningLogTime: 30
-  rabbitFamilyTime: 30
+  rabbitBurrowTime: 30
   fogSectionTime: 30
   cloudTime: 40
   signal1At: 0.25
   signal2At: 0.5
   signal3At: 0.75
   babyWalkSpeed: 0.9
+  babyAccel: 2.5
+  babyDecel: 3.5
+  babyTurnSlowdownFloor: 0.35
   babyLookUpDuration: 1.5
   babyLookAroundDuration: 1.5
   babyWakeCryRadius: 8
+  babyReactionDelayMin: 0.15
+  babyReactionDelayMax: 0.4
+  babyIdleVariantIntervalMin: 3
+  babyIdleVariantIntervalMax: 6
+  babyBirdNoticeRadius: 5
+  babyBirdNoticeDuration: 1
+  babyBirdNoticeCooldown: 6
   babySpeedVariationAmount: 0.15
   babySpeedVariationFrequency: 0.6
   babyWanderAngle: 12
@@ -34,7 +44,15 @@ MonoBehaviour:
   babyGazeDuration: 1.5
   babyGazeMaxAngle: 60
   babyGazeBlendTime: 0.35
+  babyBlinkDuration: 0.18
+  babyBlinkIntervalMin: 2
+  babyBlinkIntervalMax: 4.5
+  babySkyTiptoeHeight: 0.05
+  babySkyTiptoeAngle: 30
+  babySkyLeanBack: 10
   babyJumpArcHeight: 0.25
+  babyJumpAnticipation: 0.2
+  babyTreeLandSoundLead: 0.2
   babyBalanceWalkSpeed: 0.45
   babyLandPause: 0.8
   babyWalkClipSpeed: 0.9
@@ -46,14 +64,35 @@ MonoBehaviour:
   babyShiverIntensityVariation: 0.7
   babyShiverIntensityFrequency: 0.35
   babyShiverFadeIn: 3
+  babyRestBirdDistance: 10
+  babyPlaySecondsMin: 5
+  babyPlaySecondsMax: 9
+  sunlitSpotFadeSeconds: 1.5
+  babyCallNoticePause: 0.6
+  babyCallTrotDistance: 3
+  babyCryTrotDistance: 1.5
+  babyPeerDistance: 0.8
+  babyCallTrotSpeed: 2
+  babyCallWatchTime: 0.8
+  babyCallRejoinAhead: 1.5
+  burrowAnswerDelay: 0.6
+  burrowCryRadius: 10
   fogForkWaitTime: 3
   fogWallPauseTime: 1
+  fogRunSpeed: 2.5
+  fogRunIdleTime: 3
   birdSpeed: 5
+  birdMinSpeed: 2
+  birdSlowDistance: 1
+  birdFastDistance: 6
+  birdGlideSpeed: 3.5
+  birdGlideMargin: 0.5
   birdAltitudeSpeed: 2.8
   birdPerchDuration: 1.2
   birdCryCooldown: 1.9
   birdIdlePerchDelay: 2
   birdIdlePerchRadius: 2.5
+  birdPerchClickSeconds: 0.2
   birdAcceleration: 10
   birdLandingDeceleration: 12
   birdTakeoffHoldTimeout: 1
@@ -69,6 +108,12 @@ MonoBehaviour:
   birdWalkSpeedScale: 4
   birdWalkTurnSpeed: 720
   birdHopSeconds: {x: 1, y: 3}
+  birdClimbHoverSpeed: 0.25
+  birdClimbHoverHold: 0.8
+  birdClimbHoverRate: 1.8
+  birdClimbHeadPerSpeed: 25
+  birdClimbHeadMost: 45
+  birdClimbHeadEase: 6
   birdMaxBankAngle: 25
   birdBankSensitivity: 0.15
   birdBankSpeed: 150
