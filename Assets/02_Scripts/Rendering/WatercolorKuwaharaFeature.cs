@@ -67,10 +67,12 @@ public class WatercolorKuwaharaFeature : ScriptableRendererFeature
             return;
 
         var volume = VolumeManager.instance.stack.GetComponent<WatercolorKuwahara>();
-        if (volume == null || !volume.IsActive())
+        bool shown = volume != null && volume.IsActive();
+        if (!shown && !(ShaderPrewarm.Warms(renderingData.cameraData.camera) && ShaderPrewarm.Profile != null
+                && ShaderPrewarm.Profile.TryGet(out volume)))
             return;
 
-        m_Pass.Setup(settings, volume);
+        m_Pass.Setup(settings, volume, !shown);
         renderer.EnqueuePass(m_Pass);
     }
 
@@ -191,6 +193,8 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
     readonly Texture2D m_Noise;
     WatercolorKuwaharaFeature.Settings m_Settings;
     WatercolorKuwahara m_Volume;
+    // Drawn into a texture nothing shows, only so the shader's passes are ready before the filter first shows (ShaderPrewarm).
+    bool m_Unseen;
 
     public WatercolorKuwaharaPass(Material material, Texture2D noise)
     {
@@ -200,10 +204,11 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
         requiresIntermediateTexture = true;
     }
 
-    public void Setup(WatercolorKuwaharaFeature.Settings settings, WatercolorKuwahara volume)
+    public void Setup(WatercolorKuwaharaFeature.Settings settings, WatercolorKuwahara volume, bool unseen)
     {
         m_Settings = settings;
         m_Volume = volume;
+        m_Unseen = unseen;
         var input = ScriptableRenderPassInput.Depth;
         if (settings.useNormalsForEdges)
             input |= ScriptableRenderPassInput.Normal;
@@ -340,11 +345,14 @@ public class WatercolorKuwaharaPass : ScriptableRenderPass
             builder.SetRenderAttachment(destination, 0, AccessFlags.WriteAll);
             if (stencilOnly)
                 builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+            // Unseen, nothing reads the output, so the graph would drop this pass and the ones feeding it.
+            builder.AllowPassCulling(!m_Unseen);
             builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) => Draw(d, ctx.cmd));
         }
 
         // Later passes (FXAA, final blit) read our output instead of copying it back.
-        resourceData.cameraColor = destination;
+        if (!m_Unseen)
+            resourceData.cameraColor = destination;
     }
 
     ShaderParams BuildParams(int sourceWidth, int sourceHeight, int workWidth, int workHeight, float spacing, int sectors)

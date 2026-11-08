@@ -28,8 +28,11 @@ public class ForestMistFeature : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (m_Pass == null || ForestMist.Weight <= 0.001f || renderingData.cameraData.camera != Camera.main)
+        Camera camera = renderingData.cameraData.camera;
+        bool shown = ForestMist.Weight > 0.001f && camera == Camera.main;
+        if (m_Pass == null || !(shown || ShaderPrewarm.Warms(camera)))
             return;
+        m_Pass.unseen = !shown;
         // The scene's ForestMist Look holds the values; without one, the shader's defaults.
         m_Pass.material = ForestMist.Look != null ? ForestMist.Look : m_Material;
         m_Pass.ConfigureInput(ScriptableRenderPassInput.Depth);
@@ -66,6 +69,8 @@ public class ForestMistPass : ScriptableRenderPass
     }
 
     public Material material;
+    // Drawn into a texture nothing shows, only so its shader is ready before the mist first comes in (ShaderPrewarm).
+    public bool unseen;
 
     public ForestMistPass()
     {
@@ -93,7 +98,14 @@ public class ForestMistPass : ScriptableRenderPass
         data.material = material;
         data.source = source;
         builder.UseTexture(source);
-        builder.SetRenderAttachment(color, 0, AccessFlags.Write);
+        if (unseen)
+        {
+            desc.name = "_ForestMistUnseen";
+            builder.SetRenderAttachment(renderGraph.CreateTexture(desc), 0, AccessFlags.Write);
+            builder.AllowPassCulling(false);
+        }
+        else
+            builder.SetRenderAttachment(color, 0, AccessFlags.Write);
         if (resourceData.cameraDepthTexture.IsValid())
             builder.UseTexture(resourceData.cameraDepthTexture);
         builder.UseAllGlobalTextures(true);

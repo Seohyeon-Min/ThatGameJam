@@ -36,10 +36,12 @@ public class WatercolorBlurFeature : ScriptableRendererFeature
             return;
 
         var volume = VolumeManager.instance.stack.GetComponent<WatercolorBlur>();
-        if (volume == null || !volume.IsActive())
+        bool shown = volume != null && volume.IsActive();
+        if (!shown && !(ShaderPrewarm.Warms(renderingData.cameraData.camera) && ShaderPrewarm.Profile != null
+                && ShaderPrewarm.Profile.TryGet(out volume)))
             return;
 
-        m_Pass.Setup(volume);
+        m_Pass.Setup(volume, !shown);
         renderer.EnqueuePass(m_Pass);
     }
 
@@ -94,6 +96,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
 
     readonly Material m_Material;
     WatercolorBlur m_Volume;
+    // Drawn into a texture nothing shows, with both passes, only so the shader is ready before the blur first shows (ShaderPrewarm).
+    bool m_Unseen;
 
     public WatercolorBlurPass(Material material)
     {
@@ -105,11 +109,12 @@ public class WatercolorBlurPass : ScriptableRenderPass
     static readonly int GouacheId = Shader.PropertyToID("_WC_Gouache");
     static bool GouacheOn => Shader.GetGlobalVector(GouacheId).x > 0f;
 
-    public void Setup(WatercolorBlur volume)
+    public void Setup(WatercolorBlur volume, bool unseen)
     {
         m_Volume = volume;
+        m_Unseen = unseen;
         // Gouache rough edges also read the depth: their brush pattern is pinned to the world through it.
-        ConfigureInput(volume.depthAware.value || GouacheOn ? ScriptableRenderPassInput.Depth : ScriptableRenderPassInput.None);
+        ConfigureInput(volume.depthAware.value || GouacheOn || unseen ? ScriptableRenderPassInput.Depth : ScriptableRenderPassInput.None);
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -129,7 +134,8 @@ public class WatercolorBlurPass : ScriptableRenderPass
         // Radius is authored in 1080p pixels so the look matches at any resolution.
         float stepPixels = m_Volume.blurRadius.value * height / 1080f;
         bool useDepth = m_Volume.depthAware.value && resourceData.cameraDepthTexture.IsValid();
-        bool readDepth = (useDepth || GouacheOn) && resourceData.cameraDepthTexture.IsValid();
+        bool gouache = GouacheOn || m_Unseen;
+        bool readDepth = (useDepth || gouache) && resourceData.cameraDepthTexture.IsValid();
 
         TextureHandle source = resourceData.activeColorTexture;
         var destinationDesc = renderGraph.GetTextureDesc(source);
@@ -153,10 +159,12 @@ public class WatercolorBlurPass : ScriptableRenderPass
                 builder.UseTexture(resourceData.cameraDepthTexture);
             builder.SetRenderAttachment(destination, 0, AccessFlags.WriteAll);
             // The camera depth-stencil, read only, so the character pass can test the stencil.
-            data.cleanCharacters = GouacheOn && resourceData.activeDepthTexture.IsValid();
+            data.cleanCharacters = gouache && resourceData.activeDepthTexture.IsValid();
             if (data.cleanCharacters)
                 builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
             data.cleanPass = useDepth ? PassCharacterCleanDepth : PassCharacterClean;
+            // Unseen, nothing reads the output, so the graph would drop the pass.
+            builder.AllowPassCulling(!m_Unseen);
             builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) =>
             {
                 var props = s_Props;
@@ -174,6 +182,7 @@ public class WatercolorBlurPass : ScriptableRenderPass
         }
 
         // Later passes (FXAA, final blit) read the blurred image instead of copying it back.
-        resourceData.cameraColor = destination;
+        if (!m_Unseen)
+            resourceData.cameraColor = destination;
     }
 }
