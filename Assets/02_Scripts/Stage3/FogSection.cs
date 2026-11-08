@@ -241,11 +241,23 @@ public class FogSection : PathBlocker
     {
         natural = true;
         trail.Clear();
-        Vector3 rejoin = Baby.Instance.transform.position;
+        Vector3 current = Baby.Instance.transform.position;
+        Vector3 rejoin = current;
         for (int i = walked.Count - 1; i >= 0 && DistanceToPath(rejoin) > RejoinDistance; i--)
         {
             rejoin = walked[i];
             retreat.Add(rejoin);
+        }
+        // Most of a wandered trail sits over plain ground: cut straight to wherever retracing would end up,
+        // skipping the walked points in between, as long as that straight way is one she could actually walk
+        // (never cutting across water). Only the stretch nearest the water, where it isn't, is retraced step by step.
+        for (int i = retreat.Count - 1; i >= 0; i--)
+        {
+            if (Walkable(current, retreat[i]))
+            {
+                retreat.RemoveRange(0, i);
+                break;
+            }
         }
         // Head for the end of the nearest segment, so the baby never steps back along the path.
         pathIndex = NearestSegmentEnd(rejoin, out _);

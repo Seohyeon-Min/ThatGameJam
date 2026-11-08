@@ -10,6 +10,8 @@ public class LeaningLog : PathBlocker
     [SerializeField] Perchable top;
     [SerializeField] Animator animator;
     [SerializeField] AnimationClip fallClip;
+    [Tooltip("Seconds sooner than the clip's end that the ground-hit sound fires, so it doesn't lag the log visually landing.")]
+    [SerializeField, Min(0f)] float groundSoundLead = 0.2f;
 
     public override NaturalTimer Timer => timer;
 
@@ -26,8 +28,9 @@ public class LeaningLog : PathBlocker
         top.Release();
         top.CanPerch = false;
         animator.Play("Break", 0, 0f);
-        yield return new WaitForSeconds(fallClip.length);
+        yield return new WaitForSeconds(Mathf.Max(0f, fallClip.length - groundSoundLead));
         RuntimeManager.PlayOneShot("event:/SFX/treeHitsGround", transform.position);
+        yield return new WaitForSeconds(groundSoundLead);
         Open(byBird);
     }
 }
