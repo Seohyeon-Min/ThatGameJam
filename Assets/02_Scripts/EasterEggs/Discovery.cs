@@ -11,6 +11,8 @@ public class Discovery : MonoBehaviour
     [Tooltip("The player's bird shows in the photo. Off: it is left out, so it does not cover what was found.")]
     [SerializeField] bool showBird;
 
+    public bool IsFound => Encyclopedia.Instance != null && Encyclopedia.Instance.IsFound(entry);
+
     public void Reveal() => Reveal(null);
 
     // The photo framing this instead of the Subject, such as the bird that set it off. Null: the Subject.
