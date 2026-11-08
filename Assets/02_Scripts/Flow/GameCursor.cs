@@ -2,7 +2,8 @@ using UnityEngine;
 
 // The mouse cursor: a plain white arrow with a soft dark blur under it, so it reads on the bright snow too. While the girl still
 // sleeps at the start (the intro's dive over, the bird the player's), it is the right-click mouse instead, blinking: a cry wakes her.
-// Anything else that wants its own cursor for a while (the bird's perch cursor) asks for it with Override.
+// In the intro, while the bird circles over her waiting for a click on her, the pointer on her turns it into the left-click mouse,
+// blinking the same way. Anything else that wants its own cursor for a while (the bird's perch cursor) asks for it with Override.
 public class GameCursor : MonoBehaviour
 {
     [SerializeField] Texture2D arrow;
@@ -12,6 +13,10 @@ public class GameCursor : MonoBehaviour
     [SerializeField] Texture2D wakeHint;
     [SerializeField] Texture2D wakeHintDim;
     [SerializeField] Vector2 wakeHintHotspot = new(32f, 32f);
+    [Tooltip("The left-click mouse, bright and dim: it blinks like the wake hint while the pointer is on the girl in the intro, as the bird circles over her waiting for the click.")]
+    [SerializeField] Texture2D clickHint;
+    [SerializeField] Texture2D clickHintDim;
+    [SerializeField] Vector2 clickHintHotspot = new(32f, 32f);
     [Tooltip("Seconds it stays bright, then dim, in each blink.")]
     [SerializeField, Min(0.05f)] float brightSeconds = 0.55f;
     [SerializeField, Min(0.05f)] float dimSeconds = 0.35f;
@@ -37,10 +42,14 @@ public class GameCursor : MonoBehaviour
             texture = overrideTexture;
             hotspot = overrideHotspot;
         }
+        else if (IntroSequence.PointerOnBaby && clickHint != null)
+        {
+            texture = Bright || clickHintDim == null ? clickHint : clickHintDim;
+            hotspot = clickHintHotspot;
+        }
         else if (WakeHintWanted && wakeHint != null)
         {
-            bool bright = Time.unscaledTime % (brightSeconds + dimSeconds) < brightSeconds;
-            texture = bright || wakeHintDim == null ? wakeHint : wakeHintDim;
+            texture = Bright || wakeHintDim == null ? wakeHint : wakeHintDim;
             hotspot = wakeHintHotspot;
         }
         if (texture == shown)
@@ -48,6 +57,9 @@ public class GameCursor : MonoBehaviour
         shown = texture;
         Cursor.SetCursor(texture, hotspot, CursorMode.Auto);
     }
+
+    // The blink: bright, then dim, over and over.
+    bool Bright => Time.unscaledTime % (brightSeconds + dimSeconds) < brightSeconds;
 
     void OnDisable()
     {

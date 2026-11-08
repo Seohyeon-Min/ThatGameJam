@@ -88,6 +88,9 @@ public class IntroSequence : MonoBehaviour
 
     // From Play until the white clears and this turns off.
     public static bool IsPlaying { get; private set; }
+    // While the bird circles over her waiting for the click on her, the pointer is close enough to her for it to count:
+    // GameCursor shows the left-click hint then.
+    public static bool PointerOnBaby { get; private set; }
 
     CloudGenerator[] clouds;
     Vector3[] cloudCentres;
@@ -353,10 +356,12 @@ public class IntroSequence : MonoBehaviour
         circleAngle = angle;
         while (!ClickedOnBaby())
         {
+            PointerOnBaby = MouseOnBaby();
             circleAngle += orbitSpeed / orbitRadius * Time.deltaTime;
             bird.MoveScripted(OnCircle(circleAngle));
             yield return null;
         }
+        PointerOnBaby = false;
     }
 
     // Starts along the start tangent and ends along the end tangent. u is 0 to 1; a tangent is the velocity times the seconds the curve takes.
@@ -507,7 +512,11 @@ public class IntroSequence : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    void OnDisable() => IsPlaying = false;
+    void OnDisable()
+    {
+        IsPlaying = false;
+        PointerOnBaby = false;
+    }
 
     bool ClickedThisFrame()
     {
@@ -515,12 +524,16 @@ public class IntroSequence : MonoBehaviour
         return mouse != null && mouse.leftButton.wasPressedThisFrame && !DevTools.Covers(mouse.position.ReadValue());
     }
 
-    bool ClickedOnBaby()
+    bool ClickedOnBaby() => ClickedThisFrame() && MouseOnBaby();
+
+    // The pointer within Baby Click Radius of her on the screen.
+    bool MouseOnBaby()
     {
-        if (!ClickedThisFrame())
+        Mouse mouse = Mouse.current;
+        if (mouse == null || Camera.main == null || Baby.Instance == null)
             return false;
         Vector3 baby = Camera.main.WorldToScreenPoint(Baby.Instance.transform.position);
-        return baby.z > 0f && Vector2.Distance(baby, Mouse.current.position.ReadValue()) <= babyClickRadius * Screen.height;
+        return baby.z > 0f && Vector2.Distance(baby, mouse.position.ReadValue()) <= babyClickRadius * Screen.height;
     }
 
     // The point under a screen position at the height the bird flies.
