@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 // The notice in the bottom-right corner when an entry is found. Several finds in a row show one after another.
 // Runs on unscaled time, so it is not held up by a paused game.
@@ -8,7 +8,7 @@ public class DiscoveryPopup : MonoBehaviour
 {
     [SerializeField] RectTransform box;
     [SerializeField] CanvasGroup group;
-    [SerializeField] Text title;
+    [SerializeField] TMP_Text title;
     [SerializeField, Min(0.01f)] float inSeconds = 0.3f;
     [SerializeField, Min(0f)] float holdSeconds = 3f;
     [SerializeField, Min(0.01f)] float outSeconds = 0.4f;

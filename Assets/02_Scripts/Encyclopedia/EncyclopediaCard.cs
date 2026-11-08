@@ -1,10 +1,11 @@
 using UnityEngine;
+using TMPro;
 using UnityEngine.UI;
 
 // One slot of the encyclopedia page: number and name on one line, the photo below. "???" and no photo until found.
 public class EncyclopediaCard : MonoBehaviour
 {
-    [SerializeField] Text label;
+    [SerializeField] TMP_Text label;
     [SerializeField] RawImage photo;
 
     public void Show(int entryNumber, EncyclopediaEntry entry, Texture foundPhoto)

@@ -32,7 +32,8 @@ public static class BuildEasterEggs
     const string SquirrelPrefab = "Assets/03_Prefabs/Squirrel.prefab";
     const string SnowbankPrefab = "Assets/03_Prefabs/Stage2/Snowbank.prefab";
     const string FlowerPrefab = "Assets/03_Prefabs/Flowers/Flower01.prefab";
-    const string SparklePrefab = "Assets/03_Prefabs/InteractiveSparkle.prefab";
+    // The small, faint one the click eggs share (BuildEggSparkles).
+    const string SparklePrefab = "Assets/03_Prefabs/EggSparkle.prefab";
     const string BirdPrefab = "Assets/03_Prefabs/Bird-Animated.prefab";
     const string BirdController = "Assets/01_Arts/Models/Bird/Bird.controller";
     const string ParticleMaterial = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat";

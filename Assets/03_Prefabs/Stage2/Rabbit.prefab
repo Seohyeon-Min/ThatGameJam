@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6273719321284779464}
   - component: {fileID: 7275750619514057933}
   - component: {fileID: 6906307030246321184}
+  - component: {fileID: 6991023864842287658}
   m_Layer: 0
   m_Name: Rabbit
   m_TagString: Untagged
@@ -80,6 +81,32 @@ MonoBehaviour:
   minSwing: 0.006
   minStep: 0.05
   maxAboveSnow: 0.25
+--- !u!114 &6991023864842287658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2660992274821155925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
+  shareBake: 1
+  character: 1
+  patternResolution: 32
+  groupDistance: 0.03
+  massNormal: 1
+  pigmentScale: 0.2
+  backrunScale: 0.25
+  backrunCoverage: 0.3
+  seed: 0
+  pattern: {fileID: 11700000, guid: 239003bd9bbe733429baeab5bbe72f56, type: 2}
+  modelBounds:
+    m_Center: {x: -0.0025628805, y: 0.5095003, z: 0.068339825}
+    m_Extent: {x: 0.2870124, y: 0.5313084, z: 0.61247915}
+  variation: 136
 --- !u!1001 &5667650959980277924
 PrefabInstance:
   m_ObjectHideFlags: 0

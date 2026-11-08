@@ -19,6 +19,9 @@ public class WatercolorPaintedModel : MonoBehaviour
     [Tooltip("Share the bake with every other instance of the same prefab (one set of meshes, textures and materials). Turn off to give this instance its own bake.")]
     public bool shareBake = true;
 
+    [Tooltip("A living thing (the girl, the rabbits, the squirrel, the ladybug, the birds): its baked materials are painted as Character, like the girl's (Painted As = Character, Self Shadow Skip 0.8), and keep it when baked again.")]
+    public bool character;
+
     [Tooltip("Upper limit of voxels per side for the 3D pattern (32 = 128 KB, 64 = 1 MB). The actual count follows the on-screen blotch size set in WatercolorManager.")]
     [Range(16, 128)] public int patternResolution = 32;
 

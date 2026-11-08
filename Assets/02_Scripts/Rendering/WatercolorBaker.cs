@@ -137,7 +137,7 @@ public static class WatercolorBaker
     {
         if (model.pattern == null)
             return false;
-        foreach (var renderer in model.GetComponentsInChildren<Renderer>())
+        foreach (var renderer in OwnRenderers(model))
         {
             if (!renderer.enabled || (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer) || KeepsItsShader(renderer))
                 continue;
@@ -187,7 +187,7 @@ public static class WatercolorBaker
             return null;
         Transform root = model.transform;
         var key = new System.Text.StringBuilder();
-        foreach (var renderer in root.GetComponentsInChildren<Renderer>())
+        foreach (var renderer in OwnRenderers(model))
         {
             Mesh mesh = renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh
                 : renderer.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null;
@@ -258,9 +258,9 @@ public static class WatercolorBaker
     static void CopyBake(WatercolorPaintedModel source, WatercolorPaintedModel target)
     {
         var baked = new Dictionary<string, Renderer>();
-        foreach (var renderer in source.GetComponentsInChildren<Renderer>())
+        foreach (var renderer in OwnRenderers(source))
             baked.TryAdd(PathUnder(source.transform, renderer.transform), renderer);
-        foreach (var renderer in target.GetComponentsInChildren<Renderer>())
+        foreach (var renderer in OwnRenderers(target))
         {
             if (KeepsItsShader(renderer) || !baked.TryGetValue(PathUnder(target.transform, renderer.transform), out Renderer from))
                 continue;
@@ -298,7 +298,7 @@ public static class WatercolorBaker
         var allBounds = new Bounds();
         bool first = true;
 
-        foreach (var renderer in root.GetComponentsInChildren<Renderer>())
+        foreach (var renderer in OwnRenderers(model))
         {
             if (!renderer.enabled || renderer.sharedMaterial == null || KeepsItsShader(renderer) || !TryReadPart(renderer, root, out Part part))
                 continue;
@@ -343,7 +343,7 @@ public static class WatercolorBaker
         foreach (var parts in SplitByDistance(sameColour, gap))
         {
             masses++;
-            Material flat = FlatMaterial(sourceMaterial, pattern, folder);
+            Material flat = FlatMaterial(sourceMaterial, pattern, folder, model.character);
             flat.SetTexture("_ChaosTex", chaos);
             // A floor is one wide flat piece; an enclosing ellipsoid would bend its normals, so keep its own.
             float massBlend = flat.GetFloat("_Floor") > 0.5f ? 0f : model.massNormal;
@@ -407,6 +407,15 @@ public static class WatercolorBaker
     }
 
     // A renderer whose shader carries the WatercolorBake = Skip tag (such as SoftSnow) keeps its own look: the bake leaves it alone.
+    // The model's renderers, without those of another painted model inside it (a squirrel in its tree, a ladybug on its stump):
+    // that one bakes by itself, with its own settings (a living thing as Character).
+    static IEnumerable<Renderer> OwnRenderers(WatercolorPaintedModel model)
+    {
+        foreach (var renderer in model.GetComponentsInChildren<Renderer>())
+            if (renderer.GetComponentInParent<WatercolorPaintedModel>(true) == model)
+                yield return renderer;
+    }
+
     static bool KeepsItsShader(Renderer renderer) =>
         renderer.sharedMaterial != null && renderer.sharedMaterial.GetTag("WatercolorBake", false) == "Skip";
 
@@ -643,7 +652,11 @@ public static class WatercolorBaker
         material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
     }
 
-    static Material FlatMaterial(Material source, Texture3D pattern, string folder)
+    // The girl's own values: painted as Character (the character stencil bit), and most of her own shadow on herself skipped.
+    const float CharacterBit = 128f;
+    const float CharacterSelfShadowSkip = 0.8f;
+
+    static Material FlatMaterial(Material source, Texture3D pattern, string folder, bool character)
     {
         string name = source.name.Replace("_watercolor", "");
         string path = folder + "/" + Sanitize(name) + "_watercolor.mat";
@@ -680,6 +693,12 @@ public static class WatercolorBaker
         }
         material.SetTexture("_PatternTex", pattern);
         material.SetFloat("_HasPattern", 1f);
+        // Only ever turned on here: a material set to Character by hand stays so when a model without the flag is baked again.
+        if (character)
+        {
+            material.SetFloat("_Character", CharacterBit);
+            material.SetFloat("_SelfShadowSkip", CharacterSelfShadowSkip);
+        }
         material.enableInstancing = true;
         if (created)
             AssetDatabase.CreateAsset(material, path);

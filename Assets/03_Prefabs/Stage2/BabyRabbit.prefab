@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5604259831563216100}
   - component: {fileID: 1089552210364761636}
   - component: {fileID: 488764064811307955}
+  - component: {fileID: 8728268604757526567}
   m_Layer: 0
   m_Name: BabyRabbit
   m_TagString: Untagged
@@ -80,6 +81,32 @@ MonoBehaviour:
   minSwing: 0.006
   minStep: 0.05
   maxAboveSnow: 0.25
+--- !u!114 &8728268604757526567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6891943817998845716}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
+  shareBake: 1
+  character: 1
+  patternResolution: 32
+  groupDistance: 0.03
+  massNormal: 1
+  pigmentScale: 0.2
+  backrunScale: 0.25
+  backrunCoverage: 0.3
+  seed: 0
+  pattern: {fileID: 11700000, guid: 90b8f6d2574dd5c4f85c4a62fcf9545b, type: 2}
+  modelBounds:
+    m_Center: {x: -0.00030988455, y: 0.24639538, z: 0.16868326}
+    m_Extent: {x: 0.1641883, y: 0.26408058, z: 0.38088357}
+  variation: 108
 --- !u!1001 &8744155341052082039
 PrefabInstance:
   m_ObjectHideFlags: 0
