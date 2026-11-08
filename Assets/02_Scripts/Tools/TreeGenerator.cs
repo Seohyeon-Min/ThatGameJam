@@ -18,6 +18,11 @@ public class TreeGenerator : MonoBehaviour
 {
     // Trees closer than spacing times this are next to each other: the grid neighbours along X and Z, not the diagonal ones.
     const float NeighbourFactor = 1.3f;
+    // Metres ahead of the spring ring's edge by which a tree has changed, whatever Trees Per Frame says. The ring's centre is the
+    // sunlit spot beside the baby, not the baby herself.
+    const float RingLead = 2f;
+    // The playing spring ring's radius (w), set by SpringRing; 0 while none plays.
+    static readonly int SpringRingId = Shader.PropertyToID("_SpringRing");
 
     [System.Serializable]
     class Planted
@@ -63,6 +68,8 @@ public class TreeGenerator : MonoBehaviour
     [SerializeField, Min(0f)] float topPadding = 0f;
     [Tooltip("Bottom end (-Z): the first metres of the planted area where Clear zones don't count, so trees close off the road there")]
     [SerializeField, Min(0f)] float bottomPadding = 0f;
+    [Tooltip("Trees changed per frame (leaves and bark) when a season comes while playing, nearest the baby first: the spring ring brings them out from there, and the photo of the old look still covers the rest")]
+    [SerializeField, Min(1)] int treesPerFrame = 150;
     [Tooltip("Paint the bare and leafy trees in watercolor after making them. A kind's bake is shared, so this also bakes again every other tree of that kind in the open scenes")]
     [SerializeField] bool paint = true;
     // Everything Generate made, so Clear removes only these.
@@ -74,6 +81,16 @@ public class TreeGenerator : MonoBehaviour
 
     Season season;
     int pendingLevel = -1;
+    // The trees still to change for the season that came, nearest first with their squared distance from the baby, treesPerFrame at a
+    // time, and what they change to.
+    readonly List<(Planted tree, float distance)> toChange = new();
+    int nextChange;
+    float leafShare, oakShare;
+    // The oak shares between which the trees' bark changes, or every tree's bark (the first time, and always in the Editor).
+    float oakFrom, oakTo;
+    bool repaintAll;
+    // The oak share the bark shows, so a season repaints only the trees whose bark changes. Negative: not painted yet.
+    float oakShareShown = -1f;
 
     public int TreeCount => planted.Count;
     public int PineCount => planted.FindAll(p => p.pine).Count;
@@ -102,40 +119,106 @@ public class TreeGenerator : MonoBehaviour
 
     void LateUpdate()
     {
-        if (pendingLevel < 0)
-            return;
-        ShowSeason(pendingLevel);
-        pendingLevel = -1;
+        if (pendingLevel >= 0)
+        {
+            ShowSeason(pendingLevel, true);
+            pendingLevel = -1;
+        }
+        if (nextChange < toChange.Count)
+            ChangeTrees(treesPerFrame);
     }
 
 #if UNITY_EDITOR
     // Season preview in the Editor (SeasonPreview).
     public void PreviewSeason(int level) => ShowSeason(level);
-    public void RestoreBark(int level) => ShowOaks(level);
+
+    public void RestoreBark(int level)
+    {
+        float share = OakShare(level);
+        foreach (Planted tree in planted)
+            if (!tree.pine)
+            {
+                SetBark(tree.bare, tree.oakNumber < share);
+                SetBark(tree.leafy, tree.oakNumber < share);
+            }
+    }
 #endif
 
     float LeafShare(int level) =>
         leafShareByLevel.Length == 0 ? 0f : leafShareByLevel[Mathf.Clamp(level, 0, leafShareByLevel.Length - 1)];
 
-    void ShowSeason(int level)
-    {
-        ShowLeaves(level);
-        ShowOaks(level);
-    }
-
     float OakShare(int level) =>
         oakShareByLevel.Length == 0 ? 0f : oakShareByLevel[Mathf.Clamp(level, 0, oakShareByLevel.Length - 1)];
 
-    void ShowOaks(int level)
+    void ShowSeason(int level) => ShowSeason(level, false);
+
+    // Spread: treesPerFrame trees now and in each LateUpdate after, nearest the baby first, as the spring ring spreads from beside her.
+    // Otherwise all of them at once.
+    void ShowSeason(int level, bool spread)
     {
-        float share = OakShare(level);
+        // A season that came before the last one was all shown: the rest at once, so the bark is as oakShareShown says.
+        ChangeTrees(toChange.Count);
+        leafShare = LeafShare(level);
+        oakShare = OakShare(level);
+        // In the Editor, Generate, Clear and undo change the bark behind its back, so every tree is painted there.
+        repaintAll = oakShareShown < 0f || !Application.isPlaying;
+        oakFrom = Mathf.Min(oakShare, oakShareShown);
+        oakTo = Mathf.Max(oakShare, oakShareShown);
+        oakShareShown = oakShare;
+        Vector3 centre = Baby.Instance != null ? Baby.Instance.transform.position : transform.position;
         foreach (Planted tree in planted)
+            if (LeavesChange(tree) || BarkChanges(tree))
+                toChange.Add((tree, spread ? Distance(tree) : 0f));
+        if (!spread)
+            ChangeTrees(toChange.Count);
+        else
+            toChange.Sort((a, b) => a.distance.CompareTo(b.distance));
+
+        // A tree deleted by hand leaves null slots behind.
+        float Distance(Planted tree)
         {
-            if (tree.pine)
-                continue;
-            bool oak = tree.oakNumber < share;
-            SetBark(tree.bare, oak);
-            SetBark(tree.leafy, oak);
+            GameObject shown = tree.bare != null ? tree.bare : tree.leafy;
+            return shown != null ? FlatDistance(shown.transform.position, centre) : 0f;
+        }
+    }
+
+    // Squared distance along the ground, as the spring ring measures its radius.
+    public static float FlatDistance(Vector3 a, Vector3 b) => new Vector2(a.x - b.x, a.z - b.z).sqrMagnitude;
+
+    bool LeavesChange(Planted tree) => tree.leafy != null && tree.bare != null && tree.leafy.activeSelf != tree.leafNumber < leafShare;
+
+    // Only a birch whose number lies between the old share and the new one changes.
+    bool BarkChanges(Planted tree) => !tree.pine && (repaintAll || tree.oakNumber >= oakFrom && tree.oakNumber < oakTo);
+
+    // Count trees, and past them every tree the spring ring has nearly reached, so a slow frame doesn't let the ring pass a tree still
+    // to change.
+    void ChangeTrees(int count)
+    {
+        float ring = Shader.GetGlobalVector(SpringRingId).w;
+        float reach = ring > 0f ? (ring + RingLead) * (ring + RingLead) : -1f;
+        for (int done = 0; nextChange < toChange.Count && (done < count || toChange[nextChange].distance <= reach); done++, nextChange++)
+        {
+            Planted tree = toChange[nextChange].tree;
+            if (LeavesChange(tree))
+            {
+                bool leafy = tree.leafNumber < leafShare;
+                // A bird perched in the tree that goes away takes off.
+                if (Application.isPlaying)
+                    foreach (Perchable perch in (leafy ? tree.bare : tree.leafy).GetComponentsInChildren<Perchable>())
+                        perch.Release();
+                tree.bare.SetActive(!leafy);
+                tree.leafy.SetActive(leafy);
+            }
+            if (BarkChanges(tree))
+            {
+                SetBark(tree.bare, tree.oakNumber < oakShare);
+                SetBark(tree.leafy, tree.oakNumber < oakShare);
+            }
+        }
+        if (nextChange == toChange.Count)
+        {
+            toChange.Clear();
+            nextChange = 0;
         }
     }
 
@@ -159,25 +242,6 @@ public class TreeGenerator : MonoBehaviour
             }
             if (changed)
                 renderer.sharedMaterials = materials;
-        }
-    }
-
-    void ShowLeaves(int level)
-    {
-        float share = LeafShare(level);
-        foreach (Planted tree in planted)
-        {
-            if (tree.leafy == null || tree.bare == null)
-                continue;
-            bool leafy = tree.leafNumber < share;
-            if (tree.leafy.activeSelf == leafy)
-                continue;
-            // A bird perched in the tree that goes away takes off.
-            if (Application.isPlaying)
-                foreach (Perchable perch in (leafy ? tree.bare : tree.leafy).GetComponentsInChildren<Perchable>())
-                    perch.Release();
-            tree.bare.SetActive(!leafy);
-            tree.leafy.SetActive(leafy);
         }
     }
 
@@ -290,7 +354,7 @@ public class TreeGenerator : MonoBehaviour
                 plantedNow.Add(tree);
             }
 
-        // One bake per kind paints every tree of that kind in the open scenes (they share it). Before ShowLeaves, while every
+        // One bake per kind paints every tree of that kind in the open scenes (they share it). Before ShowSeason, while every
         // tree is still shown: the bake only finds models that are active.
         foreach (WatercolorPaintedModel model in painted.Values)
         {

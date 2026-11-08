@@ -122,9 +122,10 @@ public static class BuildCliffBreeze
         var velocity = system.velocityOverLifetime;
         velocity.enabled = true;
         velocity.space = ParticleSystemSimulationSpace.Local;
-        velocity.x = new ParticleSystem.MinMaxCurve(0f);
+        // All three in Curve mode: mixed modes are rejected with a warning every frame.
+        velocity.x = new ParticleSystem.MinMaxCurve(0f, AnimationCurve.Constant(0f, 1f, 0f));
         velocity.y = new ParticleSystem.MinMaxCurve(0.4f, AnimationCurve.EaseInOut(0f, 0f, 1f, 1f));
-        velocity.z = new ParticleSystem.MinMaxCurve(0f);
+        velocity.z = new ParticleSystem.MinMaxCurve(0f, AnimationCurve.Constant(0f, 1f, 0f));
     }
 
     static Gradient FadeInOut(Color a, float alpha)

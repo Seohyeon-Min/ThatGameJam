@@ -47,13 +47,24 @@ public class Perchable : MonoBehaviour
     Renderer[] wholeObjectRenderers;
     MaterialPropertyBlock cameraFadeBlock;
 
+    // Its place in all, so it leaves by swapping with the last one instead of a search: a season turns thousands of branches on and off.
+    int allIndex;
+
     void OnEnable()
     {
+        allIndex = all.Count;
         all.Add(this);
         if (alwaysExempt)
             SetCameraFadeExempt(true);
     }
-    void OnDisable() => all.Remove(this);
+
+    void OnDisable()
+    {
+        Perchable last = all[^1];
+        all[allIndex] = last;
+        last.allIndex = allIndex;
+        all.RemoveAt(all.Count - 1);
+    }
 
     public void NotifyPerched()
     {
@@ -79,9 +90,10 @@ public class Perchable : MonoBehaviour
             Transform root = transform.parent != null ? transform.parent : transform;
             wholeObjectRenderers = root.GetComponentsInChildren<Renderer>();
             cameraFadeBlock = new MaterialPropertyBlock();
+            cameraFadeBlock.SetFloat(CameraFadeExemptId, 1f);
         }
-        cameraFadeBlock.SetFloat(CameraFadeExemptId, exempt ? 1f : 0f);
+        // Not exempt, the block goes: a renderer with one is left out of the SRP Batcher.
         foreach (Renderer r in wholeObjectRenderers)
-            r.SetPropertyBlock(cameraFadeBlock);
+            r.SetPropertyBlock(exempt ? cameraFadeBlock : null);
     }
 }

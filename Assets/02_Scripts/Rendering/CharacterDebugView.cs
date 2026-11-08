@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 // look can be checked while they are off screen. Works in Play mode and in Edit mode (Game view). Turn it on and off
 // with Show in the Inspector, Tools > Watercolor > Toggle Character Debug View (Ctrl+Shift+D), or F3 in Play mode.
 // Each camera copies the main camera's lens and look direction and renders only while shown.
-// Not part of the game; leave it off in builds.
+// Not part of the game: release builds turn it off.
 [ExecuteAlways]
 public class CharacterDebugView : MonoBehaviour
 {
@@ -40,6 +40,13 @@ public class CharacterDebugView : MonoBehaviour
         UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
     }
 #endif
+
+    // Debug.isDebugBuild is also true in the Editor.
+    void Awake()
+    {
+        if (!Debug.isDebugBuild)
+            enabled = false;
+    }
 
     void OnDisable()
     {
