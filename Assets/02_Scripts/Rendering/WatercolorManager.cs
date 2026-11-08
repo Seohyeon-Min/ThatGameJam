@@ -532,6 +532,12 @@ public class WatercolorManager : MonoBehaviour
     const float PencilLayoutLength = 32f;
     // The shader divides the tile by this too, to know how large a dab is on screen.
     const int BrushDabCells = 12;
+
+    // The textures below, baked once in the Editor so the game doesn't draw them while it loads (ADR 0039). Without it they are drawn here.
+    static WatercolorTextures s_Baked;
+    // Looked up again while missing, so a bake made in this Editor session (which replaces the asset) is picked up.
+    static WatercolorTextures Baked => s_Baked != null ? s_Baked : s_Baked = Resources.Load<WatercolorTextures>(WatercolorTextures.ResourceName);
+
     static Texture2D s_BrushDabs;
 
     // A tile of flat brush dabs, stamped one over another: square-ended, with bristle stripes along them and each bristle ending at
@@ -539,8 +545,14 @@ public class WatercolorManager : MonoBehaviour
     // dab appears as the amount rises, a the bristle's brightness.
     static Texture2D BrushDabsTexture()
     {
-        if (s_BrushDabs != null)
-            return s_BrushDabs;
+        if (s_BrushDabs == null)
+            s_BrushDabs = Baked != null && Baked.brushDabs != null ? Baked.brushDabs : MakeBrushDabsTexture();
+        return s_BrushDabs;
+    }
+
+    // Readable to save it as an asset (AgentScripts/BakeWatercolorTextures.cs); otherwise its memory copy is dropped.
+    public static Texture2D MakeBrushDabsTexture(bool readable = false)
+    {
         const int size = 512;
         const int bristles = 24;
         var pixels = new Color32[size * size];
@@ -582,27 +594,41 @@ public class WatercolorManager : MonoBehaviour
                 pixels[index] = new Color32(255, pick, order, (byte)(shade[bristle] * 255f));
             }
         }
-        s_BrushDabs = new Texture2D(size, size, TextureFormat.RGBA32, false, true)
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false, true)
         {
             name = "WatercolorBrushDabs",
             wrapMode = TextureWrapMode.Repeat,
             hideFlags = HideFlags.HideAndDontSave,
         };
-        s_BrushDabs.SetPixels32(pixels);
-        s_BrushDabs.Apply(false, true);
-        return s_BrushDabs;
+        texture.SetPixels32(pixels);
+        texture.Apply(false, !readable);
+        return texture;
     }
 
     static Texture2D s_PencilStrokes;
+    static Texture2D s_PencilDrawn;
     static (float, float, float, float, float) s_PencilKey = (-1f, 0f, 0f, 0f, 0f);
 
     static Texture2D PencilStrokesTexture(Settings st)
     {
-        var key = (st.strokeWidthVariation, st.strokeDensity, st.strokeLengthPercent, st.strokeAlignment, st.strokeAngleJitter);
+        var key = PencilKey(st);
         if (s_PencilStrokes != null && key == s_PencilKey)
             return s_PencilStrokes;
         s_PencilKey = key;
+        if (Baked != null && Baked.pencilStrokes != null && Baked.PencilKey == key)
+            s_PencilStrokes = Baked.pencilStrokes;
+        else
+            // Other settings (tuning a look in the Editor): drawn into a texture of its own, rebuilt in place, never into the baked one.
+            s_PencilStrokes = s_PencilDrawn = MakePencilStrokesTexture(st, s_PencilDrawn);
+        return s_PencilStrokes;
+    }
 
+    public static (float, float, float, float, float) PencilKey(Settings st) =>
+        (st.strokeWidthVariation, st.strokeDensity, st.strokeLengthPercent, st.strokeAlignment, st.strokeAngleJitter);
+
+    // Draws into `into` when given (same size), else into a new texture. It stays readable, to be drawn into again.
+    public static Texture2D MakePencilStrokesTexture(Settings st, Texture2D into = null)
+    {
         const int size = PencilTexels;
         // One texel is one pixel at 1080p, so the sizes in the settings are texels here. Strokes are laid out at a
         // fixed length and then drawn longer or shorter around their own centres, so changing the length keeps every
@@ -696,18 +722,16 @@ public class WatercolorManager : MonoBehaviour
         {
             pixels[i] = new Color32((byte)(Mathf.Min(distance[i] / PencilMaxDistance, 1f) * 255f), (byte)(pressureMap[i] * 255f), 0, 255);
         }
-        if (s_PencilStrokes == null)
-            s_PencilStrokes = new Texture2D(size, size, TextureFormat.RGBA32, true, true)
-            {
-                name = "WatercolorPencilStrokes",
-                hideFlags = HideFlags.HideAndDontSave,
-                wrapMode = TextureWrapMode.Repeat,
-                filterMode = FilterMode.Trilinear,
-            };
-        s_PencilStrokes.SetPixels32(pixels);
-        // Stays readable: it is rebuilt in place when the settings change.
-        s_PencilStrokes.Apply(true, false);
-        return s_PencilStrokes;
+        Texture2D texture = into != null ? into : new Texture2D(size, size, TextureFormat.RGBA32, true, true)
+        {
+            name = "WatercolorPencilStrokes",
+            hideFlags = HideFlags.HideAndDontSave,
+            wrapMode = TextureWrapMode.Repeat,
+            filterMode = FilterMode.Trilinear,
+        };
+        texture.SetPixels32(pixels);
+        texture.Apply(true, false);
+        return texture;
     }
 
     // Floor pattern texture: FloorCells x FloorCells blotches per tile, so a repeat is many screens apart.
@@ -720,47 +744,53 @@ public class WatercolorManager : MonoBehaviour
     {
         get
         {
-            if (s_FloorPattern != null)
-                return s_FloorPattern;
-            const int size = 512;
-            var pigment = new float[size * size];
-            var field = new float[size * size];
-            var smooth = new float[size * size];
-            for (int y = 0; y < size; y++)
-                for (int x = 0; x < size; x++)
-                {
-                    float u = (float)x / size, v = (float)y / size;
-                    int i = y * size + x;
-                    // One lattice cell = one blotch. Only two octaves, so it stays soft (no speckle).
-                    pigment[i] = PeriodicNoise(u, v, FloorCells) * 0.7f + PeriodicNoise(u + 0.5f, v, FloorCells * 2) * 0.3f;
-                    // Backrun blooms a bit larger than a blotch, with a slightly ragged edge.
-                    field[i] = PeriodicNoise(u + 0.25f, v + 0.5f, FloorCells / 2) + (PeriodicNoise(u, v + 0.25f, FloorCells * 4) - 0.5f) * 0.12f;
-                    smooth[i] = PeriodicNoise(u + 0.37f, v + 0.11f, FloorCells / 3);
-                }
-            // Same coverage rule as baked models: blooms cover about 30%.
-            var sorted = (float[])field.Clone();
-            Array.Sort(sorted);
-            float threshold = sorted[(int)(0.7f * (sorted.Length - 1))];
-            var pixels = new Color32[size * size];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                float f = field[i];
-                float inside = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(threshold - 0.01f, threshold + 0.01f, f));
-                float rim = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(threshold - 0.015f, threshold + 0.005f, f))
-                    * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(threshold + 0.005f, threshold + 0.035f, f)));
-                pixels[i] = new Color32((byte)(pigment[i] * 255f), (byte)(inside * 255f), (byte)(rim * 255f), (byte)(smooth[i] * 255f));
-            }
-            s_FloorPattern = new Texture2D(size, size, TextureFormat.RGBA32, true, true)
-            {
-                name = "WatercolorFloorPattern",
-                hideFlags = HideFlags.HideAndDontSave,
-                wrapMode = TextureWrapMode.Repeat,
-                filterMode = FilterMode.Trilinear,
-            };
-            s_FloorPattern.SetPixels32(pixels);
-            s_FloorPattern.Apply(true, true);
+            if (s_FloorPattern == null)
+                s_FloorPattern = Baked != null && Baked.floorPattern != null ? Baked.floorPattern : MakeFloorPatternTexture();
             return s_FloorPattern;
         }
+    }
+
+    // Readable to save it as an asset (AgentScripts/BakeWatercolorTextures.cs); otherwise its memory copy is dropped.
+    public static Texture2D MakeFloorPatternTexture(bool readable = false)
+    {
+        const int size = 512;
+        var pigment = new float[size * size];
+        var field = new float[size * size];
+        var smooth = new float[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (float)x / size, v = (float)y / size;
+                int i = y * size + x;
+                // One lattice cell = one blotch. Only two octaves, so it stays soft (no speckle).
+                pigment[i] = PeriodicNoise(u, v, FloorCells) * 0.7f + PeriodicNoise(u + 0.5f, v, FloorCells * 2) * 0.3f;
+                // Backrun blooms a bit larger than a blotch, with a slightly ragged edge.
+                field[i] = PeriodicNoise(u + 0.25f, v + 0.5f, FloorCells / 2) + (PeriodicNoise(u, v + 0.25f, FloorCells * 4) - 0.5f) * 0.12f;
+                smooth[i] = PeriodicNoise(u + 0.37f, v + 0.11f, FloorCells / 3);
+            }
+        // Same coverage rule as baked models: blooms cover about 30%.
+        var sorted = (float[])field.Clone();
+        Array.Sort(sorted);
+        float threshold = sorted[(int)(0.7f * (sorted.Length - 1))];
+        var pixels = new Color32[size * size];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            float f = field[i];
+            float inside = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(threshold - 0.01f, threshold + 0.01f, f));
+            float rim = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(threshold - 0.015f, threshold + 0.005f, f))
+                * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(threshold + 0.005f, threshold + 0.035f, f)));
+            pixels[i] = new Color32((byte)(pigment[i] * 255f), (byte)(inside * 255f), (byte)(rim * 255f), (byte)(smooth[i] * 255f));
+        }
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, true, true)
+        {
+            name = "WatercolorFloorPattern",
+            hideFlags = HideFlags.HideAndDontSave,
+            wrapMode = TextureWrapMode.Repeat,
+            filterMode = FilterMode.Trilinear,
+        };
+        texture.SetPixels32(pixels);
+        texture.Apply(true, !readable);
+        return texture;
     }
 
     // Value noise on a `period` x `period` lattice that wraps, so the texture tiles.
