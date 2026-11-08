@@ -4,7 +4,7 @@ using UnityEditor;
 #endif
 
 // A looping yellow sparkle hinting that this Perchable still needs the bird (a device, not a decorative perch):
-// plays while CanPerch is true, stops once it's been used or disabled.
+// plays while CanPerch is true (and, if Shown After is set, that way is open), stops once it's been used or disabled.
 // Adding this component auto-spawns the InteractiveSparkle prefab at the Perchable's PerchPoint and wires it up
 // (Reset(), Editor-only) so no manual dragging is needed; it only fills sparkle in when empty.
 [RequireComponent(typeof(Perchable))]
@@ -13,6 +13,8 @@ public class InteractiveIndicator : MonoBehaviour
     const string SparklePrefabPath = "Assets/03_Prefabs/InteractiveSparkle.prefab";
 
     [SerializeField] ParticleSystem sparkle;
+    [Tooltip("Shown only once this way is open (the leaning log's stump: once the log has fallen). Empty: whenever the perch can be used.")]
+    [SerializeField] PathBlocker shownAfter;
 
     Perchable perchable;
     bool showing;
@@ -37,7 +39,7 @@ public class InteractiveIndicator : MonoBehaviour
 
     void Update()
     {
-        bool shouldShow = perchable.CanPerch;
+        bool shouldShow = perchable.CanPerch && (shownAfter == null || shownAfter.IsOpen);
         if (shouldShow == showing)
             return;
         showing = shouldShow;
