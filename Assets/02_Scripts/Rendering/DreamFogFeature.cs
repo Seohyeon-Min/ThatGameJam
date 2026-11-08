@@ -29,8 +29,11 @@ public class DreamFogFeature : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (m_Pass == null || DreamFog.Weight <= 0.001f || renderingData.cameraData.camera != Camera.main)
+        Camera camera = renderingData.cameraData.camera;
+        bool shown = DreamFog.Weight > 0.001f && camera == Camera.main;
+        if (m_Pass == null || !(shown || ShaderPrewarm.Warms(camera)))
             return;
+        m_Pass.unseen = !shown;
         // The scene's DreamFog Look holds the colours; without one, the shader's default colours.
         m_Pass.material = DreamFog.Look != null ? DreamFog.Look : m_Material;
         m_Pass.ConfigureInput(ScriptableRenderPassInput.Depth);
@@ -68,6 +71,8 @@ public class DreamFogPass : ScriptableRenderPass
     }
 
     public Material material;
+    // Drawn into a texture nothing shows, only so its shader is ready before the fog first comes in (ShaderPrewarm).
+    public bool unseen;
 
     public DreamFogPass(Material material)
     {
@@ -96,7 +101,14 @@ public class DreamFogPass : ScriptableRenderPass
         data.material = material;
         data.source = source;
         builder.UseTexture(source);
-        builder.SetRenderAttachment(color, 0, AccessFlags.Write);
+        if (unseen)
+        {
+            desc.name = "_DreamFogUnseen";
+            builder.SetRenderAttachment(renderGraph.CreateTexture(desc), 0, AccessFlags.Write);
+            builder.AllowPassCulling(false);
+        }
+        else
+            builder.SetRenderAttachment(color, 0, AccessFlags.Write);
         // For the stencil BirdVisible wrote: the bird's pixels are skipped.
         builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
         if (resourceData.cameraDepthTexture.IsValid())

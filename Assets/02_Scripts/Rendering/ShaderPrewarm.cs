@@ -7,8 +7,18 @@ using UnityEngine.Rendering;
 // shrunk to nothing in front of the camera, in the game's first frames, so those programs are made while the logo starts instead.
 // Entries are filled in the Editor by AgentScripts/BuildShaderPrewarm.cs from the scene's renderers; run it again after adding
 // materials. Nothing is created: the draws use the scene's own meshes and materials.
+// The screen effects (renderer features) are warmed in the same frames: while Warms(camera) is true, each feature records its
+// passes as usual but into textures nothing shows, with the Volume Profile's settings where it has a Volume component.
 public class ShaderPrewarm : MonoBehaviour
 {
+    static Camera warming;
+
+    // The screen effects' settings while they are warmed: the Volume Profile whose look uses them.
+    public static VolumeProfile Profile { get; private set; }
+
+    // True while this camera's frame should draw the screen effects once, unseen.
+    public static bool Warms(Camera camera) => warming != null && camera == warming;
+
     [Serializable]
     public struct Entry
     {
@@ -25,6 +35,8 @@ public class ShaderPrewarm : MonoBehaviour
     [Tooltip("Frames to draw the entries in. One makes the programs; a few more cover passes that start a frame late.")]
     [SerializeField, Min(1)] int frames = 3;
     [SerializeField] Entry[] entries;
+    [Tooltip("A Volume Profile with the WatercolorKuwahara and WatercolorBlur settings the game uses, so those passes are warmed.")]
+    [SerializeField] VolumeProfile effectsProfile;
 
     int drawn;
 
@@ -35,6 +47,8 @@ public class ShaderPrewarm : MonoBehaviour
             enabled = false;
             return;
         }
+        warming = target;
+        Profile = effectsProfile;
         Transform view = target.transform;
         Vector3 at = view.position + view.forward * (target.nearClipPlane + 1f);
         // Large bounds so neither the camera nor the shadow pass culls the draws; the shrunk mesh covers no pixels.
@@ -53,5 +67,11 @@ public class ShaderPrewarm : MonoBehaviour
             };
             Graphics.RenderMesh(render, entry.mesh, entry.subMesh, matrix);
         }
+    }
+
+    void OnDisable()
+    {
+        warming = null;
+        Profile = null;
     }
 }

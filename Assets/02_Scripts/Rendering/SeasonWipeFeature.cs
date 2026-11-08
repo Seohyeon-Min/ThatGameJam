@@ -47,8 +47,10 @@ public class SeasonWipeFeature : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (m_Pass == null || !SeasonWipe.Busy)
+        bool shown = SeasonWipe.Busy;
+        if (m_Pass == null || !(shown || ShaderPrewarm.Warms(renderingData.cameraData.camera)))
             return;
+        m_Pass.unseen = !shown;
         var wipe = new Vector4(edgeSoftness, lumpHeight, lumpSize, 0f);
         // The edge's shape for what follows it on the screen, as the flowers that bloom with the ring do (RingBloom).
         Shader.SetGlobalVector(EdgeId, wipe);
@@ -169,6 +171,8 @@ public class SeasonWipePass : ScriptableRenderPass
     readonly Material m_Material;
     Vector4 m_Wipe;
     Vector4 m_Fade;
+    // Drawn with no photo into a texture nothing shows, only so the shader is ready before the first season change (ShaderPrewarm).
+    public bool unseen;
 
     public SeasonWipePass(Material material)
     {
@@ -191,6 +195,26 @@ public class SeasonWipePass : ScriptableRenderPass
             return;
 
         TextureHandle color = resourceData.activeColorTexture;
+        if (unseen)
+        {
+            TextureDesc desc = renderGraph.GetTextureDesc(color);
+            desc.name = "_SeasonWipeUnseen";
+            desc.clearBuffer = false;
+            using var unseenBuilder = renderGraph.AddRasterRenderPass<PassData>(Sampler.name, out var unseenData, Sampler);
+            unseenData.material = m_Material;
+            unseenData.photo = renderGraph.defaultResources.blackTexture;
+            unseenData.viewProjection = Matrix4x4.identity;
+            unseenData.wipe = m_Wipe;
+            unseenData.fade = m_Fade;
+            unseenData.live = System.Array.Empty<Renderer>();
+            unseenBuilder.UseTexture(unseenData.photo);
+            unseenBuilder.SetRenderAttachment(renderGraph.CreateTexture(desc), 0, AccessFlags.Write);
+            unseenBuilder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+            unseenBuilder.AllowPassCulling(false);
+            unseenBuilder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) => Draw(ctx.cmd, d));
+            return;
+        }
+
         if (cameraData.camera == SeasonWipe.CaptureCamera)
         {
             RenderTextureDescriptor descriptor = cameraData.cameraTargetDescriptor;
@@ -219,17 +243,19 @@ public class SeasonWipePass : ScriptableRenderPass
         builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.ReadWrite);
         // The live characters read the shadow map and the other globals their materials use.
         builder.UseAllGlobalTextures(true);
-        builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) =>
-        {
-            s_Props.Clear();
-            s_Props.SetTexture(BlitTextureId, (Texture)d.photo);
-            s_Props.SetVector(BlitScaleBiasId, new Vector4(1f, 1f, 0f, 0f));
-            s_Props.SetMatrix(ViewProjectionId, d.viewProjection);
-            s_Props.SetVector(WipeId, d.wipe);
-            s_Props.SetVector(FadeId, d.fade);
-            ctx.cmd.DrawProcedural(Matrix4x4.identity, d.material, 0, MeshTopology.Triangles, 3, 1, s_Props);
-            DrawLive(ctx.cmd, d.live);
-        });
+        builder.SetRenderFunc(static (PassData d, RasterGraphContext ctx) => Draw(ctx.cmd, d));
+    }
+
+    static void Draw(RasterCommandBuffer cmd, PassData d)
+    {
+        s_Props.Clear();
+        s_Props.SetTexture(BlitTextureId, (Texture)d.photo);
+        s_Props.SetVector(BlitScaleBiasId, new Vector4(1f, 1f, 0f, 0f));
+        s_Props.SetMatrix(ViewProjectionId, d.viewProjection);
+        s_Props.SetVector(WipeId, d.wipe);
+        s_Props.SetVector(FadeId, d.fade);
+        cmd.DrawProcedural(Matrix4x4.identity, d.material, 0, MeshTopology.Triangles, 3, 1, s_Props);
+        DrawLive(cmd, d.live);
     }
 
     // Particles are left out: they're transparents, drawn later over the photo anyway.

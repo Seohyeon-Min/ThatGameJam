@@ -98,8 +98,16 @@ public class Encyclopedia : MonoBehaviour
     void FrameSubject(Transform subject)
     {
         Bounds bounds = new Bounds(subject.position, Vector3.zero);
+        // Empty particle systems can report zero-size bounds at the world origin, pulling a close-up out over the whole forest.
+        // Keep live effects (including particle-based discoveries) in the framing, but ignore empty renderers.
         foreach (Renderer part in subject.GetComponentsInChildren<Renderer>())
-            bounds.Encapsulate(part.bounds);
+        {
+            if (part is ParticleSystemRenderer particles && particles.GetComponent<ParticleSystem>().particleCount == 0)
+                continue;
+            Bounds partBounds = part.bounds;
+            if (part.enabled && partBounds.size.sqrMagnitude > 0f)
+                bounds.Encapsulate(partBounds);
+        }
 
         Quaternion rotation = Camera.main.transform.rotation;
         float tanHalfHeight = Mathf.Tan(photoCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) / photoMargin;
