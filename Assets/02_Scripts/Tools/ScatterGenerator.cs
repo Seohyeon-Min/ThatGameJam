@@ -14,6 +14,11 @@ public abstract class ScatterGenerator : MonoBehaviour
     const int TriesPerObject = 30;
     // Above this many in one Generate, it stops and warns: likely a density typed too high.
     const int MaxObjects = 20000;
+    // Metres ahead of the spring ring's edge by which one has been turned on, whatever Shown Per Frame says. The ring's centre is the
+    // sunlit spot beside the baby, not the baby herself.
+    const float RingLead = 2f;
+    // The playing spring ring's radius (w), set by SpringRing; 0 while none plays.
+    static readonly int SpringRingId = Shader.PropertyToID("_SpringRing");
 
     [System.Serializable]
     public struct Area
@@ -78,6 +83,8 @@ public abstract class ScatterGenerator : MonoBehaviour
     [SerializeField] protected int seed = 1;
     [Tooltip("They stand on this terrain's surface. Empty: the scene's active terrain")]
     [SerializeField] protected Terrain ground;
+    [Tooltip("How many are turned on per frame when a season brings an area out while playing, nearest the baby first: the spring ring brings them out from there, and the photo of the old look still covers the rest")]
+    [SerializeField, Min(1)] int shownPerFrame = 400;
     [Tooltip("On Generate, turns on Wind in the prefabs' watercolor materials that have it off, sized to each prefab's height. Materials already on keep their values")]
     [SerializeField] protected bool swayInWind = true;
     [Tooltip("Metres in from the cliff (the terrain's holes and its far +Z end) over which they thin out to none, so they don't run up to the brink. Cover Ground areas (the ending's field) are left as they are. 0: up to the edge")]
@@ -90,6 +97,10 @@ public abstract class ScatterGenerator : MonoBehaviour
 
     Season season;
     int pendingLevel = -1;
+    // What a season brought out that is still to be turned on, nearest first with its squared distance from the baby, shownPerFrame at a
+    // time.
+    readonly List<(GameObject thing, float distance)> toShow = new();
+    int nextShow;
 
     public int MadeCount => made.Count;
 
@@ -216,7 +227,7 @@ public abstract class ScatterGenerator : MonoBehaviour
         season = FindAnyObjectByType<Season>();
         if (season == null)
             return;
-        ShowForSeason(season.Level);
+        ShowForSeason(season.Level, false);
         season.OnSeasonChanged.AddListener(OnSeasonChanged);
     }
 
@@ -232,22 +243,57 @@ public abstract class ScatterGenerator : MonoBehaviour
 
     void LateUpdate()
     {
-        if (pendingLevel < 0)
-            return;
-        ShowForSeason(pendingLevel);
-        pendingLevel = -1;
+        if (pendingLevel >= 0)
+        {
+            ShowForSeason(pendingLevel, true);
+            pendingLevel = -1;
+        }
+        if (nextShow < toShow.Count)
+            ShowNext(shownPerFrame);
     }
 
 #if UNITY_EDITOR
     // Season preview in the Editor (SeasonPreview).
-    public void PreviewSeason(int level) => ShowForSeason(level);
+    public void PreviewSeason(int level) => ShowForSeason(level, false);
 #endif
 
-    void ShowForSeason(int level)
+    // Spread: an area coming out is turned on with its objects off, and they follow shownPerFrame at a time, nearest the baby first, as
+    // the spring ring spreads from beside her. Turning them off while the area is still off costs next to nothing. Otherwise all at once.
+    void ShowForSeason(int level, bool spread)
     {
+        // A season that came before these were all out: the rest at once, so none is left off.
+        ShowNext(toShow.Count);
+        Vector3 centre = Baby.Instance != null ? Baby.Instance.transform.position : transform.position;
         for (int i = 0; i < groups.Count && i < areas.Length; i++)
-            if (groups[i] != null)
-                groups[i].SetActive(level >= areas[i].fromSeason);
+        {
+            GameObject group = groups[i];
+            if (group == null)
+                continue;
+            bool shown = level >= areas[i].fromSeason;
+            if (spread && shown && !group.activeSelf)
+                foreach (Transform child in group.transform)
+                    if (child.gameObject.activeSelf)
+                    {
+                        child.gameObject.SetActive(false);
+                        toShow.Add((child.gameObject, TreeGenerator.FlatDistance(child.position, centre)));
+                    }
+            group.SetActive(shown);
+        }
+        toShow.Sort((a, b) => a.distance.CompareTo(b.distance));
+    }
+
+    // Count of them, and past them every one the spring ring has nearly reached, so a slow frame doesn't let the ring pass one still off.
+    void ShowNext(int count)
+    {
+        float ring = Shader.GetGlobalVector(SpringRingId).w;
+        float reach = ring > 0f ? (ring + RingLead) * (ring + RingLead) : -1f;
+        for (int done = 0; nextShow < toShow.Count && (done < count || toShow[nextShow].distance <= reach); done++, nextShow++)
+            toShow[nextShow].thing.SetActive(true);
+        if (nextShow == toShow.Count)
+        {
+            toShow.Clear();
+            nextShow = 0;
+        }
     }
 
 #if UNITY_EDITOR

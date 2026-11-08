@@ -1,0 +1,275 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!200 &20000000
+ShaderVariantCollection:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: WebShaderWarmup
+  m_Shaders:
+  - first: {fileID: 10770, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 66, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9000, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9002, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 16000, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 19011, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 65df88701913c224d95fc554db28381a, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: e7857e9d0c934dc4f83f270f8447b006, type: 3}
+    second:
+      variants:
+      - keywords: _BLOOM_HQ
+        passType: 0
+  - first: {fileID: 4800000, guid: 5f1864addb451f54bae8c86d230f736e, type: 3}
+    second:
+      variants:
+      - keywords: _BLOOM_HQ
+        passType: 0
+  - first: {fileID: 4800000, guid: 93446b5c5339d4f00b85c159e1159b7c, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _ALPHAPREMULTIPLY_ON
+          _LIGHT_LAYERS _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+          _SHADOWS_SOFT _SURFACE_TYPE_TRANSPARENT
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS
+          _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS
+          _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+          _SHADOWS_SOFT
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _LIGHT_LAYERS _REFLECTION_PROBE_BLENDING
+          _REFLECTION_PROBE_BOX_PROJECTION
+        passType: 13
+  - first: {fileID: 4800000, guid: 0406db5a14f94604a8c57ccfbc9f3b46, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2 _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+  - first: {fileID: -6465566751694194690, guid: 3739e562a03fc0b4982d8aa66cc50865, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS
+          _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS
+          _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+          _SHADOWS_SOFT
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _LIGHT_LAYERS _REFLECTION_PROBE_BLENDING
+          _REFLECTION_PROBE_BOX_PROJECTION
+        passType: 13
+  - first: {fileID: 4800000, guid: 650dd9526735d5b46b79224bc6e94025, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2
+        passType: 0
+      - keywords: FOG_EXP2 _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+  - first: {fileID: 4800000, guid: 5758af78fcd8b564a8b655841ddea838, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 5f4f671a3b6ed0140945615d50c61155, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 15cd0a6f32c11434c87f18b0a52840e6, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 1e9b512877cd5804da930abaa62cc45b, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2
+        passType: 13
+      - keywords: FOG_EXP2 INSTANCING_ON
+        passType: 13
+      - keywords: FOG_EXP2 INSTANCING_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+      - keywords: FOG_EXP2 _ALPHATEST_ON
+        passType: 13
+      - keywords: FOG_EXP2 _ALPHATEST_ON _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: FOG_EXP2 _ALPHATEST_ON _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+  - first: {fileID: 4800000, guid: d61eb1c6153b61847a89abcde4a0887b, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: da56c08f271f08a43bae00b0a708d58f, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+  - first: {fileID: 4800000, guid: 5d9d7f1225e573c4495932e6e97217d1, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 02af24a49b23ee245a9c27421c7856f7, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+  - first: {fileID: 4800000, guid: 9ec3741894e359b4fbc0922f85c88e21, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: 
+        passType: 14
+  - first: {fileID: 4800000, guid: e9850cacdcd74a50994d62f352385474, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 33077a257d47fce4aa08e9b19455b264, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: 71ef0873636558048be264274fa8c8ab, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: ceda41c970d54d1a8ee6e1d39d4366f8, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 9a969e2700e7c1a4baeaef7076829231, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 9af7765a224e0fa498d43673d5ba2cc1, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: db49d7f5e222cb34390cca39d9f1f478, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: e5e66c924d2b4abc8b9772d01bc978f9, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: ba72f18f70c357544b82a1ea6cc2f200, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS_CASCADE _SHADOWS_SOFT
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: f641be4d421eeca4fa54639e3d21c5f3, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS
+          _MAIN_LIGHT_SHADOWS _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _LIGHT_LAYERS
+          _MAIN_LIGHT_SHADOWS_CASCADE _REFLECTION_PROBE_BLENDING _REFLECTION_PROBE_BOX_PROJECTION
+          _SHADOWS_SOFT
+        passType: 13
+      - keywords: FOG_EXP2 _ADDITIONAL_LIGHTS _LIGHT_LAYERS _REFLECTION_PROBE_BLENDING
+          _REFLECTION_PROBE_BOX_PROJECTION
+        passType: 13
+  - first: {fileID: 4800000, guid: 881dcaf979ed4b843904ab3a471550f4, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: 70c1fb524a962ac40b6b978ddee46b5f, type: 3}
+    second:
+      variants:
+      - keywords: FOG_EXP2
+        passType: 13
+  - first: {fileID: 4800000, guid: 2695ffe4b13c62a4aaf167c1d81cdfca, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: db1836a5b6ea4b54a981c45114af8654, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: c22ee5d76a332a14b9754ce9a8c44409, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: 7f1640c0e7f24d646a243888c60cd867, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 3208b09ebd0d50e46ad10d3860b8d884, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: 7243528d749ab7e42aca4cd8040aaa40, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 13

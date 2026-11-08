@@ -68,7 +68,8 @@ public static class BuildEndingFlock
         if (animator == null)
             animator = model.AddComponent<Animator>();
         animator.runtimeAnimatorController = controller;
-        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        // Off screen the birds need no pose (web builds skin on the CPU).
+        animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
         animator.applyRootMotion = false;
         model.AddComponent<WhiteFlockBird>();
         foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
@@ -77,7 +78,7 @@ public static class BuildEndingFlock
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             if (renderer is SkinnedMeshRenderer skinned)
-                skinned.updateWhenOffscreen = true;
+                skinned.updateWhenOffscreen = false;
         }
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(model, PrefabPath);
         Object.DestroyImmediate(model);

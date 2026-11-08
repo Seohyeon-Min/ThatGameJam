@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Per-model watercolor bake settings and results. Put it on a model's root and press Bake in the Inspector
@@ -49,7 +50,13 @@ public class WatercolorPaintedModel : MonoBehaviour
     [Tooltip("How this instance flips and shifts the shared pattern (1-255; 0 = as baked).")]
     public int variation;
 
-    void OnEnable() => ApplyVariation();
+    void OnEnable()
+    {
+        // Its WatercolorTint's OnEnable sets the same value, so one is enough.
+        if (!TryGetComponent(out WatercolorTint tint) || !tint.enabled)
+            ApplyVariation();
+    }
+
     void OnValidate() => ApplyVariation();
 
     public void ApplyVariation() => ApplyUserValue(gameObject);
@@ -57,7 +64,7 @@ public class WatercolorPaintedModel : MonoBehaviour
     // The shader user value: the low 8 bits are the Variation, the next 8 a WatercolorTint's whitening (0-255), the next 8 its hue shift
     // (a signed byte, -127 to 127 for -MostHueShift to +MostHueShift), bit 24 says it blooms with the ring (its ScatterGenerator area's
     // Bloom With Ring), and the top 7 bits are the hue its petals are painted (WatercolorTint's Paint
-    // Petals). It is not saved with the scene, so it is set again whenever either is enabled.
+    // Petals). It is not saved with the scene, so it is set again whenever the object is enabled.
     public static void ApplyUserValue(GameObject root)
     {
         uint value = 0u;
@@ -76,7 +83,8 @@ public class WatercolorPaintedModel : MonoBehaviour
         ScatterGenerator scatter = root.GetComponentInParent<ScatterGenerator>(true);
         if (scatter != null && scatter.BloomsWithRing(root.transform))
             value |= 1u << 24;
-        foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+        root.GetComponentsInChildren(true, renderers);
+        foreach (var renderer in renderers)
         {
             if (renderer is MeshRenderer mesh)
                 mesh.SetShaderUserValue(value);
@@ -84,4 +92,7 @@ public class WatercolorPaintedModel : MonoBehaviour
                 skinned.SetShaderUserValue(value);
         }
     }
+
+    // Reused: this runs for every one of the thousands of models as the scene loads.
+    static readonly List<Renderer> renderers = new();
 }
