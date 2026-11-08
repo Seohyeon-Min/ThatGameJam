@@ -332,12 +332,15 @@ public class EndingFlight : MonoBehaviour
     List<(Transform puff, Vector3 rest)> topPuffs;
 
     // From the Timeline (EndingShotTrack): this shot starts now, the one before it ending where it is, with its own look if it has one,
-    // blending in over these seconds (0: at once).
-    public void BeginShot(Shot shot, WatercolorLook look = null, float blendSeconds = 0f)
+    // blending in over these seconds (0: at once). With a start look, it goes into that one over those seconds instead, then blends
+    // on from it to its look over Start To End seconds.
+    public void BeginShot(Shot shot, WatercolorLook look = null, float blendSeconds = 0f, WatercolorLook startLook = null, float startToEndSeconds = 0f)
     {
         if (!onTimeline || current == shot)
             return;
-        if (look != null)
+        if (startLook != null && look != null)
+            UseLooks(startLook, blendSeconds, look, startToEndSeconds);
+        else if (look != null)
             UseLook(look, blendSeconds);
         EndShot();
         current = shot;
@@ -392,6 +395,41 @@ public class EndingFlight : MonoBehaviour
     }
 
     Coroutine lookBlend;
+
+    // Into the start look, then on from it to the end look: the watercolor values and the Volume's profile both.
+    void UseLooks(WatercolorLook start, float inSeconds, WatercolorLook end, float spanSeconds)
+    {
+        if (lookBlend != null)
+            StopCoroutine(lookBlend);
+        lookBlend = null;
+        var manager = FindAnyObjectByType<WatercolorManager>();
+        if (manager != null)
+            lookBlend = StartCoroutine(LookPath(manager, start, inSeconds, end, spanSeconds));
+    }
+
+    IEnumerator LookPath(WatercolorManager manager, WatercolorLook start, float inSeconds, WatercolorLook end, float spanSeconds)
+    {
+        CrossfadeProfile(start, inSeconds);
+        yield return BlendLook(manager, start.settings, inSeconds);
+        CrossfadeProfile(end, spanSeconds);
+        yield return BlendLook(manager, end.settings, spanSeconds);
+    }
+
+    // The scene's Volume onto the look's profile over the seconds given (0: at once). A look with none keeps the profile on.
+    void CrossfadeProfile(WatercolorLook look, float seconds)
+    {
+        if (look.volumeProfile == null)
+            return;
+        WatercolorSeasonLooks seasonLooks = FindAnyObjectByType<WatercolorSeasonLooks>();
+        if (seasonLooks != null)
+        {
+            seasonLooks.CrossfadeVolume(look.volumeProfile, seconds);
+            return;
+        }
+        Volume volume = FindAnyObjectByType<Volume>();
+        if (volume != null)
+            volume.sharedProfile = look.volumeProfile;
+    }
 
     static IEnumerator BlendLook(WatercolorManager manager, WatercolorManager.Settings to, float seconds)
     {
