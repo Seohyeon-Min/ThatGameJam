@@ -1,12 +1,14 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 // The very end, once the sleep shot's camera has come to rest (EndingFlight): a flock of white birds sweeps over the screen from
 // the bottom left to the top right as one mass, fast, a wipe made of birds. Its front row is spaced out enough to see they are
 // birds; the rows behind come closer and closer, packed up to it, and behind them a white sheet (Tail) carries the white on over
 // the rest of the screen. All the same white, so where they overlap no edge shows. Once it has covered the screen, it is white
-// (End Card's White), and the logo video plays on it in black, in the middle.
+// (End Card's White), and the logo video plays on it in black, in the middle. Once it has played, the logo moves up a little and
+// the credits (End Card's Credits) fade in below it.
 // The birds are WhiteFlockBird prefabs under Birds and the sheet is Tail, off until it starts; the white and the logo are on the
 // End Card canvas.
 public class EndingFlock : MonoBehaviour
@@ -19,6 +21,8 @@ public class EndingFlock : MonoBehaviour
     [SerializeField] Graphic white;
     [Tooltip("The logo video (black, in the middle), turned on once the screen is white; it plays as it turns on.")]
     [SerializeField] GameObject logo;
+    [Tooltip("The credits under the logo (names large, roles small), clear until the logo has played and moved up.")]
+    [SerializeField] CanvasGroup credits;
 
     [Header("Birds")]
     [Tooltip("Rows of the flock, one behind another, from its front back (the birds are shared out over them, side by side in each). Then the gap behind the front row, as a share of the screen's height; each gap after is this much of the one before (closer and closer), down to the least.")]
@@ -48,6 +52,13 @@ public class EndingFlock : MonoBehaviour
     [SerializeField, Min(0.01f)] float whiteSeconds = 0.2f;
     [Tooltip("Seconds all white before the logo.")]
     [SerializeField, Min(0f)] float logoAfter = 0.8f;
+    [Tooltip("Once the logo video has played (or failed, or this many seconds have gone by), the logo moves up this far (canvas units, 1920 x 1080) over these seconds, to make room for the credits below it.")]
+    [SerializeField, Min(0f)] float logoMaxSeconds = 15f;
+    [SerializeField] float logoRise = 160f;
+    [SerializeField, Min(0.01f)] float riseSeconds = 1.2f;
+    [Tooltip("Seconds after the logo starts moving up that the credits start to fade in, and the seconds they take.")]
+    [SerializeField, Min(0f)] float creditsAfter = 0.6f;
+    [SerializeField, Min(0.01f)] float creditsFadeSeconds = 1.5f;
 
     public bool IsPlaying { get; private set; }
 
@@ -152,8 +163,54 @@ public class EndingFlock : MonoBehaviour
         if (tail != null)
             tail.gameObject.SetActive(false);
         yield return new WaitForSeconds(logoAfter);
-        if (logo != null)
-            logo.SetActive(true);
+        if (logo == null)
+            yield break;
+        logo.SetActive(true);
+        yield return WaitForLogo(logo.GetComponent<VideoPlayer>());
+
+        // The logo moves up a little, and the credits fade in below it.
+        var rect = (RectTransform)logo.transform;
+        Vector2 start = rect.anchoredPosition;
+        bool creditsStarted = false;
+        for (float t = 0f; t < riseSeconds || !creditsStarted; t += Time.deltaTime)
+        {
+            rect.anchoredPosition = start + Vector2.up * logoRise * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / riseSeconds));
+            if (!creditsStarted && t >= creditsAfter)
+            {
+                creditsStarted = true;
+                if (credits != null)
+                    StartCoroutine(FadeInCredits());
+            }
+            yield return null;
+        }
+    }
+
+    // Until the logo video has played to its end; or it couldn't play, or it is taking too long (a slow or failed load on the web).
+    IEnumerator WaitForLogo(VideoPlayer video)
+    {
+        if (video == null)
+            yield break;
+        bool done = false;
+        void Ended(VideoPlayer player) => done = true;
+        void Failed(VideoPlayer player, string message) => done = true;
+        video.loopPointReached += Ended;
+        video.errorReceived += Failed;
+        for (float t = 0f; !done && t < logoMaxSeconds; t += Time.unscaledDeltaTime)
+            yield return null;
+        video.loopPointReached -= Ended;
+        video.errorReceived -= Failed;
+    }
+
+    IEnumerator FadeInCredits()
+    {
+        credits.alpha = 0f;
+        credits.gameObject.SetActive(true);
+        for (float t = 0f; t < creditsFadeSeconds; t += Time.deltaTime)
+        {
+            credits.alpha = Mathf.SmoothStep(0f, 1f, t / creditsFadeSeconds);
+            yield return null;
+        }
+        credits.alpha = 1f;
     }
 
     // One bird at its place in the flock, its front this far along, turned the way it has moved; where it is now.
