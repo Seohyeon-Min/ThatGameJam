@@ -77,6 +77,9 @@ public class GameTuning : ScriptableObject
     // Seconds she holds still, turned toward the landing spot, before leaping: a brief wind-up so the jump
     // doesn't spring out of nowhere.
     public float babyJumpAnticipation = 0.2f;
+    // Climbing up onto a log (JumpTo): the wood footstep sound fires this many seconds before the jump
+    // clip actually ends, so it doesn't lag the foot visually landing.
+    public float babyTreeLandSoundLead = 0.1f;
     // Crossing a log (BalanceWalk): slower and careful than on the ground (m/s).
     public float babyBalanceWalkSpeed = 0.45f;
     // Seconds she stands after hopping down off the far end of a log, before she walks on.

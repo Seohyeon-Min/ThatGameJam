@@ -15,6 +15,12 @@ public class LoopingAmbience : MonoBehaviour
     [SerializeField] float farDistance = 15f;
 
     EventInstance instance;
+    // The stream is often a long, thin plane (a river running far past the bird on one side): distance to its
+    // single transform point read as arbitrary - right beside one end could compute as far, and vice versa.
+    // The nearest point on its actual bounds reads as distance to the water itself instead.
+    Renderer body;
+
+    void Awake() => body = GetComponent<Renderer>();
 
     void OnEnable()
     {
@@ -28,7 +34,9 @@ public class LoopingAmbience : MonoBehaviour
     {
         if (BirdController.Instance == null)
             return;
-        float distance = Vector3.Distance(transform.position, BirdController.Instance.transform.position);
+        Vector3 birdPosition = BirdController.Instance.transform.position;
+        Vector3 nearestPoint = body != null ? body.bounds.ClosestPoint(birdPosition) : transform.position;
+        float distance = Vector3.Distance(nearestPoint, birdPosition);
         instance.setVolume(1f - Mathf.InverseLerp(nearDistance, farDistance, distance));
     }
 

@@ -1,4 +1,5 @@
 using System.Collections;
+using FMODUnity;
 using UnityEngine;
 
 // The leaning dead tree by the water (design doc §7.3). It falls toward the water and becomes the baby's bridge,
@@ -26,6 +27,7 @@ public class LeaningLog : PathBlocker
         top.CanPerch = false;
         animator.Play("Break", 0, 0f);
         yield return new WaitForSeconds(fallClip.length);
+        RuntimeManager.PlayOneShot("event:/SFX/treeHitsGround", transform.position);
         Open(byBird);
     }
 }
