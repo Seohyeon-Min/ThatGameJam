@@ -11,6 +11,8 @@ public class DiscoveryPopup : MonoBehaviour
     [SerializeField] RectTransform box;
     [SerializeField] CanvasGroup group;
     [SerializeField] VideoPlayer quillVideo;
+    [Tooltip("The quill clip's file in Assets/StreamingAssets. The Web build plays a video only from a URL, never from a VideoClip asset (that is why it stayed black there), and the URL of StreamingAssets is only known at run time.")]
+    [SerializeField] string quillVideoFile = "QuillPenAnim.webm";
     [SerializeField, Min(0.01f)] float inSeconds = 0.3f;
     [SerializeField, Min(0f)] float holdSeconds = 3f;
     [SerializeField, Min(0.01f)] float outSeconds = 0.4f;
@@ -25,6 +27,11 @@ public class DiscoveryPopup : MonoBehaviour
     {
         restPosition = box.anchoredPosition;
         group.alpha = 0f;
+        if (!string.IsNullOrEmpty(quillVideoFile))
+        {
+            quillVideo.source = VideoSource.Url;
+            quillVideo.url = Application.streamingAssetsPath + "/" + quillVideoFile;
+        }
     }
 
     public void Show() => pending++;
