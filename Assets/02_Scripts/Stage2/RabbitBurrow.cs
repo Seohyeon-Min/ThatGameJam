@@ -5,11 +5,11 @@ using UnityEngine;
 // The rabbit burrow of stage 2 (design doc §8.2, ADR 0037). First, as the girl comes, the mother rabbit, out in front of the burrow,
 // calls her young home, crying over and over at no beat (a yellow ring spreads each time). At each cry the young, scattered about
 // her, prick their ears and hop a step after her: first to her side, then after her into the hole. The girl notices the first cry and
-// trots a little that way. One of them slept through it,
-// and wakes once the others are in: it sits on the way, afraid, wandering a little, not knowing where the hole is, and the girl stops
-// for it. A cry near the hole is answered from inside after a short beat (a yellow ring at the mouth, the mother peeking out), and
-// the little one pricks its ears, looks, runs home, and the way opens. Left alone, the mother calls it by herself as the natural time
-// runs out. The bird never touches the rabbits: it only gets the family's voices to each other.
+// trots a little that way. One little one was left behind: hidden at first, it darts out from the roadside to its spot as the girl
+// comes near her stop, and sits there afraid, wandering a little, not knowing where the hole is; the girl stops for it. Only then
+// (family in, little one out, girl stopped) is a cry near the hole answered from inside after a short beat (a yellow ring at the
+// mouth, the mother peeking out): the little one pricks its ears, looks, runs home, and the way opens. Left alone, the mother calls
+// it by herself as the natural time runs out. The bird never touches the rabbits: it only gets the family's voices to each other.
 public class RabbitBurrow : PathBlocker
 {
     enum Phase { Before, Calling, Lost, Home }
@@ -33,8 +33,15 @@ public class RabbitBurrow : PathBlocker
     [SerializeField, Min(0f)] float stagger = 0.3f;
 
     [Header("Then: the one left behind")]
-    [Tooltip("Starts asleep on the way, wakes once the others are in.")]
+    [Tooltip("Hidden at first (off). It darts out from the roadside as the girl comes near her stop.")]
     [SerializeField] BurrowRabbit lost;
+    [Tooltip("Where it darts out from, by the roadside.")]
+    [SerializeField] Transform lostFrom;
+    [Tooltip("Where it runs to, and sits about afraid.")]
+    [SerializeField] Transform lostSpot;
+    [Tooltip("The girl's stop (the StopPoint for this burrow): once she is this close (m) to it, the little one darts out.")]
+    [SerializeField] Transform girlStop;
+    [SerializeField, Min(0f)] float lostAppearDistance = 2f;
     [Tooltip("How far (m) from its place it wanders, lost.")]
     [SerializeField, Min(0f)] float wanderRadius = 0.6f;
     [SerializeField] Vector2 wanderPause = new(1.2f, 2.8f);
@@ -47,6 +54,10 @@ public class RabbitBurrow : PathBlocker
 
     Phase phase;
     bool girlWaiting;
+    // The mother and the young are in; the little one has run out to its spot. With the girl stopped, the cry is answered.
+    bool familyIn;
+    bool lostOut;
+    bool lostStarted;
     Coroutine wandering;
     bool[] youngStepping;
     Stage stage;
@@ -67,21 +78,60 @@ public class RabbitBurrow : PathBlocker
     public override void BeginWaiting()
     {
         girlWaiting = true;
-        // Come here some other way than past the trigger (a dev skip): the call still comes first.
+        // Come here some other way than past the triggers (a dev skip): the call and the little one still come first.
         if (phase == Phase.Before)
             StartCoroutine(CallYoung());
-        else if (phase == Phase.Lost)
-            timer.Begin();
+        if (!lostStarted)
+            StartCoroutine(LostRunsOut());
+        TryLost();
     }
 
     void Update()
     {
-        if (phase != Phase.Before || GameFlow.Instance == null || GameFlow.Instance.CurrentStage != stage || Baby.Instance == null)
+        if (GameFlow.Instance == null || GameFlow.Instance.CurrentStage != stage || Baby.Instance == null)
             return;
-        Vector3 offset = Baby.Instance.transform.position - callTrigger.position;
-        offset.y = 0f;
-        if (offset.sqrMagnitude <= callTriggerRadius * callTriggerRadius)
+        Vector3 girl = Baby.Instance.transform.position;
+        if (phase == Phase.Before && FlatDistance(girl, callTrigger.position) <= callTriggerRadius)
             StartCoroutine(CallYoung());
+        if (!lostStarted && phase != Phase.Home && FlatDistance(girl, girlStop.position) <= lostAppearDistance)
+            StartCoroutine(LostRunsOut());
+    }
+
+    static float FlatDistance(Vector3 a, Vector3 b)
+    {
+        Vector3 d = a - b;
+        d.y = 0f;
+        return d.magnitude;
+    }
+
+    // From hiding by the roadside, a dash out to its spot, where it sits afraid.
+    IEnumerator LostRunsOut()
+    {
+        lostStarted = true;
+        lost.transform.SetPositionAndRotation(lostFrom.position, Quaternion.LookRotation(Flat(lostSpot.position - lostFrom.position)));
+        lost.gameObject.SetActive(true);
+        yield return lost.HopTo(lostSpot.position, true);
+        lost.SetAfraid(true);
+        lostOut = true;
+        wandering = StartCoroutine(Wander());
+        TryLost();
+    }
+
+    static Vector3 Flat(Vector3 v)
+    {
+        v.y = 0f;
+        return v.sqrMagnitude > 0.0001f ? v : Vector3.forward;
+    }
+
+    // Lost, and so to be helped, once the family is in, the little one is out, and the girl has stopped for it: from then on a
+    // cry is answered and the natural time runs.
+    void TryLost()
+    {
+        if (phase != Phase.Calling || !familyIn || !lostOut || !girlWaiting)
+            return;
+        phase = Phase.Lost;
+        cryHint.Playing = true;
+        timer.Begin();
     }
 
     // Only the little one, lost, can be helped: while the mother is still calling the others the cry goes unanswered.
@@ -115,14 +165,8 @@ public class RabbitBurrow : PathBlocker
         // She is in: the rest of the way, straight after her.
         yield return Together(young.Length, i => YoungGoIn(i));
 
-        yield return new WaitForSeconds(0.8f);
-        yield return lost.WakeUp();
-        lost.SetAfraid(true);
-        phase = Phase.Lost;
-        cryHint.Playing = true;
-        wandering = StartCoroutine(Wander());
-        if (girlWaiting)
-            timer.Begin();
+        familyIn = true;
+        TryLost();
     }
 
     bool YoungGathered()
@@ -198,7 +242,7 @@ public class RabbitBurrow : PathBlocker
     // A little hop this way or that about its place, and a look round, over and over.
     IEnumerator Wander()
     {
-        Vector3 seat = lost.transform.position;
+        Vector3 seat = lostSpot.position;
         while (true)
         {
             yield return new WaitForSeconds(UnityEngine.Random.Range(wanderPause.x, wanderPause.y));
@@ -225,8 +269,13 @@ public class RabbitBurrow : PathBlocker
 
     IEnumerator GoHome(bool byBird, bool skipCall)
     {
-        if (skipCall)
-            yield return lost.WakeUp();
+        // Not out yet (a dev shortcut): it is at its spot already.
+        if (skipCall && !lostOut)
+        {
+            lost.transform.SetPositionAndRotation(lostSpot.position, Quaternion.LookRotation(Flat(lostFrom.position - lostSpot.position)));
+            lost.gameObject.SetActive(true);
+            lostOut = true;
+        }
         if (wandering != null)
             StopCoroutine(wandering);
         lost.Halt();

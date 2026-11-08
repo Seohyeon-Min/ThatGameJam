@@ -121,7 +121,7 @@ public class GameTuning : ScriptableObject
     // A cry from the bird, once she has seen the mother call: she trots this far (m) toward the bird.
     public float babyCryTrotDistance = 1.5f;
     // Stopped for the lost rabbit (a StopPoint watching with her head) farther than this (m): she trots up to this far from it.
-    public float babyPeerDistance = 0.8f;
+    public float babyPeerDistance = 1.3f;
     public float babyCallTrotSpeed = 2f;
     public float babyCallWatchTime = 0.8f;
     // Then she comes back onto her way this far (m) ahead of where she is along it, instead of cutting straight to the next point.
