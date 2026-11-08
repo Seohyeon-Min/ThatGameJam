@@ -604,7 +604,7 @@ public class EndingFlight : MonoBehaviour
     }
 
     // The top shot's whoosh (2D), as the bird bursts up out of the clouds and again as it drops back into them.
-    const string CloudSound = "event:/SFX/cutscene_dive";
+    const string CloudSound = "event:/SFX/cutsceneDive";
 
     IEnumerator TopShot(BirdController bird)
     {
