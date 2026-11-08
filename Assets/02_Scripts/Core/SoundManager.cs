@@ -1,15 +1,15 @@
 using FMOD.Studio;
 using FMODUnity;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 // Plays the game's ambient and effect sounds. Lives as a persistent prefab in the scene.
+// The bird's cry sound is BirdController's own job (Cry(), cooldown and all), not this: it has no business
+// deciding right-click behaviour a second time.
 public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance { get; private set; }
 
     [SerializeField] EventReference windEvent;
-    [SerializeField] EventReference birdEvent;
     [Tooltip("Test only: an event to play from the start of the game, such as music being tried out. Empty plays nothing.")]
     [SerializeField] EventReference testAudioEvent;
 
@@ -27,12 +27,6 @@ public class SoundManager : MonoBehaviour
             testAudioInstance = RuntimeManager.CreateInstance(testAudioEvent);
             testAudioInstance.start();
         }
-    }
-
-    void Update()
-    {
-        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && !Encyclopedia.IsOpen)
-            RuntimeManager.PlayOneShot(birdEvent, BirdController.Instance.transform.position);
     }
 
     void OnDestroy()

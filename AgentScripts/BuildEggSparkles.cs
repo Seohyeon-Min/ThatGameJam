@@ -23,6 +23,8 @@ public static class BuildEggSparkles
         "Assets/03_Prefabs/EasterEggs/IcicleXylophone.prefab",
         "Assets/03_Prefabs/EasterEggs/SnowWhirl.prefab",
         "Assets/03_Prefabs/EasterEggs/StumpLadybug.prefab",
+        // The ladybug egg as it is now: in the leaning log's stump.
+        "Assets/03_Prefabs/EasterEggs/LeaningLogStump.prefab",
     };
 
     public static string Run()

@@ -19,6 +19,20 @@ MonoBehaviour:
   lumpSize: 2.5
   fadeStart: 26
   fadeEnd: 38
+--- !u!114 &-6373607856113060342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ef41a2b95a4cf5478fde212f853316e, type: 3}
+  m_Name: DreamFog
+  m_EditorClassIdentifier: Assembly-CSharp::DreamFogFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: db1836a5b6ea4b54a981c45114af8654, type: 3}
 --- !u!114 &-3881289934963426081
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,7 +198,11 @@ MonoBehaviour:
   - {fileID: -3422908632515747798}
   - {fileID: -8869442305284128853}
   - {fileID: -2189873071619459965}
-  m_RendererFeatureMap: 05838fea6e4001dda910d060a3c917dadfbc343c5ee322ca2ae047ecbb627fd0abbfb7353769e98483b4ed360b029ce1
+  - {fileID: 3330321499439342450}
+  - {fileID: -6373607856113060342}
+  - {fileID: 7345804924165988290}
+  - {fileID: 3739162968608180127}
+  m_RendererFeatureMap: 05838fea6e4001dda910d060a3c917dadfbc343c5ee322ca2ae047ecbb627fd0abbfb7353769e98483b4ed360b029ce172a3ed49c2ad372e0af6bd766c658ca7c29f3aa6a88af1659f872fb5e82ce433
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -194,10 +212,10 @@ MonoBehaviour:
     m_Bits: 4294967295
   m_OpaqueLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294963199
   m_TransparentLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294963199
   m_DefaultStencilState:
     overrideStencilState: 0
     stencilReference: 0
@@ -213,3 +231,101 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &3330321499439342450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8174ef9a15d73b646ab2b865381b407a, type: 3}
+  m_Name: ForestMist
+  m_EditorClassIdentifier: Assembly-CSharp::ForestMistFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 5a06c4330c1ae234a82ecc34b6732482, type: 3}
+--- !u!114 &3739162968608180127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: BabyPrism
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
+  m_Active: 1
+  settings:
+    passTag: BabyPrism
+    Event: 550
+    filterSettings:
+      RenderQueueType: 0
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 8192
+      PassNames: []
+    overrideMaterial: {fileID: 2100000, guid: 51a3a8d8aa3f4ba4abb9c17b4528892a, type: 2}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 1
+    overrideDepthState: 0
+    depthCompareFunction: 4
+    enableWrite: 1
+    stencilSettings:
+      overrideStencilState: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 0
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60
+--- !u!114 &7345804924165988290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: AboveFog
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
+  m_Active: 1
+  settings:
+    passTag: AboveFog
+    Event: 550
+    filterSettings:
+      RenderQueueType: 1
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 4096
+      PassNames: []
+    overrideMaterial: {fileID: 0}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 1
+    overrideDepthState: 0
+    depthCompareFunction: 4
+    enableWrite: 1
+    stencilSettings:
+      overrideStencilState: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 0
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60

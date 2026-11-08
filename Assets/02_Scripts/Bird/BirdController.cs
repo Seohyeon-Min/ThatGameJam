@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using FMODUnity;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -138,6 +139,8 @@ public class BirdController : MonoBehaviour
     float landTime;
     // The turn while landing, from the heading it arrived with.
     Quaternion landFrom, landTo;
+    // Perched, the heading it turns to on the spot (TurnToward). Set to the landing heading as it lands.
+    float perchedYaw;
     float nextCryTime;
     bool perchCursorShown;
     Vector3 baseScale;
@@ -533,7 +536,7 @@ public class BirdController : MonoBehaviour
             case State.Flying: Fly(); break;
             case State.ToPerch: FlyToPerch(); break;
             case State.Landing: Land(); Bank(0f); break;
-            case State.Perched: transform.position = perch.PerchPoint.position; Bank(0f); break;
+            case State.Perched: transform.position = perch.PerchPoint.position; TurnOnPerch(); Bank(0f); break;
             case State.Walking: Walk(); break;
         }
         bool moved = transform.position != before;
@@ -660,6 +663,15 @@ public class BirdController : MonoBehaviour
     static bool CanShelter() => GameFlow.Instance.CurrentStage.snowShelter
         && Baby.Instance.State is BabyState.Walking or BabyState.Reacting or BabyState.Waiting;
 
+    // The fog maze's trees: the bird has no horizontal avoidance for them (only vertical clearance over logs/banks underfoot),
+    // so while it's the current stage the target is kept within FogMaze's corridor around the baby's path instead.
+    // Out of the maze (the bird and where it goes both past its exit, toward the cliff) it flies free; going back in, or coming
+    // out, it keeps to the corridor until it is through the exit.
+    Vector3 ClampToFogCorridor(Vector3 point) =>
+        FogMaze.Instance != null && GameFlow.Instance.CurrentStage == FogMaze.Instance.Stage
+            && !(FogMaze.Instance.IsPastExit(transform.position) && FogMaze.Instance.IsPastExit(point))
+            ? FogMaze.Instance.ClampToCorridor(point) : point;
+
     // A click on the baby toggles sheltering on; a second click there (or anywhere else, via Click) turns it off again.
     void ToggleShelter()
     {
@@ -725,6 +737,10 @@ public class BirdController : MonoBehaviour
         if (hit.collider.gameObject.layer != interactableLayer)
             return null;
         Perchable perchable = hit.collider.GetComponentInParent<Perchable>();
+        if (perchable == null)
+            foreach (Perchable other in Perchable.All)
+                if (other.IsClickedThrough(hit.collider))
+                    perchable = other;
         return perchable != null && perchable.CanPerch && OnScreen(perchable.PerchPoint.position) ? perchable : null;
     }
 
@@ -796,7 +812,7 @@ public class BirdController : MonoBehaviour
         // Towards the clamped target, so a bird taking off from a branch off the road glides back onto it instead of jumping.
         Vector3 position = transform.position;
         var from = new Vector3(position.x, 0f, position.z);
-        Vector3 to = Limit(new Vector3(target.x, 0f, target.z));
+        Vector3 to = ClampToFogCorridor(Limit(new Vector3(target.x, 0f, target.z)));
         // Slower the nearer where it is going is (the pointer), up to its full speed far off.
         GameTuning speeds = GameTuning.Current;
         float far = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(speeds.birdSlowDistance, speeds.birdFastDistance, Vector3.Distance(from, to)));
@@ -883,7 +899,7 @@ public class BirdController : MonoBehaviour
     void Walk()
     {
         Vector3 position = transform.position;
-        Vector3 goal = Limit(new Vector3(target.x, 0f, target.z));
+        Vector3 goal = ClampToFogCorridor(Limit(new Vector3(target.x, 0f, target.z)));
         // Setting off from standing, it hops for a moment before it settles into walking.
         bool going = (goal - new Vector3(position.x, 0f, position.z)).sqrMagnitude > 1e-6f;
         if (going && !wasWalking)
@@ -995,6 +1011,7 @@ public class BirdController : MonoBehaviour
         if (landTime < GameTuning.Current.birdPerchDuration)
             return;
         state = State.Perched;
+        facingYaw = perchedYaw = transform.eulerAngles.y;
         clicksLocked = false;
         perch.NotifyPerched();
         if (refusePending)
@@ -1002,6 +1019,23 @@ public class BirdController : MonoBehaviour
             refusePending = false;
             StartRefusing();
         }
+    }
+
+    // Perched, it turns on the spot to face the point, level (an icicle under its branch, before it pecks it).
+    // Returns the seconds the turn takes.
+    public float TurnToward(Vector3 point)
+    {
+        Vector3 direction = Vector3.ProjectOnPlane(point - transform.position, Vector3.up);
+        if (state != State.Perched || direction.sqrMagnitude < 0.0001f)
+            return 0f;
+        perchedYaw = Quaternion.LookRotation(direction).eulerAngles.y;
+        return Mathf.Abs(Mathf.DeltaAngle(facingYaw, perchedYaw)) / GameTuning.Current.birdTurnSpeed;
+    }
+
+    void TurnOnPerch()
+    {
+        facingYaw = Mathf.MoveTowardsAngle(facingYaw, perchedYaw, GameTuning.Current.birdTurnSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Euler(0f, facingYaw, 0f);
     }
 
     // Facing along the perch point's forward axis, the way nearer the current heading (or its forward itself, FacesForward).
@@ -1060,6 +1094,8 @@ public class BirdController : MonoBehaviour
         nextCryTime = Time.time + GameTuning.Current.birdCryCooldown;
         CryListener.Broadcast(transform.position);
         onCry.Invoke();
+        // Gated by the same cooldown as the ring (above), so the call sounds exactly as often as it shows.
+        RuntimeManager.PlayOneShot("event:/SFX/bird", transform.position);
         StartCoroutine(CryPulse());
         if (cryPulse != null)
         {

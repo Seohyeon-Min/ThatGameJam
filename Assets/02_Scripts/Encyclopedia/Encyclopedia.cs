@@ -7,7 +7,7 @@ using UnityEngine.Rendering.Universal;
 
 // The list of interactions the player has found in this play session, each with a close-up photo of what was found,
 // taken by the game at the moment the interaction shows itself.
-// The ` key slides the page up from the bottom and pauses the game; the scene behind it blurs through a depth of field Volume.
+// The Esc key slides the page up from the bottom and pauses the game; the scene behind it blurs through a depth of field Volume.
 // The same key closes it. Gameplay input checks IsOpen so clicks on the page do not reach the world.
 public class Encyclopedia : MonoBehaviour
 {
@@ -42,14 +42,15 @@ public class Encyclopedia : MonoBehaviour
     // Call this when the interaction shows itself (the squirrel's head is out, the trout has surfaced), not on the player's click.
     // The photo is taken now. With a photo view (an off camera placed in the scene for this interaction) it is taken from
     // that camera's place, angle and field of view. Without one, it is framed on the subject's renderers from the game camera's angle.
-    public void Discover(EncyclopediaEntry entry, Transform subject, Camera photoView = null)
+    // Without Show Bird the player's bird is left out of the photo, so it does not cover what was found.
+    public void Discover(EncyclopediaEntry entry, Transform subject, Camera photoView = null, bool showBird = true)
     {
         if (!found.Add(entry))
             return;
         int index = Array.IndexOf(entries, entry);
-        photos[index] = TakePhoto(subject, photoView);
+        photos[index] = TakePhoto(subject, photoView, showBird);
         cards[index].Show(index + 1, entry, photos[index]);
-        popup.Show(index + 1, entry);
+        popup.Show();
     }
 
     void Awake()
@@ -66,7 +67,7 @@ public class Encyclopedia : MonoBehaviour
     }
 
     // Screen space overlay UI (the popup, the page) is not part of a camera's render.
-    RenderTexture TakePhoto(Transform subject, Camera photoView)
+    RenderTexture TakePhoto(Transform subject, Camera photoView, bool showBird)
     {
         photoCamera.CopyFrom(Camera.main);
         photoCamera.aspect = (float)photoSize.x / photoSize.y;
@@ -82,8 +83,14 @@ public class Encyclopedia : MonoBehaviour
 
         var photo = new RenderTexture(photoSize.x, photoSize.y, 24);
         var request = new UniversalRenderPipeline.SingleCameraRequest { destination = photo };
+        // The render request draws right away, so the bird is hidden for this one render only.
+        Renderer[] bird = showBird || BirdController.Instance == null ? Array.Empty<Renderer>() : BirdController.Instance.GetComponentsInChildren<Renderer>();
+        foreach (Renderer part in bird)
+            part.forceRenderingOff = true;
         if (RenderPipeline.SupportsRenderRequest(photoCamera, request))
             RenderPipeline.SubmitRenderRequest(photoCamera, request);
+        foreach (Renderer part in bird)
+            part.forceRenderingOff = false;
         return photo;
     }
 
@@ -112,7 +119,7 @@ public class Encyclopedia : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
         // It does not open during the intro or a cutscene.
-        if (keyboard != null && keyboard.backquoteKey.wasPressedThisFrame && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
+        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
             SetOpen(!IsOpen);
 
         float target = IsOpen ? 1f : 0f;

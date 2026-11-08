@@ -139,7 +139,11 @@ public static class ConvertTextToCinzel
     static void Wire(Object owner, string field, Transform target)
     {
         var so = new SerializedObject(owner);
-        so.FindProperty(field).objectReferenceValue = target != null ? target.GetComponent<TMP_Text>() : null;
+        // Not every version of the script has the field (the discovery popup lost its title for the quill clip).
+        SerializedProperty property = so.FindProperty(field);
+        if (property == null)
+            return;
+        property.objectReferenceValue = target != null ? target.GetComponent<TMP_Text>() : null;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 

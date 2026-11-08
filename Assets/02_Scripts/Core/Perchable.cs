@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 
 // An object the bird lands on when it is left-clicked (the leaning log top, a snow-laden branch, a roadside tree's branch).
-// Its click collider must be on the Interactable layer, on this object or a child.
+// Its click collider must be on the Interactable layer, on this object or a child, or listed in Clicked Through.
 public class Perchable : MonoBehaviour
 {
     static readonly int CameraFadeExemptId = Shader.PropertyToID("_CameraFadeExempt");
@@ -24,6 +24,8 @@ public class Perchable : MonoBehaviour
     // Once the player clicks it, the bird goes there and lands, and the player's clicks don't count until it has (the snow whirl).
     [SerializeField] bool locksClicks;
     [SerializeField] UnityEvent onPerched;
+    [Tooltip("Colliders outside this object that also send the bird here (the icicles hanging from this branch). On the Interactable layer.")]
+    [SerializeField] Collider[] clickedThrough = { };
 
     public static IReadOnlyList<Perchable> All => all;
 
@@ -38,6 +40,7 @@ public class Perchable : MonoBehaviour
     public bool AlignsBird => alignBird;
     public bool FacesForward => faceForward;
     public bool LocksClicks => locksClicks;
+    public bool IsClickedThrough(Collider collider) => Array.IndexOf(clickedThrough, collider) >= 0;
 
     // The whole object this perch belongs to (for a tree's branch, the tree itself), not just this collider's own
     // renderer, so camera-fade can be held off the whole thing instead of only the branch the bird's feet touch.

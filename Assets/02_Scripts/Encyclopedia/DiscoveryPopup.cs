@@ -1,21 +1,23 @@
-using System.Collections.Generic;
+using FMODUnity;
 using UnityEngine;
-using TMPro;
+using UnityEngine.Video;
 
-// The notice in the bottom-right corner when an entry is found. Several finds in a row show one after another.
-// Runs on unscaled time, so it is not held up by a paused game.
+// The notice in the bottom-right corner when an entry is found: "New Discovery", the quill-pen clip replaying
+// beside it, and "Press ESC to see" above that, with event:/SFX/easteregg played alongside. Several finds in a
+// row show one after another (the clip restarts and the sound replays each time). Runs on unscaled time, so it
+// is not held up by a paused game.
 public class DiscoveryPopup : MonoBehaviour
 {
     [SerializeField] RectTransform box;
     [SerializeField] CanvasGroup group;
-    [SerializeField] TMP_Text title;
+    [SerializeField] VideoPlayer quillVideo;
     [SerializeField, Min(0.01f)] float inSeconds = 0.3f;
     [SerializeField, Min(0f)] float holdSeconds = 3f;
     [SerializeField, Min(0.01f)] float outSeconds = 0.4f;
     [Tooltip("How far below its place the box starts, in canvas units.")]
     [SerializeField] float riseDistance = 60f;
 
-    readonly Queue<string> waiting = new Queue<string>();
+    int pending;
     Vector2 restPosition;
     float elapsed = -1f;
 
@@ -25,15 +27,18 @@ public class DiscoveryPopup : MonoBehaviour
         group.alpha = 0f;
     }
 
-    public void Show(int entryNumber, EncyclopediaEntry entry) => waiting.Enqueue($"No. {entryNumber:00}  {entry.title}");
+    public void Show() => pending++;
 
     void Update()
     {
         if (elapsed < 0f)
         {
-            if (waiting.Count == 0)
+            if (pending == 0)
                 return;
-            title.text = waiting.Dequeue();
+            pending--;
+            quillVideo.Stop();
+            quillVideo.Play();
+            RuntimeManager.PlayOneShot("event:/SFX/easteregg");
             elapsed = 0f;
         }
 

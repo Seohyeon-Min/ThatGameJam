@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using System.Collections;
+using FMODUnity;
 using UnityEngine;
 
 public enum BabyState { Sleeping, Waking, Walking, Waiting, Reacting, Playing, Resting, Ending }
@@ -61,6 +62,8 @@ public class Baby : CryListener
     public NaturalTimer WakeTimer => wakeTimer;
     // The blocker the baby is standing in front of, else null.
     public PathBlocker CurrentBlocker { get; private set; }
+    // Crossing a balance beam (a fallen log): her footsteps and the jump on and off it sound like wood, not snow.
+    public bool OnBalanceBeam => onBalanceBeam;
 
     // Reached the last point of its route and has lain down to sleep there.
     public event Action ReachedRest;
@@ -913,6 +916,8 @@ public class Baby : CryListener
             yield return null;
         }
         transform.position = target;
+        // Climbing up onto the beam: a foot lands on wood. Down off the far end: back onto snow.
+        RuntimeManager.PlayOneShot(onBalanceBeam ? "event:/SFX/footstepTreeJump" : "event:/SFX/footstepSnow", transform.position);
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog maze).

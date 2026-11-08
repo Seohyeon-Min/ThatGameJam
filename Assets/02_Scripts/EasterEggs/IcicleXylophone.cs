@@ -3,9 +3,10 @@ using FMODUnity;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// The icicle xylophone (easter_eggs.md): clicking an icicle sends the bird to the branch it hangs from (its Perchable); the bird pecks it,
-// and as the beak touches it the icicle swings where it hangs and rings one note of the scale (do re mi fa sol la ti do, eight icicles).
-// Clicking the icicle the bird is standing at pecks it again; another one, and the bird goes there.
+// The icicle xylophone (easter_eggs.md): clicking an icicle sends the bird to the branch it hangs from (its Perchable, which lists
+// the icicle's collider in Clicked Through); the bird pecks it, and as the beak touches it the icicle swings where it hangs and rings
+// one note of the scale (do re mi fa sol la ti do, eight icicles on two branches).
+// Standing on a branch, clicking any icicle under it turns the bird toward that one and pecks it where it stands; one under the other branch, and the bird goes there.
 // No note samples yet: each note is one sound at its own pitch.
 public class IcicleXylophone : MonoBehaviour
 {
@@ -14,7 +15,7 @@ public class IcicleXylophone : MonoBehaviour
     {
         [Tooltip("Its click collider must be on the Interactable layer.")]
         public Collider body;
-        [Tooltip("Where the bird lands to tap it. Not under the icicle, which swings.")]
+        [Tooltip("The branch it hangs from, where the bird lands to tap it.")]
         public Perchable perch;
         [Tooltip("Semitones above the sound's own pitch.")]
         public int semitone;
@@ -32,6 +33,8 @@ public class IcicleXylophone : MonoBehaviour
 
     int interactableMask;
     bool pecking;
+    // The icicle last clicked while the bird was not yet standing on its branch: rung once it lands there. -1: none.
+    int aimed = -1;
     System.Action[] onPerched;
     Coroutine[] swings;
     Vector3[] homePositions;
@@ -53,7 +56,13 @@ public class IcicleXylophone : MonoBehaviour
             Bounds bounds = icicles[i].body.bounds;
             tops[i] = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
             int index = i;
-            onPerched[i] = () => StartCoroutine(PeckAndRing(index));
+            onPerched[i] = () =>
+            {
+                if (aimed != index)
+                    return;
+                aimed = -1;
+                StartCoroutine(PeckAndRing(index));
+            };
         }
     }
 
@@ -70,6 +79,7 @@ public class IcicleXylophone : MonoBehaviour
             icicles[i].perch.Perched -= onPerched[i];
         StopAllCoroutines();
         pecking = false;
+        aimed = -1;
         for (int i = 0; i < icicles.Length; i++)
         {
             icicles[i].body.transform.SetPositionAndRotation(homePositions[i], homeRotations[i]);
@@ -77,20 +87,25 @@ public class IcicleXylophone : MonoBehaviour
         }
     }
 
-    // The bird is already at this icicle: clicked again, it pecks again. Clicks on the others are the bird's (it goes there).
+    // The bird is already on this icicle's branch: it pecks it from there. Otherwise the click is the bird's (it goes to the branch),
+    // and the icicle rings once it lands.
     void Update()
     {
         Mouse mouse = Mouse.current;
         if (mouse == null || !mouse.leftButton.wasPressedThisFrame || Encyclopedia.IsOpen || Cutscene.PlayerLocked
             || DevTools.Covers(mouse.position.ReadValue()))
             return;
-        BirdController bird = BirdController.Instance;
         Ray ray = Camera.main.ScreenPointToRay(mouse.position.ReadValue());
-        if (!bird.IsPerched || !Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, interactableMask, QueryTriggerInteraction.Collide))
+        if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, interactableMask, QueryTriggerInteraction.Collide))
             return;
-        for (int i = 0; i < icicles.Length; i++)
-            if (hit.collider == icicles[i].body && bird.Perch == icicles[i].perch)
-                StartCoroutine(PeckAndRing(i));
+        int clicked = System.Array.FindIndex(icicles, icicle => icicle.body == hit.collider);
+        if (clicked < 0)
+            return;
+        BirdController bird = BirdController.Instance;
+        if (bird.IsPerched && bird.Perch == icicles[clicked].perch)
+            StartCoroutine(PeckAndRing(clicked));
+        else
+            aimed = clicked;
     }
 
     // Rings as the beak reaches the bottom of the peck.
@@ -100,6 +115,13 @@ public class IcicleXylophone : MonoBehaviour
             yield break;
         pecking = true;
         BirdController bird = BirdController.Instance;
+        // Toward this icicle first: the bird pecks every icicle under its branch from one spot.
+        yield return new WaitForSeconds(bird.TurnToward(tops[index]));
+        if (!bird.IsPerched || bird.Perch != icicles[index].perch)
+        {
+            pecking = false;
+            yield break;
+        }
         float seconds = bird.Peck(1);
         yield return new WaitForSeconds(seconds * 0.5f);
         // Not if it has flown off meanwhile.
