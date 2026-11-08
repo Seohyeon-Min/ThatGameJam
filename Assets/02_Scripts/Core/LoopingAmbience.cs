@@ -26,8 +26,13 @@ public class LoopingAmbience : MonoBehaviour
 
     void Awake() => body = GetComponent<Renderer>();
 
-    void OnEnable()
+    // Once the sound banks are in (on the web they come down after the game starts).
+    void OnEnable() => StartCoroutine(Begin());
+
+    System.Collections.IEnumerator Begin()
     {
+        while (!RuntimeManager.HaveMasterBanksLoaded)
+            yield return null;
         instance = RuntimeManager.CreateInstance(eventPath);
         instance.set3DAttributes(RuntimeUtils.To3DAttributes(transform.position));
         instance.setVolume(0f);
@@ -36,7 +41,7 @@ public class LoopingAmbience : MonoBehaviour
 
     void Update()
     {
-        if (BirdController.Instance == null)
+        if (BirdController.Instance == null || !instance.isValid())
             return;
         Vector3 birdPosition = BirdController.Instance.transform.position;
         Vector3 nearestPoint = body != null ? body.bounds.ClosestPoint(birdPosition) : transform.position;
@@ -50,7 +55,10 @@ public class LoopingAmbience : MonoBehaviour
 
     void OnDisable()
     {
+        if (!instance.isValid())
+            return;
         instance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
         instance.release();
+        instance.clearHandle();
     }
 }

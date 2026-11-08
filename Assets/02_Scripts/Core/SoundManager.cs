@@ -18,8 +18,11 @@ public class SoundManager : MonoBehaviour
 
     void Awake() => Instance = this;
 
-    void Start()
+    // Once the sound banks are in (on the web they come down after the game starts).
+    System.Collections.IEnumerator Start()
     {
+        while (!RuntimeManager.HaveMasterBanksLoaded)
+            yield return null;
         windInstance = RuntimeManager.CreateInstance(windEvent);
         windInstance.start();
         if (!testAudioEvent.IsNull)
@@ -31,8 +34,11 @@ public class SoundManager : MonoBehaviour
 
     void OnDestroy()
     {
-        windInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
-        windInstance.release();
+        if (windInstance.isValid())
+        {
+            windInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+            windInstance.release();
+        }
         if (testAudioInstance.isValid())
         {
             testAudioInstance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);

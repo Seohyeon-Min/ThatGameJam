@@ -116,10 +116,18 @@ public class Cutscene : MonoBehaviour
             SwitchVolume();
         }
 
+        // A sound that cannot be made (the banks not in yet, on the web) must not stop the cutscene before its Timeline plays.
         if (!cutsceneAudio.IsNull)
         {
-            audioInstance = RuntimeManager.CreateInstance(cutsceneAudio);
-            audioInstance.start();
+            try
+            {
+                audioInstance = RuntimeManager.CreateInstance(cutsceneAudio);
+                audioInstance.start();
+            }
+            catch (EventNotFoundException e)
+            {
+                Debug.LogWarning("Cutscene " + name + ": its sound could not play (" + e.Message + ")", this);
+            }
         }
 
         if (director.playableAsset != null)

@@ -151,6 +151,10 @@ public class IntroSequence : MonoBehaviour
         bird.SetAltitude(orbitCentre.position.y, true);
 
         yield return WaitForLogo();
+        // On the web the sound banks come down after the game starts (51 MB): nothing is played before they are in, or it fails
+        // (FMOD's Event not found) and a cutscene stops at its sound. The click to start waits for them.
+        while (!FMODUnity.RuntimeManager.HaveMasterBanksLoaded)
+            yield return null;
         if (clickToStart != null)
             StartCoroutine(FadeIn(clickToStart));
         yield return new WaitUntil(ClickedThisFrame);

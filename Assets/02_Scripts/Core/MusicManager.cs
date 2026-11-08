@@ -107,8 +107,14 @@ public class MusicManager : MonoBehaviour
     // Each track at once where Season's level (and the cliff) puts it, snapped.
     void StartMusic()
     {
-        if (music.isValid())
+        if (music.isValid() || waitingForBanks)
             return;
+        // On the web the sound banks may still be coming down: it starts once they are in.
+        if (!RuntimeManager.HaveMasterBanksLoaded)
+        {
+            StartCoroutine(StartWhenBanksLoaded());
+            return;
+        }
         music = RuntimeManager.CreateInstance(musicEvent);
         int level = Level;
         for (int i = 0; i < layers.Length; i++)
@@ -118,6 +124,17 @@ public class MusicManager : MonoBehaviour
         }
         music.start();
         music.setPaused(muted);
+    }
+
+    bool waitingForBanks;
+
+    System.Collections.IEnumerator StartWhenBanksLoaded()
+    {
+        waitingForBanks = true;
+        while (!RuntimeManager.HaveMasterBanksLoaded)
+            yield return null;
+        waitingForBanks = false;
+        StartMusic();
     }
 
     int Level => season != null ? season.Level : 0;

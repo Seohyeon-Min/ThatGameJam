@@ -17,6 +17,14 @@ public class FogBirdAmbience : MonoBehaviour
     void OnEnable()
     {
         field = GetComponent<FogField>();
+        StartCoroutine(Begin());
+    }
+
+    // Once the sound banks are in (on the web they come down after the game starts).
+    System.Collections.IEnumerator Begin()
+    {
+        while (!RuntimeManager.HaveMasterBanksLoaded)
+            yield return null;
         instance = RuntimeManager.CreateInstance(eventPath);
         instance.setVolume(0f);
         instance.start();
@@ -24,7 +32,7 @@ public class FogBirdAmbience : MonoBehaviour
 
     void Update()
     {
-        if (Baby.Instance == null)
+        if (Baby.Instance == null || !instance.isValid())
             return;
         // The fog area spans the whole maze, far bigger than the event's attenuation range, so the sound has to follow her
         // through it rather than sit fixed at the field's own pivot.
@@ -36,7 +44,10 @@ public class FogBirdAmbience : MonoBehaviour
 
     void OnDisable()
     {
+        if (!instance.isValid())
+            return;
         instance.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
         instance.release();
+        instance.clearHandle();
     }
 }
