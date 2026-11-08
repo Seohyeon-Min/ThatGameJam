@@ -13,11 +13,9 @@ public class BirdAnimationEvents : MonoBehaviour
     [Tooltip("Bird_Takeoff: feet leave the branch (frame 12, 0.367 s). Detach from the perch and start moving here.")]
     public UnityEvent onFootRelease;
 
-    public void FootContact()
-    {
-        onFootContact?.Invoke();
-        RuntimeManager.PlayOneShot("event:/SFX/branch", transform.position);
-    }
+    // The branch landing sound now plays on arrival instead (BirdController, where state becomes Landing),
+    // so it doesn't wait for this later event.
+    public void FootContact() => onFootContact?.Invoke();
     public void GripComplete() => onGripComplete?.Invoke();
     public void FootRelease() => onFootRelease?.Invoke();
 
