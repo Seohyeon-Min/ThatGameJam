@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6704260661238685094}
+  - component: {fileID: 3687947156946967145}
   m_Layer: 0
   m_Name: Squirrel
   m_TagString: Untagged
@@ -32,6 +33,32 @@ Transform:
   - {fileID: 3663795170532493047}
   m_Father: {fileID: 6271666113629180549}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3687947156946967145
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1992205430917697428}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
+  shareBake: 1
+  character: 1
+  patternResolution: 32
+  groupDistance: 0.03
+  massNormal: 1
+  pigmentScale: 0.2
+  backrunScale: 0.25
+  backrunCoverage: 0.3
+  seed: 0
+  pattern: {fileID: 11700000, guid: 79c2d816d2b51e64cb8db3006a8a6a06, type: 2}
+  modelBounds:
+    m_Center: {x: 0.0018883124, y: 0.17371422, z: -0.06557594}
+    m_Extent: {x: 0.0780095, y: 0.18066292, z: 0.1724616}
+  variation: 72
 --- !u!1 &3132016206328505423
 GameObject:
   m_ObjectHideFlags: 0
@@ -75,6 +102,7 @@ GameObject:
   - component: {fileID: 3225149115498314119}
   - component: {fileID: 3163440234881456813}
   - component: {fileID: 1199177414707155434}
+  - component: {fileID: 6622297068382731359}
   m_Layer: 0
   m_Name: HollowSquirrel
   m_TagString: Untagged
@@ -128,6 +156,7 @@ MonoBehaviour:
   entry: {fileID: 11400000, guid: 0a82c2be2e177d44f9af4c2574c2d068, type: 2}
   subject: {fileID: 6704260661238685094}
   photoView: {fileID: 0}
+  showBird: 0
 --- !u!114 &1199177414707155434
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -150,6 +179,32 @@ MonoBehaviour:
   lookSeconds: 5
   turnAngle: 35
   cryHint: {fileID: 8148514684212630487}
+--- !u!114 &6622297068382731359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8343929171785915176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 593dba3227d90f34b8980f13ccb81309, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WatercolorPaintedModel
+  shareBake: 1
+  character: 0
+  patternResolution: 32
+  groupDistance: 0.03
+  massNormal: 1
+  pigmentScale: 0.2
+  backrunScale: 0.25
+  backrunCoverage: 0.3
+  seed: 0
+  pattern: {fileID: 11700000, guid: 615098ddc8fca6f44b28fe24913b1c4f, type: 2}
+  modelBounds:
+    m_Center: {x: 0.20146191, y: 1.3336791, z: -0.10390043}
+    m_Extent: {x: 2.0736532, y: 1.9251735, z: 1.6146551}
+  variation: 168
 --- !u!1 &8610493171936724759
 GameObject:
   m_ObjectHideFlags: 0

@@ -57,7 +57,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
         WatercolorLook first = LookFor(currentLevel);
         if (first != null)
         {
-            manager.Apply(first.settings, 1f);
+            manager.Show(first);
             if (volume != null && first.volumeProfile != null)
                 volume.sharedProfile = first.volumeProfile;
         }
@@ -88,7 +88,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
         {
             to = null;
             if (look != null)
-                manager.Apply(look.settings, 1f);
+                manager.Show(look);
             wipeCheckFrom = Time.frameCount + RingStartFrames;
             return;
         }
@@ -173,9 +173,13 @@ public class WatercolorSeasonLooks : MonoBehaviour
         if (to == null)
             return;
         blend = blendSeconds > 0f ? Mathf.Min(1f, blend + Time.deltaTime / blendSeconds) : 1f;
+        manager.shownLook = null;
         manager.Blend(from, to.settings, Mathf.SmoothStep(0f, 1f, blend));
         if (blend >= 1f)
+        {
+            manager.Show(to);
             to = null;
+        }
     }
 
     WatercolorLook LookFor(int level) => level >= 0 && level < looks.Length ? looks[level] : null;
@@ -199,7 +203,7 @@ public class WatercolorSeasonLooks : MonoBehaviour
         WatercolorLook look = LookAtLevel(level);
         if (look == null || manager == null)
             return;
-        manager.Apply(look.settings, 1f);
+        manager.Show(look);
         if (volume != null && look.volumeProfile != null)
             volume.sharedProfile = look.volumeProfile;
     }

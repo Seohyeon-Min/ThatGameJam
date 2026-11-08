@@ -33,8 +33,10 @@ public class IntroSequence : MonoBehaviour
     [Tooltip("\"Best experienced with headphones\" under the title, clear until the logo has played; seconds it takes to fade in. It goes with the title.")]
     [SerializeField] CanvasGroup headphones;
     [SerializeField, Min(0.01f)] float headphonesFadeSeconds = 0.8f;
-    [Tooltip("Seconds after the title shows that the headphones line starts to fade in (clicks still wait for the logo's end).")]
-    [SerializeField, Min(0f)] float headphonesAfter = 4f;
+    [Tooltip("Seconds before the logo video's end (by the video's own clock) that the headphones line starts to fade in.")]
+    [SerializeField, Min(0f)] float headphonesBeforeEnd = 0.6f;
+    [Tooltip("\"Click to start\" under the headphones line: fades in once the logo has played and clicks count, and goes with the title.")]
+    [SerializeField] CanvasGroup clickToStart;
     [Tooltip("White, over the whole screen.")]
     [SerializeField] Graphic whiteFade;
     [Tooltip("Seconds from the moment the bird starts dropping until the screen is fully white. The game starts then, so the dive is cut short if it would run longer.")]
@@ -116,10 +118,12 @@ public class IntroSequence : MonoBehaviour
             brain.UpdateMethod = updateMethod;
         }
         SetAlpha(whiteFade, 0f);
-        if (headphones != null)
+        foreach (CanvasGroup line in new[] { headphones, clickToStart })
         {
-            headphones.alpha = 0f;
-            headphones.gameObject.SetActive(true);
+            if (line == null)
+                continue;
+            line.alpha = 0f;
+            line.gameObject.SetActive(true);
         }
         StartCoroutine(Run());
     }
@@ -144,6 +148,8 @@ public class IntroSequence : MonoBehaviour
         bird.SetAltitude(orbitCentre.position.y, true);
 
         yield return WaitForLogo();
+        if (clickToStart != null)
+            StartCoroutine(FadeIn(clickToStart));
         yield return new WaitUntil(ClickedThisFrame);
         Vector2 click = Mouse.current.position.ReadValue();
         StartCoroutine(FadeOutTitle());
@@ -190,8 +196,8 @@ public class IntroSequence : MonoBehaviour
         bool hint = false;
         for (float t = 0f; !done && t < logoMaxSeconds; t += Time.unscaledDeltaTime)
         {
-            // The headphones line comes in a set time after the title shows, whatever the video's own clock says.
-            if (!hint && t >= headphonesAfter)
+            // The headphones line comes in just before the logo ends, by the video's own clock (it may start late on the web).
+            if (!hint && titleVideo.isPlaying && titleVideo.length > 0 && titleVideo.time >= titleVideo.length - headphonesBeforeEnd)
                 hint = StartHeadphones();
             yield return null;
         }
@@ -204,19 +210,19 @@ public class IntroSequence : MonoBehaviour
     bool StartHeadphones()
     {
         if (headphones != null)
-            StartCoroutine(FadeInHeadphones());
+            StartCoroutine(FadeIn(headphones));
         return true;
     }
 
-    IEnumerator FadeInHeadphones()
+    IEnumerator FadeIn(CanvasGroup line)
     {
         for (float t = 0f; t < headphonesFadeSeconds && !titleGoing; t += Time.deltaTime)
         {
-            headphones.alpha = Mathf.SmoothStep(0f, 1f, t / headphonesFadeSeconds);
+            line.alpha = Mathf.SmoothStep(0f, 1f, t / headphonesFadeSeconds);
             yield return null;
         }
         if (!titleGoing)
-            headphones.alpha = 1f;
+            line.alpha = 1f;
     }
 
     // The title (and the headphones line) has started fading out.
@@ -227,16 +233,21 @@ public class IntroSequence : MonoBehaviour
         titleGoing = true;
         float from = title.color.a;
         float hintFrom = headphones != null ? headphones.alpha : 0f;
+        float clickFrom = clickToStart != null ? clickToStart.alpha : 0f;
         for (float t = 0f; t < titleFadeSeconds; t += Time.deltaTime)
         {
             SetAlpha(title, Mathf.Lerp(from, 0f, t / titleFadeSeconds));
             if (headphones != null)
                 headphones.alpha = Mathf.Lerp(hintFrom, 0f, t / titleFadeSeconds);
+            if (clickToStart != null)
+                clickToStart.alpha = Mathf.Lerp(clickFrom, 0f, t / titleFadeSeconds);
             yield return null;
         }
         title.gameObject.SetActive(false);
         if (headphones != null)
             headphones.gameObject.SetActive(false);
+        if (clickToStart != null)
+            clickToStart.gameObject.SetActive(false);
     }
 
     // Measures each cloud once, so what it takes to clear the screen is known without looking at all its puffs every frame.
@@ -454,6 +465,8 @@ public class IntroSequence : MonoBehaviour
         title.gameObject.SetActive(false);
         if (headphones != null)
             headphones.gameObject.SetActive(false);
+        if (clickToStart != null)
+            clickToStart.gameObject.SetActive(false);
         skyCamera.gameObject.SetActive(false);
         diveCamera.gameObject.SetActive(false);
         // The clouds are only for up here, wherever in the scene they were placed.

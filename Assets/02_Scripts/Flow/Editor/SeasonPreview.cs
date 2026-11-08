@@ -21,6 +21,8 @@ static class SeasonPreview
 
     static SeasonPreview()
     {
+        // A script reload drops the manager's link to the previewed look (it is not saved): link it again.
+        EditorApplication.delayCall += Relink;
         EditorSceneManager.sceneSaving += (_, _) => End();
         EditorApplication.playModeStateChanged += change =>
         {
@@ -30,6 +32,16 @@ static class SeasonPreview
     }
 
     static bool Active => SessionState.GetBool(ActiveKey, false);
+
+    static void Relink()
+    {
+        if (!Active || Application.isPlaying)
+            return;
+        var looks = Object.FindAnyObjectByType<WatercolorSeasonLooks>();
+        var manager = Object.FindAnyObjectByType<WatercolorManager>();
+        if (looks != null && manager != null)
+            manager.shownLook = looks.LookAtLevel(SessionState.GetInt(LevelKey, -1));
+    }
 
     [MenuItem("Tools/Season/Level 0 (Intro)", false, 0)] static void Level0() => Show(0);
     [MenuItem("Tools/Season/Level 1 (Stage 1)", false, 1)] static void Level1() => Show(1);
@@ -75,7 +87,8 @@ static class SeasonPreview
         WatercolorLook look = looks != null ? looks.LookAtLevel(level) : null;
         if (look != null && manager != null)
         {
-            manager.Apply(look.settings, 1f);
+            // Linked: what is edited on the manager while previewing goes into this look, so ending the preview keeps it.
+            manager.Show(look);
             Volume volume = SceneVolume();
             if (volume != null && look.volumeProfile != null)
                 volume.sharedProfile = look.volumeProfile;
@@ -113,6 +126,7 @@ static class SeasonPreview
         {
             // Through Apply, which keeps the manager's own Form Light and sends the values to the shaders.
             var before = JsonUtility.FromJson<WatercolorManager.Settings>(settings);
+            manager.shownLook = null;
             manager.Apply(before, 1f);
         }
         Volume volume = SceneVolume();

@@ -11,6 +11,14 @@ public class WatercolorLook : ScriptableObject
     public VolumeProfile volumeProfile;
     public WatercolorManager.Settings settings = new();
 
+    // Edited while on screen (WatercolorManager.shownLook): shows at once.
+    void OnValidate()
+    {
+        var manager = FindAnyObjectByType<WatercolorManager>();
+        if (manager != null && manager.shownLook == this)
+            manager.Apply(settings, 1f);
+    }
+
     [ContextMenu("Copy From Scene Manager")]
     void CopyFromSceneManager()
     {

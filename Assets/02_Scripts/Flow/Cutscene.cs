@@ -37,6 +37,8 @@ public class Cutscene : MonoBehaviour
     EventInstance audioInstance;
     WatercolorManager manager;
     WatercolorManager.Settings before;
+    // The look linked to the manager before this one's (WatercolorManager.shownLook), linked again when it is put back.
+    WatercolorLook lookBefore;
     Volume volume;
     VolumeProfile profileBefore;
     bool lookHeld;
@@ -109,7 +111,8 @@ public class Cutscene : MonoBehaviour
         {
             before = JsonUtility.FromJson<WatercolorManager.Settings>(JsonUtility.ToJson(manager.settings));
             lookHeld = true;
-            manager.Apply(look.settings, 1f);
+            lookBefore = manager.shownLook;
+            manager.Show(look);
             SwitchVolume();
         }
 
@@ -169,7 +172,9 @@ public class Cutscene : MonoBehaviour
         if (lookHeld && !keepLook)
         {
             lookHeld = false;
+            manager.shownLook = null;
             manager.Apply(before, 1f);
+            manager.shownLook = lookBefore;
             if (volume != null)
                 volume.sharedProfile = profileBefore;
             volume = null;

@@ -344,6 +344,32 @@ public class WatercolorManager : MonoBehaviour
 
     public Settings settings = new Settings();
 
+    // The look on screen (a season's, a cutscene's, the season preview's), set by whoever put it there; null = the manager's own
+    // values. While it is set the two stay one: values edited here in the Inspector are written into that look asset, and edits to
+    // that look show here at once. So a tweak made while previewing a season or playing is kept, in the look the game uses.
+    [NonSerialized] public WatercolorLook shownLook;
+
+    // Puts the look on screen at once and links it (shownLook). Null look: unlinks only.
+    public void Show(WatercolorLook look)
+    {
+        shownLook = look;
+        if (look != null)
+            Apply(look.settings, 1f);
+    }
+
+    // The linked look's values as edited here, all but the scene's Form Light, which a look never keeps.
+    void WriteIntoShownLook()
+    {
+        if (shownLook == null)
+            return;
+        var copy = JsonUtility.FromJson<Settings>(JsonUtility.ToJson(settings));
+        copy.formLight = null;
+        shownLook.settings = copy;
+#if UNITY_EDITOR
+        UnityEditor.EditorUtility.SetDirty(shownLook);
+#endif
+    }
+
     // The scene's manager (or defaults when there is none). WatercolorBaker reads the blotch sizes from here.
     public static Settings Current
     {
@@ -362,6 +388,7 @@ public class WatercolorManager : MonoBehaviour
 
     void OnValidate()
     {
+        WriteIntoShownLook();
         if (isActiveAndEnabled)
         {
             Push(settings);
