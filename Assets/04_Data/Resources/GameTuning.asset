@@ -20,7 +20,7 @@ MonoBehaviour:
   signal1At: 0.25
   signal2At: 0.5
   signal3At: 0.75
-  babyWalkSpeed: 0.9
+  babyWalkSpeed: 1.08
   babyAccel: 2.5
   babyDecel: 3.5
   babyTurnSlowdownFloor: 0.35
@@ -57,6 +57,7 @@ MonoBehaviour:
   babyLandPause: 0.8
   babyWalkClipSpeed: 0.9
   babyBalanceClipSpeed: 0.45
+  babyRunClipSpeed: 2.5
   babyClipRateMin: 0.5
   babyClipRateMax: 2.5
   babyShiverAngle: 0.8
@@ -79,13 +80,13 @@ MonoBehaviour:
   burrowCryRadius: 10
   fogForkWaitTime: 3
   fogWallPauseTime: 1
-  fogRunSpeed: 2.5
+  fogRunSpeed: 3.5
   fogRunIdleTime: 3
-  birdSpeed: 5
-  birdMinSpeed: 2
+  birdSpeed: 3.5
+  birdMinSpeed: 1.4
   birdSlowDistance: 1
   birdFastDistance: 6
-  birdGlideSpeed: 3.5
+  birdGlideSpeed: 2.45
   birdGlideMargin: 0.5
   birdAltitudeSpeed: 2.8
   birdPerchDuration: 1.2

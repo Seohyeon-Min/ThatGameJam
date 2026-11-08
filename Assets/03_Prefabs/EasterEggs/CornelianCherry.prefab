@@ -159,7 +159,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6987635341029728802}
+  - {fileID: 8103752682563649370}
   m_Father: {fileID: 1287105640543894160}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4755104277850737307
@@ -573,7 +573,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7563a2f6758e9d4ab44f7e82ef73b04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractiveIndicator
-  sparkle: {fileID: 7521419123330304999}
+  sparkle: {fileID: 8713959111315101343}
+  shownAfter: {fileID: 0}
 --- !u!1 &8452891798871347360
 GameObject:
   m_ObjectHideFlags: 0
@@ -729,7 +730,7 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c0128bc208e504c41871ad4b8b012c55, type: 3}
   m_PrefabInstance: {fileID: 1310085175442752090}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &3818538717458295807
+--- !u!1001 &2626000765154801287
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -786,15 +787,15 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ffccfa9f5993f4542829e7d765f177d3, type: 3}
---- !u!4 &6987635341029728802 stripped
+--- !u!4 &8103752682563649370 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6054876296925120989, guid: ffccfa9f5993f4542829e7d765f177d3, type: 3}
-  m_PrefabInstance: {fileID: 3818538717458295807}
+  m_PrefabInstance: {fileID: 2626000765154801287}
   m_PrefabAsset: {fileID: 0}
---- !u!198 &7521419123330304999 stripped
+--- !u!198 &8713959111315101343 stripped
 ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 6674156994154438680, guid: ffccfa9f5993f4542829e7d765f177d3, type: 3}
-  m_PrefabInstance: {fileID: 3818538717458295807}
+  m_PrefabInstance: {fileID: 2626000765154801287}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4446280172841752661
 PrefabInstance:

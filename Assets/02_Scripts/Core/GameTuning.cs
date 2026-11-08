@@ -90,6 +90,8 @@ public class GameTuning : ScriptableObject
     // scale-2 baby. These defaults keep both clips at about their normal rate, as before; lower them toward those to cut the sliding.
     public float babyWalkClipSpeed = 0.9f;
     public float babyBalanceClipSpeed = 0.45f;
+    // The speed (m/s) at which the Run clip plays at its normal rate: the fog run (fogRunSpeed) looked right at this.
+    public float babyRunClipSpeed = 2.5f;
     // Limits on that playback rate, so a big mismatch never turns the legs into a blur or a crawl.
     public float babyClipRateMin = 0.5f;
     public float babyClipRateMax = 2.5f;

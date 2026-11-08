@@ -976,8 +976,11 @@ public class Baby : CryListener
         animator.SetBool(QuietWaitParam, false);
         animator.SetBool(WalkingParam, true);
         PlayDirect(RunState, 0.15f);
+        GameTuning tuning = GameTuning.Current;
+        // The run clip keeps pace with the running, so a faster run does not slide her feet.
+        animator.speed = Mathf.Clamp(tuning.fogRunSpeed / Mathf.Max(tuning.babyRunClipSpeed, 0.01f), 0.5f, 2f);
         TurnToward(target - transform.position);
-        transform.position = Vector3.MoveTowards(transform.position, target, GameTuning.Current.fogRunSpeed * Time.deltaTime);
+        transform.position = Vector3.MoveTowards(transform.position, target, tuning.fogRunSpeed * Time.deltaTime);
         return transform.position == target;
     }
 

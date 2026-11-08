@@ -42,9 +42,16 @@ public class CliffEnding : PathBlocker
     [Tooltip("A light breeze blowing past her out over the drop (CliffBreeze prefab), while she sits, until the ending's first cut. Empty: none.")]
     [SerializeField] ParticleSystem breeze;
 
+    [Header("Bird")]
+    [Tooltip("A soft dark spot behind the bird, so it shows against the cliff's bright pink: on from out of the fog until the ending. Empty: none.")]
+    [SerializeField] BirdShade birdShade;
+
     [Header("Ending")]
     [Tooltip("The ending (the bird flies out and up, seen from the air, then from far off). Empty: only the girl's ending animation plays.")]
     [SerializeField] EndingFlight ending;
+    [Tooltip("Played, a little quieter, as the music turns to the cliff's out of the fog, to cover the change: the season change's sound.")]
+    [SerializeField] string musicTurnSound = "event:/SFX/spiral";
+    [SerializeField, Range(0f, 1f)] float musicTurnVolume = 0.6f;
 
     // Set while she is here: walking to the stump, then sitting by it.
     Baby baby;
@@ -85,7 +92,17 @@ public class CliffEnding : PathBlocker
         baby = Baby.Instance;
         // Out of the fog: the music turns to the cliff's (st_3 out, 0, 1_1, 2_1 and 4 in, on the beat).
         if (MusicManager.Instance != null)
+        {
             MusicManager.Instance.EnterCliff();
+            if (!string.IsNullOrEmpty(musicTurnSound))
+            {
+                FMOD.Studio.EventInstance turn = FMODUnity.RuntimeManager.CreateInstance(musicTurnSound);
+                turn.setVolume(musicTurnVolume);
+                turn.start();
+                turn.release();
+            }
+        }
+        ShowBirdShade(true);
         // Again after a dev tool took her back a stage, maybe after the ending.
         if (walking != null)
             StopCoroutine(walking);
@@ -145,6 +162,7 @@ public class CliffEnding : PathBlocker
         ended = true;
         if (MusicManager.Instance != null)
             MusicManager.Instance.FadeOut();
+        ShowBirdShade(false);
         baby.PlayEnding();
         // The bird just past where it would set the ending off, at its height, with the camera cut to the sitting view.
         BirdController bird = BirdController.Instance;
@@ -209,6 +227,7 @@ public class CliffEnding : PathBlocker
             walking = null;
             resting = false;
             HoldSittingView(false);
+            ShowBirdShade(false);
             baby = null;
             return;
         }
@@ -221,6 +240,7 @@ public class CliffEnding : PathBlocker
         if (BirdOutPastCliff())
         {
             ended = true;
+            ShowBirdShade(false);
             baby.PlayEnding();
             if (ending != null)
                 ending.Play(edge.forward);
@@ -228,6 +248,12 @@ public class CliffEnding : PathBlocker
     }
 
     bool BirdOutPastCliff() => BirdPastEdge(pastEdge);
+
+    void ShowBirdShade(bool show)
+    {
+        if (birdShade != null)
+            birdShade.Show(show);
+    }
 
     // The bird at least this far out past the edge (metres along its forward).
     bool BirdPastEdge(float metres)

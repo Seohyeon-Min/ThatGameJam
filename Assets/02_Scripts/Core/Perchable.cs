@@ -40,6 +40,8 @@ public class Perchable : MonoBehaviour
     public bool AlignsBird => alignBird;
     public bool FacesForward => faceForward;
     public bool LocksClicks => locksClicks;
+    // A device or an easter egg (always kept visible), not a plain branch.
+    public bool AlwaysExempt => alwaysExempt;
     public bool IsClickedThrough(Collider collider) => Array.IndexOf(clickedThrough, collider) >= 0;
 
     // The whole object this perch belongs to (for a tree's branch, the tree itself), not just this collider's own

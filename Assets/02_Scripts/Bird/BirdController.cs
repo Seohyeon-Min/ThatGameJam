@@ -136,6 +136,9 @@ public class BirdController : MonoBehaviour
     float pressedTime;
     Perchable perch;
     bool clicksLocked;
+    // Doing something where it stands (pecking, puffing its chest, turning to an icicle) until then: the player's clicks to move
+    // don't count, so the interaction can't be broken off halfway.
+    float busyUntil;
     float landTime;
     // The turn while landing, from the heading it arrived with.
     Quaternion landFrom, landTo;
@@ -481,7 +484,7 @@ public class BirdController : MonoBehaviour
         // Holding the button the bird follows the pointer and no branch reacts, unless the press began on one and is still a click.
         ShowPerchCursor(hovered != null && (!held || pressedPerch != null));
 
-        bool pressed = moveAction.WasPressedThisFrame() && !clicksLocked && !DevTools.Covers(pointAction.ReadValue<Vector2>());
+        bool pressed = moveAction.WasPressedThisFrame() && !clicksLocked && Time.time >= busyUntil && !DevTools.Covers(pointAction.ReadValue<Vector2>());
         if (Cutscene.PlayerLocked)
         {
             // Held still: no clicks count, and it stops where it is instead of going on to its last target.
@@ -696,7 +699,9 @@ public class BirdController : MonoBehaviour
         lastBabyPosition = Baby.Instance.transform.position;
     }
 
-    // An explicit click on a branch or the ground always breaks off sheltering.
+    // An explicit click on a branch or the ground always breaks off sheltering. Clicked onto something to do (an easter egg, the
+    // leaning log), the bird goes there and lands without the player's clicks counting, and then does it (Busy), so a click to
+    // move can't break the interaction off; a plain branch is left again by the next click.
     void ClickPerch(Perchable perchable)
     {
         IsSheltering = false;
@@ -704,11 +709,18 @@ public class BirdController : MonoBehaviour
         if (perchable == perch && state == State.Perched)
             return;
         perchable.GetComponentInParent<ClickCatcher>()?.PlayInteractSound();
-        if (perchable.LocksClicks)
+        if (IsInteraction(perchable))
             PerchOn(perchable);
         else
             StartPerch(perchable);
     }
+
+    static bool IsInteraction(Perchable perchable) =>
+        perchable.LocksClicks || perchable.AlwaysExempt || perchable.GetComponent<InteractiveIndicator>() != null
+        || perchable.GetComponentInParent<ClickCatcher>() != null;
+
+    // The player's clicks to move don't count for these seconds from now (or longer, if already busy).
+    void Busy(float seconds) => busyUntil = Mathf.Max(busyUntil, Time.time + seconds);
 
     void Click(RaycastHit hit)
     {
@@ -772,6 +784,7 @@ public class BirdController : MonoBehaviour
         bool takingOff = state is State.Perched or State.Landing or State.Walking;
         perch = null;
         clicksLocked = false;
+        busyUntil = 0f;
         refusePending = false;
         animator.ResetTrigger(RefuseParam);
         // Taking off from the ground, it keeps going where it was walking.
@@ -1036,7 +1049,9 @@ public class BirdController : MonoBehaviour
         if (state != State.Perched || direction.sqrMagnitude < 0.0001f)
             return 0f;
         perchedYaw = Quaternion.LookRotation(direction).eulerAngles.y;
-        return Mathf.Abs(Mathf.DeltaAngle(facingYaw, perchedYaw)) / GameTuning.Current.birdTurnSpeed;
+        float seconds = Mathf.Abs(Mathf.DeltaAngle(facingYaw, perchedYaw)) / GameTuning.Current.birdTurnSpeed;
+        Busy(seconds);
+        return seconds;
     }
 
     void TurnOnPerch()
@@ -1117,6 +1132,7 @@ public class BirdController : MonoBehaviour
     {
         const float eachSeconds = 0.3f;
         StartCoroutine(PeckRoutine(times, eachSeconds));
+        Busy(times * eachSeconds);
         return times * eachSeconds;
     }
 
@@ -1137,6 +1153,7 @@ public class BirdController : MonoBehaviour
     {
         const float seconds = 1.2f;
         StartCoroutine(Swell(seconds, 0.25f));
+        Busy(seconds);
         return seconds;
     }
 
