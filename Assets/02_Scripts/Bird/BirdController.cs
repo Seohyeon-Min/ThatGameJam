@@ -988,6 +988,9 @@ public class BirdController : MonoBehaviour
             transform.position = point;
             currentSpeed = 0f;
             state = State.Landing;
+            // The feet touch down right here, not at the landing clip's later FootContact event (0.93 s in):
+            // playing it on arrival instead of waiting for that keeps the branch sound from lagging the click.
+            RuntimeManager.PlayOneShot("event:/SFX/branch", transform.position);
             landTime = 0f;
             landFrom = transform.rotation;
             landTo = perch.AlignsBird ? AlongPerch() : landFrom;

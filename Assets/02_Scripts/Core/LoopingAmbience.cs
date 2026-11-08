@@ -13,6 +13,10 @@ public class LoopingAmbience : MonoBehaviour
     [SerializeField] float nearDistance = 4f;
     [Tooltip("Silent at or beyond this distance from the bird.")]
     [SerializeField] float farDistance = 15f;
+    [Tooltip("Full volume at or within this height above the sound (e.g. the water surface), on top of the distance fade: flying high fades it out even directly overhead. 0: loudest only right at that height (walking on the ground).")]
+    [SerializeField] float nearHeight = 0f;
+    [Tooltip("Silent at or beyond this height above the sound. 6: fully faded by the bird's highest flight (GameTuning/Stage birdAltitude + zoom).")]
+    [SerializeField] float farHeight = 6f;
 
     EventInstance instance;
     // The stream is often a long, thin plane (a river running far past the bird on one side): distance to its
@@ -37,7 +41,11 @@ public class LoopingAmbience : MonoBehaviour
         Vector3 birdPosition = BirdController.Instance.transform.position;
         Vector3 nearestPoint = body != null ? body.bounds.ClosestPoint(birdPosition) : transform.position;
         float distance = Vector3.Distance(nearestPoint, birdPosition);
-        instance.setVolume(1f - Mathf.InverseLerp(nearDistance, farDistance, distance));
+        // Height above the sound on its own, so flying high fades it out even hovering right over it, not just flying away from it.
+        float height = Mathf.Max(0f, birdPosition.y - nearestPoint.y);
+        float distanceFade = 1f - Mathf.InverseLerp(nearDistance, farDistance, distance);
+        float heightFade = 1f - Mathf.InverseLerp(nearHeight, farHeight, height);
+        instance.setVolume(distanceFade * heightFade);
     }
 
     void OnDisable()
