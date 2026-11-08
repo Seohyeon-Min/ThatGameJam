@@ -13,7 +13,11 @@ public class BirdAnimationEvents : MonoBehaviour
     [Tooltip("Bird_Takeoff: feet leave the branch (frame 12, 0.367 s). Detach from the perch and start moving here.")]
     public UnityEvent onFootRelease;
 
-    public void FootContact() => onFootContact?.Invoke();
+    public void FootContact()
+    {
+        onFootContact?.Invoke();
+        RuntimeManager.PlayOneShot("event:/SFX/branch", transform.position);
+    }
     public void GripComplete() => onGripComplete?.Invoke();
     public void FootRelease() => onFootRelease?.Invoke();
 

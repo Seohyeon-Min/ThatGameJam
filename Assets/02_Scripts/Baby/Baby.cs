@@ -907,17 +907,27 @@ public class Baby : CryListener
         animator.CrossFade(JumpState, 0.1f);
         Vector3 start = transform.position;
         float arcHeight = tuning.babyJumpArcHeight;
+        // Climbing up onto the beam: the wood footstep sound fires a little before the jump clip ends
+        // (Lead seconds early), so it doesn't lag the foot visually landing.
+        float treeLandSoundAt = Mathf.Max(0f, jumpClip.length - tuning.babyTreeLandSoundLead);
+        bool treeLandSoundPlayed = false;
         for (float time = 0f; time < jumpClip.length; time += Time.deltaTime)
         {
             // Turning continues every frame (as WalkTo does), not just once at takeoff, so a route that
             // bends right at the beam still has the baby facing the far end by the time she lands.
             TurnToward(target - transform.position);
             transform.position = EvaluateJump(start, target, time / jumpClip.length, arcHeight);
+            if (onBalanceBeam && !treeLandSoundPlayed && time >= treeLandSoundAt)
+            {
+                treeLandSoundPlayed = true;
+                RuntimeManager.PlayOneShot("event:/SFX/footstepTreeJump", transform.position);
+            }
             yield return null;
         }
         transform.position = target;
-        // Climbing up onto the beam: a foot lands on wood. Down off the far end: back onto snow.
-        RuntimeManager.PlayOneShot(onBalanceBeam ? "event:/SFX/footstepTreeJump" : "event:/SFX/footstepSnow", transform.position);
+        // Down off the far end: back onto snow, right as she lands (no early lead needed there).
+        if (!onBalanceBeam)
+            RuntimeManager.PlayOneShot("event:/SFX/footstepSnow", transform.position);
     }
 
     // One frame of walking toward the target; true on arrival. Also lets the blocker the baby waits at lead it (the fog maze).

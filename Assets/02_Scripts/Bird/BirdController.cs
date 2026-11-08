@@ -498,7 +498,10 @@ public class BirdController : MonoBehaviour
             pressedTime = Time.time;
         }
         else if (pressed && caught)
+        {
             following = false;
+            hit.collider.GetComponentInParent<ClickCatcher>().PlayInteractSound();
+        }
         else if (pressed && onGround)
             Click(ground);
         else if (pressedPerch != null)
@@ -700,6 +703,7 @@ public class BirdController : MonoBehaviour
         following = false;
         if (perchable == perch && state == State.Perched)
             return;
+        perchable.GetComponentInParent<ClickCatcher>()?.PlayInteractSound();
         if (perchable.LocksClicks)
             PerchOn(perchable);
         else
