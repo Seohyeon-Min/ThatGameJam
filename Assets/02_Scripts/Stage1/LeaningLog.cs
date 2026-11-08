@@ -11,7 +11,7 @@ public class LeaningLog : PathBlocker
     [SerializeField] Animator animator;
     [SerializeField] AnimationClip fallClip;
     [Tooltip("Seconds sooner than the clip's end that the ground-hit sound fires, so it doesn't lag the log visually landing.")]
-    [SerializeField, Min(0f)] float groundSoundLead = 0.2f;
+    [SerializeField, Min(0f)] float groundSoundLead = 0.35f;
 
     public override NaturalTimer Timer => timer;
 
