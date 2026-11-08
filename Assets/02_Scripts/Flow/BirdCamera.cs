@@ -46,6 +46,9 @@ public class BirdCamera : MonoBehaviour
     // (CameraZone without a device) keeps it in view.
     Vector3? restPoint;
     float restWeight;
+    // The season has started to change where she sleeps (ReleaseRest): the camera eases off her and follows the bird again at
+    // once, instead of holding on her until she wakes. The season wipe's photo is laid by its own camera matrices, so it stays put.
+    bool restReleased;
     // While set (CliffEnding, once the girl sits by the stump), the camera eases onto this point and stays near it, drifting
     // after the bird by viewFollow only. Eased in and out like a zone; the point is kept while easing out.
     Vector3? viewPoint;
@@ -159,13 +162,25 @@ public class BirdCamera : MonoBehaviour
         {
             restPoint = Baby.Instance.transform.position;
             restWeight = 0f;
+            restReleased = false;
         }
         if (!restPoint.HasValue)
             return;
         bool asleep = state == BabyState.Resting || state == BabyState.Sleeping;
-        restWeight = Mathf.MoveTowards(restWeight, asleep ? 1f : 0f, Time.deltaTime / zoneEaseTime);
+        restWeight = Mathf.MoveTowards(restWeight, asleep && !restReleased ? 1f : 0f, Time.deltaTime / zoneEaseTime);
+        // Kept (at no weight) while she still sleeps after a release, so it doesn't take hold of her again.
         if (!asleep && restWeight <= 0f)
+        {
             restPoint = null;
+            restReleased = false;
+        }
+    }
+
+    // The season starts to change (GameFlow.EndStage): lets go of her as she sleeps.
+    public void ReleaseRest()
+    {
+        if (restPoint.HasValue)
+            restReleased = true;
     }
 
     // Eases onto this point and stays near it, drifting after the bird by this much (0 = held still, 1 = free); null eases off it.

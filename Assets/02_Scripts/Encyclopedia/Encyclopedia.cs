@@ -7,8 +7,8 @@ using UnityEngine.Rendering.Universal;
 
 // The list of interactions the player has found in this play session, each with a close-up photo of what was found,
 // taken by the game at the moment the interaction shows itself.
-// The Esc key slides the page up from the bottom and pauses the game; the scene behind it blurs through a depth of field Volume.
-// The same key closes it. Gameplay input checks IsOpen so clicks on the page do not reach the world.
+// Tab (or Esc, Space, E) slides the page up from the bottom and pauses the game; the scene behind it blurs through a depth of field Volume.
+// Any of them closes it. Gameplay input checks IsOpen so clicks on the page do not reach the world.
 public class Encyclopedia : MonoBehaviour
 {
     [Tooltip("In page order. The number shown for an entry is its place here, from 1.")]
@@ -127,7 +127,7 @@ public class Encyclopedia : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
         // It does not open during the intro or a cutscene.
-        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
+        if (keyboard != null && TogglePressed(keyboard) && (IsOpen || !IntroSequence.IsPlaying && !Cutscene.AnyPlaying))
             SetOpen(!IsOpen);
 
         float target = IsOpen ? 1f : 0f;
@@ -136,6 +136,11 @@ public class Encyclopedia : MonoBehaviour
         shown = Mathf.MoveTowards(shown, target, Time.unscaledDeltaTime / slideSeconds);
         Apply();
     }
+
+    // Tab (the one the popup names), Esc, Space or E: any of them opens it, and closes it.
+    static bool TogglePressed(Keyboard keyboard) =>
+        keyboard.tabKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame
+        || keyboard.spaceKey.wasPressedThisFrame || keyboard.eKey.wasPressedThisFrame;
 
     void SetOpen(bool open)
     {

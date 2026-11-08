@@ -259,6 +259,8 @@ public class GameFlow : MonoBehaviour
         foreach (CameraZone zone in CurrentStage.GetComponentsInChildren<CameraZone>())
             if (!zone.HasDevice)
                 zone.Release();
+        // And the camera's hold on her where she sleeps: it follows the bird again as soon as the season starts to change.
+        birdCamera.ReleaseRest();
         season.AdvanceSeason();
         if (current + 1 >= stages.Length)
         {

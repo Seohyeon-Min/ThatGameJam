@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Video;
 
 // The notice in the bottom-right corner when an entry is found: "New Discovery", the quill-pen clip replaying
-// beside it, and "Press ESC to see" above that, with event:/SFX/eastereggPop played alongside. Several finds in a
+// beside it, and "Press TAB to see" above that, with event:/SFX/eastereggPop played alongside. Several finds in a
 // row show one after another (the clip restarts and the sound replays each time). Runs on unscaled time, so it
 // is not held up by a paused game.
 public class DiscoveryPopup : MonoBehaviour

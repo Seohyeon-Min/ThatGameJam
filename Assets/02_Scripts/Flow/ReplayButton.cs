@@ -38,12 +38,21 @@ public class ReplayButton : MonoBehaviour
         if (going || mouse == null || group.alpha < readyAt)
             return;
         Vector2 pointer = mouse.position.ReadValue();
-        // Screen Space Overlay: no camera.
-        bool over = RectTransformUtility.RectangleContainsScreenPoint(hitArea, pointer, null);
+        bool over = RectTransformUtility.RectangleContainsScreenPoint(hitArea, pointer, CanvasCamera());
         Vector3 scale = over ? rest * hoverScale : rest;
         grows.localScale = Vector3.Lerp(grows.localScale, scale, 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime));
         if (over && mouse.leftButton.wasPressedThisFrame)
             Replay();
+    }
+
+    // The camera the canvas is drawn by (the End Card is Screen Space - Camera); none for Screen Space Overlay.
+    Camera CanvasCamera()
+    {
+        Canvas canvas = hitArea.GetComponentInParent<Canvas>();
+        if (canvas == null)
+            return null;
+        canvas = canvas.rootCanvas;
+        return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
     }
 
     void Replay()
