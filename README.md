@@ -15,8 +15,8 @@ Spring comes in the end. You play a bird who brings it a little sooner and makes
 ## Features
 
 - **Intro snow walk**: hold the bird over the child to shelter her from the falling snow
-- **Stage 1, the leaning log**: perch on the log so it falls and bridges the stream
-- **Stage 2, the blocked rabbit burrow**: cry to the rabbits and help dig the snow away
+- **Stage 1, the leaning log**: perch on the leaning log until it falls and bridges the stream
+- **Stage 2, the lost baby rabbit**: cry near the burrow so the mother answers and her little one finds its way home
 - **Stage 3, the fog maze**: six forks hidden in fog; animals on the right ways answer the bird's cry and the child runs toward the bird
 - **Seasons**: each time the child sleeps in a sunlit spot, winter retreats and the forest turns a step closer to spring
 - **Discovery journal and easter eggs**: hidden interactions around the forest, each recorded with a close-up photo
